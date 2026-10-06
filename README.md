@@ -8,5 +8,10 @@ O projeto é também um ambiente de aprendizado prático de Angular, arquitetura
 
 - [Escopo inicial](docs/product/initial-scope.md)
 - [Decisão arquitetural: base técnica](docs/decisions/0001-base-tecnica.md)
+- [Plano de setup do SDD](docs/plans/2026-10-06-sdd-setup.md)
 
 As próximas decisões serão registradas antes da implementação correspondente.
+
+## Fluxo SDD com agentes
+
+Spec (`product-spec`) → Plano (`tech-planner`) → Revisão (`architecture-review` quando cruza serviços) → Implementação (`backend-dev`/`angular-dev`) → Testes (`test-engineer`) → Validação (`feature-validator`), orquestrado por `sdd-orchestrator`.
