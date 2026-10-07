@@ -50,8 +50,8 @@ saíram de `packages/` para `libs/`, e foi criado o esqueleto do serviço backen
     `drizzle-kit` para gerar migrations.
   - Estrutura hexagonal vazia, sem regras de negócio: `src/domain/`,
     `src/application/` (ports e use-cases) e `src/infrastructure/`
-    (http, persistence, messaging). O NestJS (`src/app/`) permanece como
-    composition root.
+    (persistence e messaging). Os controllers NestJS ficam em `src/app/`
+    como composition root.
 - **e2e**: projeto `apps/web-e2e` com Playwright, `nxE2EPreset` e um único
   spec de fumaça (a app carrega e renderiza o shell). Testes de features
   entram no ciclo SDD; outros navegadores além do Chromium ficam para quando

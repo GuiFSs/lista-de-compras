@@ -53,3 +53,7 @@ Thumbs.db
 __screenshots__/
 
 vite.config.*.timestamp*
+
+# ambiente local (nunca versionar)
+.env
+.env.local
