@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lista-de-compras-postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lista_de_compras
+      # Bancos lógicos por serviço (ADR 0001) - lidos pelo init script;
+      # defaults são credenciais locais de desenvolvimento.
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD:-auth_local}
+      SHOPPING_LIST_DB_PASSWORD: ${SHOPPING_LIST_DB_PASSWORD:-shopping_list_local}
+      PRICE_HISTORY_DB_PASSWORD: ${PRICE_HISTORY_DB_PASSWORD:-price_history_local}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: lista-de-compras-rabbitmq
+    restart: unless-stopped
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
