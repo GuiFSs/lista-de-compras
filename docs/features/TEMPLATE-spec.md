@@ -14,7 +14,13 @@
 
 ## Estados relevantes
 
-- ...
+- Carregando / vazio / erro / sucesso (os 4 são obrigatórios — guia de design)
+
+## Design e UX
+
+- Padrões seguidos: `docs/design/GUIA-DESIGN.md`
+- Componentes/tokens usados: <botões, campos, listas, sheets...>
+- Comportamento mobile: <bottom nav, ações no polegar, etc.>
 
 ## Critérios de aceite
 

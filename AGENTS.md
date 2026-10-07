@@ -7,6 +7,7 @@ Este repositório é, ao mesmo tempo, um produto utilizável e um ambiente de ap
 Leia antes de alterar ou especificar uma feature:
 
 - `docs/product/initial-scope.md`
+- `docs/design/GUIA-DESIGN.md` — design mobile-first, UX e tokens visuais
 - ADRs em `docs/decisions/`
 - As skills aplicáveis em `.agents/skills/` (SDD do projeto) e `.opencode/skills/` (oficiais do framework, ex.: `angular-developer`)
 
