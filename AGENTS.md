@@ -8,7 +8,7 @@ Leia antes de alterar ou especificar uma feature:
 
 - `docs/product/initial-scope.md`
 - ADRs em `docs/decisions/`
-- A skill aplicável em `.agents/skills/`
+- As skills aplicáveis em `.agents/skills/` (SDD do projeto) e `.opencode/skills/` (oficiais do framework, ex.: `angular-developer`)
 
 Não presuma regras de produto, integrações, dados ou experiência de uso ainda não documentados. Durante a implementação de uma feature, faça perguntas apenas quando a resposta mudar o comportamento, o contrato ou a arquitetura.
 
