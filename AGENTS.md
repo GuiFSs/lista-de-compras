@@ -28,6 +28,8 @@ Cada feature segue: **Spec → Plano → Implementação → Validação**, semp
 
 Delegação refinada: o `sdd-orchestrator` delega **por tarefa** do `PLAN.md`, em paralelo (subagentes em background) quando as tarefas são independentes, e em sequência quando tocam os mesmos arquivos. Detalhes em `docs/plans/2026-10-06-sdd-setup.md`.
 
+Após o PR (push aprovado), o `code-reviewer` pode revisar o PR a pedido do usuário: é consultivo, não bloqueia o merge e não edita código. Detalhes em `docs/plans/2026-10-06-sdd-setup.md`.
+
 Agentes (`.opencode/agents/`):
 
 1. `sdd-orchestrator` — coordena fases e gates (agente padrão da sessão).
@@ -37,6 +39,7 @@ Agentes (`.opencode/agents/`):
 5. `backend-dev` / `angular-dev` — implementação.
 6. `test-engineer` — testes.
 7. `feature-validator` — validação final contra os critérios de aceite.
+8. `code-reviewer` — revisão de PR (consultiva), com 6 sub-agents por lente: `reviewer-security`, `reviewer-requirements`, `reviewer-tests`, `reviewer-architecture`, `reviewer-regression` e `reviewer-performance`.
 
 ## Papéis de agentes
 

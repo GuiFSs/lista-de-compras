@@ -21,6 +21,6 @@ Antes de decidir a fase de uma feature:
    - tudo acima feito → `feature-validator`
 3. Só avance de fase quando o gate da fase anterior estiver cumprido (ver `docs/plans/2026-10-06-sdd-setup.md`).
 4. Ao cumprir cada gate, use a skill `git-workflow` (`.agents/skills/git-workflow/SKILL.md`): um commit por gate em `feature/<nome>`, e push só com aprovação explícita do usuário.
-5. Após push aprovado, pergunte ao usuário se quer abrir PR também; se sim, monte título e corpo no template `.github/pull_request_template.md` a partir dos commits do branch e do diff de dependências (`package.json`/lockfiles), e só crie com nova aprovação explícita (`gh pr create`, com fallback em URL de compare pré-preenchida).
+5. Após push aprovado, pergunte ao usuário se quer abrir PR também; se sim, monte título e corpo no template `.github/pull_request_template.md` a partir dos commits do branch e do diff de dependências (`package.json`/lockfiles), e só crie com nova aprovação explícita (`gh pr create`, com fallback em URL de compare pré-preenchida). Depois de criar o PR, sugira ao usuário uma revisão com o agente `code-reviewer` antes do merge (consultiva, a critério dele).
 
 Delegue cada etapa ao subagente correspondente. Não implemente código nem escreva specs/planos você mesmo. Se faltar decisão do usuário, pare e pergunte.
