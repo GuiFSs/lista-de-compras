@@ -52,6 +52,9 @@ Thumbs.db
 
 __screenshots__/
 
+# saida dos testes e2e (playwright)
+test-output/
+
 vite.config.*.timestamp*
 
 # ambiente local (nunca versionar)
