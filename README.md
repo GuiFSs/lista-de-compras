@@ -11,6 +11,7 @@ O projeto é também um ambiente de aprendizado prático de Angular, arquitetura
 - [Decisão arquitetural: dados de compra e acesso inicial](docs/decisions/0002-dados-de-compra-e-acesso-inicial.md)
 - [Decisão arquitetural: setup do workspace front-end](docs/decisions/0003-setup-do-workspace-front-end.md)
 - [Decisão arquitetural: setup do front, back e e2e](docs/decisions/0004-setup-do-front-do-back-e-do-e2e.md)
+- [Lições do setup inicial](docs/lessons/2026-10-07-setup-inicial.md)
 - [Plano de setup do SDD](docs/plans/2026-10-06-sdd-setup.md)
 
 Toda decisão arquitetural relevante é registrada como ADR antes (ou junto) da mudança correspondente.

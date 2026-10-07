@@ -45,6 +45,10 @@ saíram de `packages/` para `libs/`, e foi criado o esqueleto do serviço backen
     ADR 0001.
   - `ConfigModule.forRoot({ isGlobal: true })` lendo `.env` da raiz;
     `.env.example` versionado e `.env` ignorado pelo git.
+  - Variáveis do serviço prefixadas com `API_` — `API_PORT`, e não `PORT`: o Nx
+    injeta o `.env` em todos os targets e o dev server do Angular trata `PORT`
+    como a própria porta (aprendizado detalhado em
+    [docs/lessons/2026-10-07-setup-inicial.md](../lessons/2026-10-07-setup-inicial.md)).
   - Drizzle ORM como adaptador de persistência: módulo/provider com token de
     injeção (`DRIZZLE`), schema e migrations vazios por enquanto,
     `drizzle-kit` para gerar migrations.
@@ -55,7 +59,9 @@ saíram de `packages/` para `libs/`, e foi criado o esqueleto do serviço backen
 - **e2e**: projeto `apps/web-e2e` com Playwright, `nxE2EPreset` e um único
   spec de fumaça (a app carrega e renderiza o shell). Testes de features
   entram no ciclo SDD; outros navegadores além do Chromium ficam para quando
-  houver necessidade.
+  houver necessidade. O target `serve` do `web` é marcado
+  `continuous: true` para o grafo do Nx (gate `e2e--wait-for-webserver`)
+  tratar o dev server como tarefa contínua em vez de aguardá-lo terminar.
 - **Infra local**: um único Postgres no Docker com **bancos lógicos separados
   por serviço** (`auth`, `shopping_list`, `price_history`), criados por script
   de init, cada um com papel e senha próprios via variáveis de ambiente —
