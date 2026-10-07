@@ -1,4 +1,4 @@
-// Reset CSS mínimo - setup inicial
+// Reset mínimo — base do guia de design (docs/design/GUIA-DESIGN.md)
 *,
 *::before,
 *::after {
@@ -10,13 +10,18 @@
   padding: 0;
 }
 
-html,
-body {
+html {
   height: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  line-height: 1.5;
+  height: 100%;
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-normal);
+  color: var(--color-ink);
+  background: var(--color-canvas);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -27,4 +32,50 @@ canvas,
 svg {
   display: block;
   max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  touch-action: manipulation;
+}
+
+a {
+  color: var(--color-primary-text);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-heading);
+}
+
+// Foco visível sempre — nunca outline sem substituto (guia, seção 5)
+:focus-visible {
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 2px;
+}
+
+// Movimento respeitado: animações e transições desligadas
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

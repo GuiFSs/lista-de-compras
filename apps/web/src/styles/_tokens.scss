@@ -1,30 +1,162 @@
-// Design tokens - mobile-first (setup inicial)
+// Design tokens — linguagem mobile-first inspirada no Notion
+// Fonte de verdade: docs/design/GUIA-DESIGN.md (ADR 0005)
+// Doc e CSS mudam juntos; componentes nunca hardcodam valor.
+
 :root {
-  // Colors
-  --color-primary: #2563eb;
-  --color-surface: #ffffff;
-  --color-background: #fafafa;
-  --color-text: #111827;
+  // ── Cores estruturais (tema claro) ─────────────────────────────
+  --color-primary: #0075de;
+  --color-primary-active: #005bab;
+  --color-primary-text: #0075de; // links, foco, texto/ícone em azul
+  --color-on-primary: #ffffff;
+  --color-secondary: #213183; // indigo profundo (uso pontual)
 
-  // Spacing (mobile-first scale)
-  --space-xs: 0.25rem;
-  --space-sm: 0.5rem;
-  --space-md: 1rem;
-  --space-lg: 1.5rem;
-  --space-xl: 2rem;
+  // ── Superfícies e texto ────────────────────────────────────────
+  --color-canvas: #f6f5f4; // papel quente — fundo de página
+  --color-surface: #ffffff; // cards, app bar, campos, sheets
+  --color-ink: #000000;
+  --color-ink-secondary: #31302e;
+  --color-ink-muted: #615d59;
+  --color-ink-faint: #a39e98;
+  --color-hairline: #e6e6e6;
 
-  // Border radius
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  // ── Cores semânticas (só feedback: validação, toast, badge) ────
+  --color-success: #15803d;
+  --color-success-soft: #ecf7ef;
+  --color-warning: #9a6700;
+  --color-warning-soft: #fff7e0;
+  --color-danger: #c62828;
+  --color-danger-soft: #fdecec;
 
-  // Typography
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
+  // ── Paleta decorativa "sticker" — nunca em CTA ou estrutura ────
+  --color-sticker-sky: #62aef0;
+  --color-sticker-purple: #d6b6f6;
+  --color-sticker-purple-deep: #391c57;
+  --color-sticker-pink: #ff64c8;
+  --color-sticker-orange: #dd5b00;
+  --color-sticker-orange-deep: #793400;
+  --color-sticker-teal: #2a9d99;
+  --color-sticker-green: #1aae39;
+  --color-sticker-brown: #523410;
 
-  // Breakpoints (mobile-first reference)
+  // Overlays (independem do tema)
+  --color-overlay: rgba(0, 0, 0, 0.4);
+  --color-ripple: rgba(0, 0, 0, 0.05);
+  --color-ripple-dark: rgba(255, 255, 255, 0.08);
+
+  // ── Tipografia ─────────────────────────────────────────────────
+  --font-family-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Helvetica, Arial, sans-serif;
+
+  --font-size-display: 2rem; // 32px — hero de empty state e login
+  --font-size-h1: 1.625rem; // 26px — título da tela
+  --font-size-h2: 1.375rem; // 22px — seções
+  --font-size-title: 1.25rem; // 20px — cards, dialogs
+  --font-size-body: 1rem; // 16px — corpo padrão
+  --font-size-body-sm: 0.9375rem; // 15px — listas densas, navegação
+  --font-size-caption: 0.875rem; // 14px — metadados
+  --font-size-eyebrow: 0.75rem; // 12px — badges, labels pequenos
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.15;
+  --line-height-snug: 1.3;
+  --line-height-normal: 1.5;
+
+  --letter-spacing-display: -0.03em;
+  --letter-spacing-heading: -0.02em;
+  --letter-spacing-title: -0.01em;
+  --letter-spacing-eyebrow: 0.01em;
+
+  // ── Espaçamento (base 4px, ritmo 8px) ──────────────────────────
+  --space-xxs: 0.25rem; // 4px
+  --space-xs: 0.5rem; // 8px
+  --space-sm: 0.75rem; // 12px
+  --space-md: 1rem; // 16px
+  --space-lg: 1.5rem; // 24px
+  --space-xl: 1.75rem; // 28px
+  --space-xxl: 2rem; // 32px
+
+  // ── Raios ──────────────────────────────────────────────────────
+  --radius-xs: 4px; // campos, chips
+  --radius-sm: 5px; // linhas de lista, pills
+  --radius-md: 8px; // botões utilitários
+  --radius-lg: 12px; // cards
+  --radius-xl: 16px; // sheets, containers grandes
+  --radius-full: 9999px; // CTA, badges
+
+  // ── Elevação (camadas quase invisíveis, filosofia Notion) ──────
+  --shadow-1: rgba(0, 0, 0, 0.01) 0 0.175px 1.041px,
+    rgba(0, 0, 0, 0.02) 0 0.8px 2.925px, rgba(0, 0, 0, 0.027) 0 2.025px 7.847px,
+    rgba(0, 0, 0, 0.04) 0 4px 18px;
+  --shadow-2: rgba(0, 0, 0, 0.02) 0 1px 1px, rgba(0, 0, 0, 0.03) 0 3px 7px,
+    rgba(0, 0, 0, 0.04) 0 8px 16px, rgba(0, 0, 0, 0.05) 0 14px 32px,
+    rgba(0, 0, 0, 0.05) 0 23px 52px;
+
+  // ── Layout e navegação ─────────────────────────────────────────
+  --container-max: 960px;
+  --app-bar-height: 56px;
+  --bottom-nav-height: 56px;
+  --touch-target-min: 44px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  --z-app-bar: 100;
+  --z-bottom-nav: 100;
+  --z-overlay: 200;
+  --z-toast: 300;
+
+  // ── Movimento ──────────────────────────────────────────────────
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+
+  // ── Breakpoints (referência; usar em media queries, não em CSS vars)
   --breakpoint-sm: 640px;
   --breakpoint-md: 768px;
   --breakpoint-lg: 1024px;
+
+  color-scheme: light;
+}
+
+// ── Tema escuro ──────────────────────────────────────────────────
+// Aplicado pelo sistema; [data-theme] no :root força manualmente.
+@mixin dark-theme {
+  --color-canvas: #191919;
+  --color-surface: #202020;
+  --color-ink: #ffffff;
+  --color-ink-secondary: #e3e2e0;
+  --color-ink-muted: #9b9a97;
+  --color-ink-faint: #6b6a66;
+  --color-hairline: rgba(255, 255, 255, 0.1);
+
+  // Primary/on-primary inalterados (CTA branco-sobre-azul já contrasta);
+  // só o azul textual clareia para contraste sobre o fundo escuro.
+  --color-primary-text: #62aef0;
+
+  --color-success: #3fb950;
+  --color-success-soft: rgba(63, 185, 80, 0.15);
+  --color-warning: #d29922;
+  --color-warning-soft: rgba(210, 153, 34, 0.15);
+  --color-danger: #f85149;
+  --color-danger-soft: rgba(248, 81, 73, 0.15);
+
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  --color-ripple: rgba(255, 255, 255, 0.08);
+
+  // No escuro a hairline já dá profundidade; sombra encurta.
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  color-scheme: dark;
+}
+
+:root[data-theme='dark'] {
+  @include dark-theme;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    @include dark-theme;
+  }
 }

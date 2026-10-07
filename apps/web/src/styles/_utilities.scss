@@ -1,2 +1,30 @@
-// Utilitários SCSS leves - setup inicial
-// Esqueleto vazio intencionalmente
+// Utilities globais — mínimo proposital (guia, seção 1 e 5).
+// Componentes preferem estilos scoped; isto só cobre convenções transversais.
+
+// Conteúdo invisível para leitores de tela (rótulos acessíveis)
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Coluna de conteúdo mobile-first, centralizada no desktop
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: var(--space-md);
+}
+
+// Espaço inferior que reserva a bottom nav + safe area (guia, seção 3)
+.content-with-bottom-nav {
+  padding-bottom: calc(
+    var(--bottom-nav-height) + var(--safe-bottom) + var(--space-md)
+  );
+}

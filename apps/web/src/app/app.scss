@@ -1,21 +1,28 @@
+// Shell — padrão "app bar" do guia de design (docs/design/GUIA-DESIGN.md)
 :host {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
 }
 
-.app-header {
-  padding: var(--space-md);
-  color: var(--color-surface);
-  background: var(--color-primary);
+.app-bar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-app-bar);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: var(--app-bar-height);
+  padding-inline: var(--space-md);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-hairline);
 
   h1 {
-    margin: 0;
-    font-size: var(--font-size-lg);
+    font-size: var(--font-size-h2);
   }
 }
 
 main {
   flex: 1;
-  padding: var(--space-md);
+  padding-block: var(--space-md);
 }
