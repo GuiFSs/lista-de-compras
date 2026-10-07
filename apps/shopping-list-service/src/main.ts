@@ -15,7 +15,9 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
-  const port = config.get('PORT') ?? 3000;
+  // API_PORT e não PORT: o Nx carrega o .env da raiz para todos os targets e
+  // o dev server do Angular trata PORT como a própria porta (monorepo).
+  const port = config.get('API_PORT') ?? 3000;
   await app.listen(port);
   Logger.log(
     `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`,
