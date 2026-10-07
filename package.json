@@ -2,7 +2,16 @@
   "name": "lista-de-compras",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "web": "nx serve web",
+    "api": "nx serve shopping-list-service",
+    "build": "nx run-many -t build",
+    "test": "nx run-many -t test",
+    "lint": "nx run-many -t lint",
+    "e2e": "nx e2e web-e2e",
+    "docker:up": "docker compose -f docker/compose.dev.yml up -d",
+    "docker:down": "docker compose -f docker/compose.dev.yml down"
+  },
   "private": true,
   "devDependencies": {
     "@angular-devkit/core": "~22.2.0",
