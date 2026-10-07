@@ -51,3 +51,5 @@ Thumbs.db
 .angular
 
 __screenshots__/
+
+vite.config.*.timestamp*

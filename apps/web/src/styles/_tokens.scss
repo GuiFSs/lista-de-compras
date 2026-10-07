@@ -1,0 +1,30 @@
+// Design tokens - mobile-first (setup inicial)
+:root {
+  // Colors
+  --color-primary: #2563eb;
+  --color-surface: #ffffff;
+  --color-background: #fafafa;
+  --color-text: #111827;
+
+  // Spacing (mobile-first scale)
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+
+  // Border radius
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  // Typography
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+
+  // Breakpoints (mobile-first reference)
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+}

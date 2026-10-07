@@ -1,0 +1,21 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.app-header {
+  padding: var(--space-md);
+  color: var(--color-surface);
+  background: var(--color-primary);
+
+  h1 {
+    margin: 0;
+    font-size: var(--font-size-lg);
+  }
+}
+
+main {
+  flex: 1;
+  padding: var(--space-md);
+}

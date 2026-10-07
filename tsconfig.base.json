@@ -2,7 +2,7 @@
   "compilerOptions": {
     "composite": true,
     "declarationMap": true,
-    "emitDeclarationOnly": true,
+    "declaration": true,
     "importHelpers": true,
     "isolatedModules": true,
     "lib": ["es2022"],
@@ -18,6 +18,11 @@
     "target": "es2022",
     "customConditions": ["lista-de-compras"],
     "noUncheckedSideEffectImports": false,
-    "types": ["*"]
+    "types": ["*"],
+    "paths": {
+      "@lista/contracts": ["./libs/contracts/src/index.ts"],
+      "@lista/shared/util": ["./libs/shared/util/src/index.ts"],
+      "@lista/ui-web": ["./libs/ui-web/src/index.ts"]
+    }
   }
 }

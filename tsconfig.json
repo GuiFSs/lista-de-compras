@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./libs/contracts"
+    },
+    {
+      "path": "./libs/shared/util"
+    },
+    {
+      "path": "./libs/ui-web"
+    },
+    {
+      "path": "./apps/shopping-list-service"
+    },
+    {
+      "path": "./apps/web"
+    }
+  ],
+  "exclude": ["node_modules", "tmp"]
+}

@@ -1,27 +1,27 @@
 {
-  "name": "lista-de-compras",
+  "name": "web",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "prefix": "app",
-  "sourceRoot": "apps/lista-de-compras/src",
-  "tags": ["scope:app"],
+  "sourceRoot": "apps/web/src",
+  "tags": ["type:app", "scope:web", "platform:web"],
   "targets": {
     "build": {
       "executor": "@angular/build:application",
       "outputs": ["{options.outputPath}"],
       "defaultConfiguration": "production",
       "options": {
-        "outputPath": "dist/lista-de-compras",
-        "browser": "apps/lista-de-compras/src/main.ts",
-        "tsConfig": "apps/lista-de-compras/tsconfig.app.json",
+        "outputPath": "dist/apps/web",
+        "browser": "apps/web/src/main.ts",
+        "tsConfig": "apps/web/tsconfig.app.json",
         "inlineStyleLanguage": "scss",
         "assets": [
           {
             "glob": "**/*",
-            "input": "apps/lista-de-compras/public"
+            "input": "apps/web/public"
           }
         ],
-        "styles": ["apps/lista-de-compras/src/styles.scss"]
+        "styles": ["apps/web/src/styles.scss"]
       },
       "configurations": {
         "production": {
@@ -38,7 +38,7 @@
             }
           ],
           "outputHashing": "all",
-          "serviceWorker": "apps/lista-de-compras/ngsw-config.json"
+          "serviceWorker": "apps/web/ngsw-config.json"
         },
         "development": {
           "optimization": false,
@@ -48,20 +48,16 @@
       }
     },
     "serve": {
-      "continuous": true,
       "executor": "@angular/build:dev-server",
       "defaultConfiguration": "development",
       "configurations": {
         "production": {
-          "buildTarget": "lista-de-compras:build:production"
+          "buildTarget": "web:build:production"
         },
         "development": {
-          "buildTarget": "lista-de-compras:build:development"
+          "buildTarget": "web:build:development"
         }
       }
-    },
-    "lint": {
-      "executor": "@nx/eslint:lint"
     },
     "test": {
       "executor": "@angular/build:unit-test",
@@ -69,13 +65,16 @@
         "watch": false
       }
     },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    },
     "serve-static": {
       "continuous": true,
       "executor": "@nx/web:file-server",
       "options": {
-        "buildTarget": "lista-de-compras:build",
+        "buildTarget": "web:build",
         "port": 4200,
-        "staticFilePath": "dist/lista-de-compras/browser",
+        "staticFilePath": "dist/apps/web/browser",
         "spa": true
       }
     }

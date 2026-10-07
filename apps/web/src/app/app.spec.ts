@@ -8,7 +8,7 @@ describe('App', () => {
     }).compileComponents();
   });
 
-  it('should render the app title', async () => {
+  it('deve renderizar o título da aplicação', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
