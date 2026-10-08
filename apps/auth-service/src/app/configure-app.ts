@@ -12,7 +12,7 @@
 import * as corsModule from '@fastify/cors';
 import { BadRequestException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFastifyApplication } from '@nestjs/platform-fastify';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { LOGIN_400_MESSAGE } from './login-messages';
 
 /** Origem padrão da PWA em desenvolvimento (ADR 0006 / PLAN.md — CORS). */
@@ -63,15 +63,16 @@ export async function configureApp(app: NestFastifyApplication): Promise<void> {
   // (parseAs: 'buffer'); sucesso entrega o objeto parseado ao `@Body()` do
   // controller, e falha vira BadRequestException → filtro do Nest → 400
   // canônico. O bodyLimit segue a configuração do servidor (como o padrão
-  // do Nest).
-  const adapter: any = app.getHttpAdapter();
-  const instance = adapter.getInstance?.();
-  const { bodyLimit } = instance?.initialConfig ?? { bodyLimit: 1048576 };
-  adapter.useBodyParser?.(
+  // do Nest). `getHttpAdapter()` devolve a interface `HttpServer`, cuja
+  // assinatura de `useBodyParser` é opcional e sem tipos; o cast para
+  // `FastifyAdapter` recupera a assinatura tipada real do adapter.
+  const adapter = app.getHttpAdapter() as FastifyAdapter;
+  const { bodyLimit } = adapter.getInstance().initialConfig;
+  adapter.useBodyParser(
     'application/json',
     false,
     { bodyLimit },
-    (_req: any, body: Buffer, done: (err: Error | null, result?: unknown) => void) => {
+    (_req, body, done) => {
       try {
         done(null, JSON.parse(body.toString()));
       } catch {

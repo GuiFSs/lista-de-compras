@@ -112,12 +112,18 @@ export class AuthController {
 
       if (!result.ok) {
         if (result.reason === 'rate-limited') {
-          // T7: retornar 429 com envelope canônico + header Retry-After.
+          // T7/AC14: 429 com envelope canônico + header Retry-After (RN13).
+          // O header é gravado no reply (passthrough: o Nest não zera headers
+          // já definidos) e a exceção carrega o corpo — o filtro de exceções
+          // aplica status 429 + envelope. Evita `send()` manual (que seria
+          // resposta dupla com passthrough) e mantém o método tipado como
+          // `Promise<LoginSuccessResponse>` sem casts.
           const retryAfter = result.retryAfterSeconds ?? 0;
-          res.status(429);
           res.header('Retry-After', String(Math.ceil(retryAfter)));
-          res.status(429).send({ statusCode: 429, message: LOGIN_429_MESSAGE } as any);
-          return {} as LoginSuccessResponse;
+          throw new HttpException(
+            canonicalError(HttpStatus.TOO_MANY_REQUESTS, LOGIN_429_MESSAGE),
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
         }
         // RN7/AC3: 401 genérico — igual para usuário inexistente e senha
         // errada; não indica campo nem expõe dado sensível.
