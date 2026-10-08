@@ -4,13 +4,18 @@
   "license": "MIT",
   "scripts": {
     "web": "nx serve web",
-    "api": "nx serve shopping-list-service",
+    "ms-shopping-list": "nx serve shopping-list-service",
+    "ms-auth": "nx serve auth-service",
+    "ms-all": "nx run-many -t serve -p web,shopping-list-service,auth-service",
     "build": "nx run-many -t build",
     "test": "nx run-many -t test",
     "lint": "nx run-many -t lint",
+    "typecheck": "nx run-many -t typecheck",
     "e2e": "nx e2e web-e2e",
     "docker:up": "docker compose -f docker/compose.dev.yml up -d",
-    "docker:down": "docker compose -f docker/compose.dev.yml down"
+    "docker:down": "docker compose -f docker/compose.dev.yml down",
+    "auth:keys": "node scripts/generate-jwt-keys.mjs",
+    "auth:seed": "nx run auth-service:seed"
   },
   "private": true,
   "devDependencies": {
@@ -58,6 +63,7 @@
     "prettier": "^3.8.1",
     "ts-node": "10.9.1",
     "tslib": "^2.3.0",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.58.0",
     "vite": "^8.0.0",
@@ -79,6 +85,7 @@
     "@angular/platform-browser": "~22.2.0",
     "@angular/router": "~22.2.0",
     "@angular/service-worker": "~22.2.0",
+    "@fastify/cors": "^11.3.0",
     "@fontsource/inter": "^5.3.0",
     "@nestjs/common": "^11.2.7",
     "@nestjs/config": "^12.0.1",
@@ -87,7 +94,9 @@
     "@nestjs/platform-fastify": "^11.2.7",
     "amqp-connection-manager": "^5.0.0",
     "amqplib": "^2.2.0",
+    "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.3",
+    "jose": "^6.2.12",
     "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "~7.8.0"

@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/out-tsc",
+    "outDir": "../../dist/out-tsc/apps/shopping-list-service",
     "module": "commonjs",
     "types": ["node"],
     "experimentalDecorators": true,
@@ -12,6 +12,13 @@
   "include": ["src/**/*.ts"],
   "exclude": [
     "src/**/*.spec.ts",
-    "src/**/*.test.ts"
+    "src/**/*.test.ts",
+    "src/test-fixtures/**/*",
+    "src/test-setup.ts"
+  ],
+  "references": [
+    {
+      "path": "../../libs/shared/jwt/tsconfig.lib.json"
+    }
   ]
 }

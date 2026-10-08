@@ -7,6 +7,9 @@
       "path": "./libs/contracts"
     },
     {
+      "path": "./libs/shared/jwt"
+    },
+    {
       "path": "./libs/shared/util"
     },
     {
@@ -20,6 +23,9 @@
     },
     {
       "path": "./apps/web-e2e"
+    },
+    {
+      "path": "./apps/auth-service"
     }
   ],
   "exclude": ["node_modules", "tmp"]

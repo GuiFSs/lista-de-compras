@@ -25,6 +25,8 @@ Não presuma regras de produto, integrações, dados ou experiência de uso aind
 - Git: commits pequenos e rastreáveis em branch `feature/<nome>`;
   Conventional Commits com escopo; push, PR e merge só com aprovações
   explícitas e separadas do usuário (skill `git-workflow`).
+- Testes: todas as falhas de teste DEVEM ser resolvidas antes de avançar para a próxima fase do SDD. Se uma falha não puder ser resolvida, pare e pergunte ao usuário como prosseguir — nunca avance para a próxima etapa com falhas da etapa atual. Exceção: testes que forem realmente difíceis de mockar/setar podem ser removidos, mas apenas com aprovação explícita do usuário.
+- Nunca usar o tipo `any` do TypeScript no código (front-end e back-end, app e libs, produção e testes). Em vez dele, use `unknown` + *narrowing* (type guards), genéricos com `extends` ou tipos de domínio. A regra é imposta pelo lint: `@typescript-eslint/no-explicit-any: error` em `eslint.config.mjs` (raiz), então `npm run lint` falha se alguém reintroduzir um `any` — inclusive em arquivos de teste. Exceção só em casos raros, com aprovação explícita do usuário e com `// eslint-disable-next-line @typescript-eslint/no-explicit-any` + justificativa escrita ao lado; sem isso, o gate de implementação não passa.
 - Explique decisões e mudanças de modo didático, conectando-as aos objetivos de aprendizado do projeto.
 
 ## Ciclo SDD
