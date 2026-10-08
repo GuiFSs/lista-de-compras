@@ -1,0 +1,25 @@
+{
+  "name": "jwt",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared/jwt/src",
+  "projectType": "library",
+  "tags": ["type:util", "scope:shared", "platform:node"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/shared/jwt",
+        "main": "libs/shared/jwt/src/index.ts",
+        "tsConfig": "libs/shared/jwt/tsconfig.lib.json",
+        "assets": ["libs/shared/jwt/*.md"]
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "vitest run --config libs/shared/jwt/vitest.config.mts --run"
+      }
+    }
+  }
+}

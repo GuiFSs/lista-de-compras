@@ -1,28 +1,6 @@
-// Shell — padrão "app bar" do guia de design (docs/design/GUIA-DESIGN.md)
+// A raiz virou só o router-outlet: o app-bar (logado) vive no
+// AuthenticatedShell; o login é tela cheia. Nada de shell aqui (AC1).
 :host {
-  display: flex;
-  flex-direction: column;
+  display: block;
   min-height: 100dvh;
-}
-
-.app-bar {
-  position: sticky;
-  top: 0;
-  z-index: var(--z-app-bar);
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  min-height: var(--app-bar-height);
-  padding-inline: var(--space-md);
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-hairline);
-
-  h1 {
-    font-size: var(--font-size-h2);
-  }
-}
-
-main {
-  flex: 1;
-  padding-block: var(--space-md);
 }

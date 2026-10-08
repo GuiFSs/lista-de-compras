@@ -1,0 +1,152 @@
+// Login: tela cheia, coluna única centralizada no desktop (guia §3/§5).
+// Todos os estilos usam apenas tokens CSS — nenhuma cor hardcoded.
+
+.login {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  min-height: 100dvh;
+  padding: var(--space-lg) var(--space-md);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  touch-action: manipulation;
+}
+
+.login-form {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Rótulo — sempre visível acima, tamanho caption */
+.label {
+  font-size: var(--font-size-caption);
+  font-weight: 400;
+  color: var(--color-ink-secondary);
+  line-height: 1.5;
+  width: 100%;
+  padding: 0;
+  margin: 0 0 var(--space-xxs);
+}
+
+/* Inputs — superfície, border, radius */
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  padding: var(--space-xxs) var(--space-sm);
+  font-size: var(--font-size-body);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-xs);
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  touch-action: manipulation;
+  -webkit-appearance: none;
+  appearance: none;
+  caret-color: var(--color-ink); /* cursor de texto */
+}
+
+/* Estado: foco visível (:focus-visible) */
+input[type="text"]:focus-visible,
+input[type="password"]:focus-visible {
+  border-color: var(--color-primary-text);
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 2px;
+  box-shadow: var(--shadow-1);
+}
+
+/* Estado: erro — borda vermelha per --color-danger */
+input[type="text"].error,
+input[type="password"].error {
+  border-color: var(--color-danger);
+  box-shadow: 0 0 0 1px var(--color-danger);
+}
+
+/* Estado: focused via class binding do componente */
+input[type="text"].focused,
+input[type="password"].focused {
+  border-color: var(--color-primary-text);
+  box-shadow: var(--shadow-1);
+}
+
+/* Placeholder — nunca substituir rótulo */
+::placeholder {
+  color: var(--color-ink-faint);
+}
+
+/* Mensagem de erro abaixo do campo (estado "erro") */
+.error-message {
+  font-size: var(--font-size-caption);
+  color: var(--color-danger);
+  margin-top: var(--space-xxs);
+  margin-bottom: 0;
+  line-height: 1.5;
+  width: 100%;
+  display: block;
+}
+
+/* Botão primary — altura mínima 44px (AC4), pill --radius-full */
+.btn-primary {
+  width: 100%;
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--color-on-primary);
+  background-color: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  box-sizing: border-box;
+  touch-action: manipulation;
+  min-height: 44px; /* AC4: alvo de toque ≥ 44px */
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Estado: disabled (AC4 — impede envio duplicado) */
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Estado: loading — "Entrando…" com spinner */
+.btn-primary.loading {
+  pointer-events: none; /* impede clique durante loading */
+}
+
+.btn-primary.loading .spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-on-primary);
+  border-radius: var(--radius-full);
+  border-top-color: transparent;
+  animation: spinner 0.8s linear infinite;
+}
+
+@keyframes spinner {
+  to { transform: rotate(360deg); }
+}
+
+/* Estado: success — após navegação */
+.main-content {}
+
+/* Responsivo: mobile-first, centralizado no desktop (@media md+) */
+@media (min-width: 768px) {
+  .login-form {
+    margin: 0 auto;
+    max-width: calc(100% - var(--space-lg) * 2);
+  }
+}

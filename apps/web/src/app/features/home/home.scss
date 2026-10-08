@@ -1,0 +1,16 @@
+// Home placeholder — coluna única mobile-first, só tokens (ADR 0005).
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-lg) var(--space-md);
+}
+
+.home__title {
+  font-size: var(--font-size-h1);
+}
+
+.home__hint {
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-body);
+}

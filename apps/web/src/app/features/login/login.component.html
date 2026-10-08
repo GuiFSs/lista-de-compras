@@ -1,0 +1,92 @@
+<!-- Tela de login — mobile-first, 4 estados (vazio/carregando/erro/sucesso) -->
+<main
+  class="login"
+  touch-action="manipulation"
+  (touchstart)="$event.preventDefault()"
+>
+  <form
+    class="login-form"
+    [formGroup]="form"
+    (ngSubmit)="onSubmit($event)"
+    novalidate
+  >
+
+    <!-- Usuário -->
+    <div class="field-wrapper">
+      <label
+        for="username"
+        class="label caption"
+        [class.error]="submitted && f['username'].errors"
+        [class.focused]="isFocused('username')"
+      >
+        Usuário
+      </label>
+      <input
+        id="username"
+        type="text"
+        placeholder="Usuário"
+        formControlName="username"
+        [class.error]="submitted && f['username'].errors"
+        [class.focused]="isFocused('username')"
+        aria-describedby="username-error"
+        aria-invalid="submitted && f['username'].errors ? 'true' : 'false'"
+        required
+      />
+    </div>
+
+    <!-- Senha -->
+    <div class="field-wrapper">
+      <label
+        for="password"
+        class="label caption"
+        [class.error]="submitted && f['password'].errors"
+        [class.focused]="isFocused('password')"
+      >
+        Senha
+      </label>
+      <input
+        id="password"
+        type="password"
+        placeholder="Senha"
+        formControlName="password"
+        [class.error]="submitted && f['password'].errors"
+        [class.focused]="isFocused('password')"
+        aria-describedby="password-error"
+        aria-invalid="submitted && f['password'].errors ? 'true' : 'false'"
+        required
+      />
+    </div>
+
+    <!-- Mensagem de erro genérica (estado "erro") -->
+    <!-- Usa aria-live role="alert" para leitores de tela -->
+    <div
+      *ngIf="states.error"
+      class="error-message caption"
+      role="alert"
+      id="username-error"
+    >
+      {{ errorMessage }}
+    </div>
+    <div
+      *ngIf="states.error"
+      class="error-message caption"
+      role="alert"
+      id="password-error"
+    >
+      {{ errorMessage }}
+    </div>
+
+    <!-- Botão de submit -->
+    <button
+      type="submit"
+      class="btn-primary"
+      [disabled]="states.loading || (submitted && (f['username'].errors || f['password'].errors))"
+      [class.loading]="states.loading"
+    >
+      <span *ngIf="states.loading">Entrando…</span>
+      <span *ngIf="!states.loading">Entrar</span>
+      <span *ngIf="states.loading" class="spinner"></span>
+    </button>
+
+  </form>
+</main>

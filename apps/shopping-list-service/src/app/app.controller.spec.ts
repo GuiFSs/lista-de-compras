@@ -7,6 +7,7 @@ import {
 import { AppModule } from './app.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { signTestJwt } from '../test-fixtures/jwt-test-utils';
 
 describe('AppModule (smoke do setup)', () => {
   it('resolve o DI do NestJS e responde via adaptador Fastify', async () => {
@@ -21,7 +22,15 @@ describe('AppModule (smoke do setup)', () => {
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
 
-    const response = await app.inject({ method: 'GET', url: '/api' });
+    // A rota `/api` agora é protegida pelo guard global (AC15/ADR 0007):
+    // o smoke envia um JWT válido assinado com o par de teste (o mesmo que
+    // o auth-service usaria em produção com as chaves do `.env`).
+    const token = await signTestJwt();
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api',
+      headers: { authorization: `Bearer ${token}` },
+    });
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ message: 'Hello API' });
 

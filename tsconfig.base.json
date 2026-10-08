@@ -21,6 +21,7 @@
     "types": ["*"],
     "paths": {
       "@lista/contracts": ["./libs/contracts/src/index.ts"],
+      "@lista/shared/jwt": ["./libs/shared/jwt/src/index.ts"],
       "@lista/shared/util": ["./libs/shared/util/src/index.ts"],
       "@lista/ui-web": ["./libs/ui-web/src/index.ts"]
     }

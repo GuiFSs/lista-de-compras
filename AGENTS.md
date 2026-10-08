@@ -21,6 +21,8 @@ Não presuma regras de produto, integrações, dados ou experiência de uso aind
 - Cada serviço é dono exclusivo de seus dados; integração entre serviços ocorre por contratos HTTP ou eventos documentados.
 - Nunca versionar credenciais, segredos, tokens nem senhas em texto puro.
 - Git: um commit por gate do SDD, em branch `feature/<nome>`; Conventional Commits com escopo; push só com aprovação do usuário (skill `git-workflow`).
+- Testes: todas as falhas de teste DEVEM ser resolvidas antes de avançar para a próxima fase do SDD. Se uma falha não puder ser resolvida, pare e pergunte ao usuário como prosseguir — nunca avance para a próxima etapa com falhas da etapa atual. Exceção: testes que forem realmente difíceis de mockar/setar podem ser removidos, mas apenas com aprovação explícita do usuário.
+- Nunca usar o tipo `any` do TypeScript no código (front-end e back-end). Exceções só em casos raros e com aprovação explícita do usuário.
 - Explique decisões e mudanças de modo didático, conectando-as aos objetivos de aprendizado do projeto.
 
 ## Ciclo SDD

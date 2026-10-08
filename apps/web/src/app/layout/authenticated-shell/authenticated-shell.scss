@@ -1,0 +1,39 @@
+// App bar + coluna de conteúdo — padrão do guia (§3), só tokens (ADR 0005).
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.app-bar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-app-bar);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  min-height: var(--app-bar-height);
+  padding-inline: var(--space-md);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-hairline);
+
+  h1 {
+    font-size: var(--font-size-h2);
+  }
+}
+
+// Ação ghost do guia (§4, botões): transparente, texto primário, alvo ≥ 44px.
+.app-bar__logout {
+  min-height: var(--touch-target-min);
+  padding-inline: var(--space-md);
+  border-radius: var(--radius-full);
+  color: var(--color-primary-text);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+}
+
+main {
+  flex: 1;
+  padding-block: var(--space-md);
+}

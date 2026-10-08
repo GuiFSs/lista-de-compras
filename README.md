@@ -40,7 +40,14 @@ Pré-requisitos: Node.js 22+, npm 10+ e Docker Desktop (apenas para o banco/mens
 ```bash
 npm install --legacy-peer-deps   # workaround do bug "edgesOut" do npm 10.9.2
 cp .env.example .env             # variáveis locais (o .env é ignorado pelo git)
+npm run auth:keys                # gera o par RS256 e grava AUTH_JWT_*_B64 no .env local
 ```
+
+O `npm run auth:keys` é pré-requisito do dev local do **auth-service** (feature
+Autenticação, ADR 0007): gera o par de chaves RS256 (base64 single-line) usado
+para assinar e validar os JWTs e grava-o no `.env` local — que é ignorado pelo
+git, então as chaves nunca entram no repositório. O comando **não imprime o
+material das chaves** no terminal, apenas uma confirmação.
 
 ### Front-end (`apps/web`)
 
@@ -91,6 +98,7 @@ npm run lint        # nx run-many -t lint
 npm run e2e         # nx e2e web-e2e
 npm run docker:up   # sobe Postgres + RabbitMQ
 npm run docker:down # derruba os containers
+npm run auth:keys   # gera o par RS256 e grava AUTH_JWT_*_B64 no .env local (sem ecoar chaves)
 ```
 
 ### Problemas conhecidos
