@@ -11,7 +11,7 @@ Leia antes de alterar ou especificar uma feature:
 - ADRs em `docs/decisions/`
 - `docs/process/sdd-workflow.md` — fluxo, gates, DoR/DoD e handoffs
 - Lições aplicáveis em `docs/lessons/`
-- As skills aplicáveis em `.agents/skills/` (SDD do projeto) e `.opencode/skills/` (oficiais do framework, ex.: `angular-developer`)
+- As skills aplicáveis em `.agents/skills/` (SDD do projeto, incl. `coding-style`) e `.opencode/skills/` (oficiais do framework, ex.: `angular-developer`)
 
 Não presuma regras de produto, integrações, dados ou experiência de uso ainda não documentados. Durante a implementação de uma feature, faça perguntas apenas quando a resposta mudar o comportamento, o contrato ou a arquitetura.
 
@@ -27,7 +27,7 @@ Não presuma regras de produto, integrações, dados ou experiência de uso aind
   explícitas e separadas do usuário (skill `git-workflow`).
 - Testes: todas as falhas de teste DEVEM ser resolvidas antes de avançar para a próxima fase do SDD. Se uma falha não puder ser resolvida, pare e pergunte ao usuário como prosseguir — nunca avance para a próxima etapa com falhas da etapa atual. Exceção: testes que forem realmente difíceis de mockar/setar podem ser removidos, mas apenas com aprovação explícita do usuário.
 - Nunca usar o tipo `any` do TypeScript no código (front-end e back-end, app e libs, produção e testes). Em vez dele, use `unknown` + *narrowing* (type guards), genéricos com `extends` ou tipos de domínio. A regra é imposta pelo lint: `@typescript-eslint/no-explicit-any: error` em `eslint.config.mjs` (raiz), então `npm run lint` falha se alguém reintroduzir um `any` — inclusive em arquivos de teste. Exceção só em casos raros, com aprovação explícita do usuário e com `// eslint-disable-next-line @typescript-eslint/no-explicit-any` + justificativa escrita ao lado; sem isso, o gate de implementação não passa.
-- Explique decisões e mudanças de modo didático, conectando-as aos objetivos de aprendizado do projeto.
+- Explique decisões e mudanças de modo didático no **chat, handoff, ADR ou `docs/lessons/`**, conectando-as aos objetivos de aprendizado. No **código**, siga a skill `coding-style`: comentários moderados que ajudam a ler o *porquê* não óbvio — sem prefácios que recontam SPEC/PLAN nem narrativa da linha seguinte.
 
 ## Ciclo SDD
 
@@ -36,7 +36,9 @@ Cada feature segue: **Spec → Plano → Implementação → Validação**, com
 `docs/features/<feature>/`. Usuário aprova spec e plano; o
 `feature-validator` aprova tecnicamente a validação; push, PR e merge continuam
 sendo decisões do usuário. O processo canônico está em
-`docs/process/sdd-workflow.md`.
+`docs/process/sdd-workflow.md`. Features/fixes com superfície de UI exigem
+evidência Playwright em `apps/web-e2e` (comando + resultado registrados;
+ADR 0008); backend-only fecha com unitário/integração.
 
 O `sdd-orchestrator` delega por tarefa do `PLAN.md`, sequencialmente por padrão.
 No máximo duas tarefas independentes e com arquivos disjuntos podem rodar em

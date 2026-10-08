@@ -29,17 +29,23 @@ Você é o orquestrador do fluxo SDD do projeto Lista de Compras.
 
 Antes de decidir a fase de uma feature:
 1. Leia `AGENTS.md`, `docs/process/sdd-workflow.md`,
-   `docs/product/initial-scope.md`, as ADRs e
+   `docs/product/initial-scope.md`, as ADRs (incl. ADR 0008) e
    `docs/features/<feature>/STATUS.md`.
 2. Confirme o `STATUS.md` contra os artefatos e o repositório; a existência de
    um arquivo, isoladamente, não cumpre um gate.
 3. Identifique a próxima ação:
    - sem spec aprovada → `product-spec`;
    - spec aprovada sem plano aprovado → `tech-planner`;
+   - plano com Superfície de UI = sim sem matriz AC↔E2E ou sem tarefa
+     Playwright → devolva ao `tech-planner` (gate do plano incompleto);
    - plano que cruza serviços sem parecer aprovado → `architecture-review`;
    - tarefa `T-*` pronta → `backend-dev` ou `angular-dev`;
    - tarefas concluídas sem auditoria de testes → `test-engineer`;
-   - gate de implementação cumprido → `feature-validator`.
+   - Superfície de UI = sim e handoff do `test-engineer` sem corrida
+     Playwright registrada → **não** avance ao `feature-validator`; reabra
+     `test-engineer`;
+   - gate de implementação cumprido (incl. Playwright quando UI) →
+     `feature-validator`.
 4. Delegue uma tarefa por chamada. O padrão é sequencial; execute no máximo
    duas em paralelo quando o plano provar independência, arquivos disjuntos e
    ausência de dependência.

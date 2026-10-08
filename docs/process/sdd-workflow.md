@@ -46,6 +46,10 @@ Definition of Ready:
 Definition of Done:
 
 - tarefas `T-*` mapeiam ACs, agente, arquivos, dependências, testes e evidência;
+- o plano declara `Superfície de UI: sim|não` com justificativa (ADR 0008);
+- se superfície de UI = sim: existe tarefa `T-*` de E2E Playwright, matriz
+  `AC → cenário E2E` cobrindo todo AC observável na UI, e comando
+  `npx nx e2e web-e2e` (ou filtro equivalente) como evidência esperada;
 - contratos, ownership, riscos e trade-offs estão definidos;
 - `ARCHITECTURE-REVIEW.md` está aprovada quando aplicável;
 - não existe decisão bloqueante aberta;
@@ -65,6 +69,11 @@ Definition of Done:
 - contratos e ADRs previstos estão versionados;
 - devs escreveram os testes próximos da mudança;
 - `test-engineer` auditou os `AC-*`, completou lacunas e registrou resultados;
+- se superfície de UI = sim: suíte Playwright da feature em `apps/web-e2e`
+  está verde e o handoff registra **comando + resultado** (nunca inferência;
+  existência do arquivo `.spec.ts` não conta como evidência);
+- se superfície de UI = não: unitários/integração suficientes para os `AC-*`
+  estão verdes e registrados;
 - suíte proporcional ao risco está verde.
 
 ### 4. Validação
@@ -72,11 +81,18 @@ Definition of Done:
 Definition of Ready:
 
 - implementação e testes concluídos;
-- `STATUS.md` não registra tarefa pendente.
+- `STATUS.md` não registra tarefa pendente;
+- se superfície de UI = sim: o handoff do `test-engineer` já registra corrida
+  Playwright; sem isso o orquestrador não delega o `feature-validator`.
 
 Definition of Done:
 
 - `VALIDATION.md` contém evidência para cada `AC-*`;
+- se superfície de UI = sim: cada AC observável na UI cita cenário Playwright
+  e a seção de comandos inclui `npx nx e2e web-e2e` (ou filtro) com resultado;
+  evidência manual ou observação não substitui Playwright nesses ACs
+  (ADR 0008) — ausência → **reprova**;
+- se superfície de UI = não: evidência automatizada unitária/integração por AC;
 - contratos, ADRs, documentação e segurança transversal foram conferidos;
 - não há pendência de comportamento, contrato ou arquitetura;
 - `feature-validator` aprovou;
@@ -90,7 +106,9 @@ requisito. Toda afirmação de conclusão deve apontar para arquivo, teste, coma
 ou observação registrada.
 
 Nunca avance apenas porque um arquivo existe. Verifique seu status, checklist,
-aprovação e consistência com o código.
+aprovação e consistência com o código. Em particular: nunca marque AC de UI
+como aprovado só porque um spec Playwright existe; exige-se saída de comando
+registrada no handoff e em `VALIDATION.md`.
 
 ## Delegação e paralelismo
 

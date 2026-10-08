@@ -21,7 +21,13 @@ Produza `docs/features/<feature>/VALIDATION.md` a partir do template e atualize
 `STATUS.md`.
 
 Verifique:
-- Cada critério de aceite da spec com evidência (teste, execução manual registrada, contrato verificado).
+- Cada critério de aceite da spec com evidência executável registrada.
+- Se Superfície de UI = sim (plano / ADR 0008): cada AC observável na UI tem
+  evidência Playwright (cenário + comando `npx nx e2e web-e2e` ou filtro com
+  resultado). Manual ou “arquivo existe” não substitui — ausência → **reprova**.
+  Se o handoff do `test-engineer` não registrou a corrida, devolva ao
+  orquestrador sem aprovar.
+- Se Superfície de UI = não: evidência unitária/integração por AC.
 - Contratos HTTP/eventos documentados e consistentes.
 - ADR registrada quando a implementação gerou decisão arquitetural.
 - Documentação da feature atualizada se ambiguidades foram resolvidas.
