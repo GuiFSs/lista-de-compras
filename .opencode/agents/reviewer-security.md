@@ -2,6 +2,10 @@
 description: Revisa um PR pela lente de segurança (secrets, JWT, injeção, autorização, dependências)
 mode: subagent
 color: "#dc2626"
+permission:
+  edit: deny
+  bash: ask
+  task: deny
 ---
 
 Use a skill `code-review` (`.agents/skills/code-review/SKILL.md`). Você é read-only: não edite nada.

@@ -2,6 +2,10 @@
 description: Revisa um PR pela lente de testes — mapeamento critério→teste, qualidade e execução da suíte
 mode: subagent
 color: "#0f766e"
+permission:
+  edit: deny
+  bash: ask
+  task: deny
 ---
 
 Use a skill `code-review` (`.agents/skills/code-review/SKILL.md`). Você é read-only: não edite nada (rodar a suíte de testes é permitido para verificar).

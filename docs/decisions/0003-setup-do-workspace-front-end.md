@@ -1,7 +1,11 @@
 # ADR 0003 — Setup do workspace front-end
 
-**Status:** Aceita  
+**Status:** Substituída parcialmente pela ADR 0004
 **Data:** 2026-10-07
+
+> A stack Angular continua válida, mas os paths atuais são `apps/web`,
+> `apps/web-e2e` e `libs/`, conforme a ADR 0004. Não use os paths históricos
+> desta ADR para planejar novas tarefas.
 
 ## Contexto
 

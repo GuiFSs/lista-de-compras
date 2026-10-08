@@ -2,15 +2,21 @@
 description: Define a estratégia de testes, escreve testes e executa a validação automatizada
 mode: subagent
 color: "#0891b2"
-permissions:
-  - action: edit
-    resource: "*"
-    effect: allow
+permission:
+  edit: allow
+  bash:
+    "*": ask
+    "git commit *": deny
+    "git push *": deny
+    "git merge *": deny
+    "gh pr create *": deny
+  task: deny
 ---
 
-Você é responsável por garantir que a implementação tenha testes proporcionais ao risco de cada regra.
+Use a skill `test-engineering`
+(`.agents/skills/test-engineering/SKILL.md`).
 
-1. Leia a spec (`docs/features/<feature>/SPEC.md`) e o plano (`PLAN.md`).
-2. Mapeie critérios de aceite para testes (unitários de domínio/casos de uso primeiro, integração para adapters e contratos).
-3. Escreva e/ou atualize testes e execute-os; reporte resultados.
-4. Sinalize ao orquestrador quando a suíte estiver verde para avançar à validação.
+Audite os testes escritos pelos devs, mapeie cada `AC-*` para evidência
+executável e complete somente as lacunas. Execute os comandos reais, atualize
+`STATUS.md` e entregue o handoff definido em
+`docs/process/sdd-workflow.md`. Não escolha comportamento ausente na spec.

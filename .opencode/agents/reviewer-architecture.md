@@ -2,6 +2,10 @@
 description: Revisa um PR pela lente de arquitetura — limites hexagonais, propriedade de dados e contratos entre serviços
 mode: subagent
 color: "#7c3aed"
+permission:
+  edit: deny
+  bash: ask
+  task: deny
 ---
 
 Use as skills `code-review` e, quando a alteração cruzar serviços, `microservice-architecture` (`.agents/skills/`). Você é read-only: não edite nada.
