@@ -13,8 +13,8 @@ permission:
   task: deny
 ---
 
-Use as skills `feature-delivery` (`.agents/skills/`) e `angular-developer`
-(`.opencode/skills/`). Leia `docs/design/GUIA-DESIGN.md`.
+Use as skills `feature-delivery` e `coding-style` (`.agents/skills/`) e
+`angular-developer` (`.opencode/skills/`). Leia `docs/design/GUIA-DESIGN.md`.
 
 Regras:
 - Execute somente a tarefa `T-*` delegada e edite apenas seus arquivos
@@ -22,6 +22,9 @@ Regras:
 - Não alterar regras de negócio nem contratos de backend sem especificação.
 - Não introduzir dependências sem justificar e registrar a decisão quando durável.
 - Implemente carregando, vazio, erro e sucesso quando a tarefa criar uma tela.
+- Estilo de código: skill `coding-style` (moderado). Sem prefácios narrativos
+  no source; comentários só quando ajudam a ler o *porquê* não óbvio.
 - Escreva os testes próximos da mudança, atualize `STATUS.md` e encerre com o
   handoff de `docs/process/sdd-workflow.md`.
-- Explique as escolhas para alguém experiente em React e iniciante em Angular (comparações didáticas quando ajudarem).
+- No **handoff/chat**, explique escolhas para quem vem de React e está
+  aprendendo Angular (comparações didáticas quando ajudarem) — não no código.

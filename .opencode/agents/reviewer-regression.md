@@ -16,6 +16,7 @@ Checklist (cada import/declaração do diff precisa existir de verdade):
 - **Exports**: todo símbolo importado é efetivamente exportado pelo módulo alvo (nome, tipo, default vs nomeado).
 - **Dependências**: pacotes importados estão declarados em `package.json`; nenhum uso de API de lib inexistente.
 - **Dead code**: exports/funções/arquivos novos sem nenhum uso; variáveis e parâmetros não usados; código comentado ou debug residual (`console.log`, breakpoints).
+- **Estilo (`coding-style`)**: prefácios que recontam SPEC/PLAN; comentários narrativos do óbvio; JSDoc que só repete o nome. Manter comentários de *porquê* (segurança, interop). Severidade tipicamente 🟡/🔵.
 - **Alucinação**: chamadas a funções, hooks, endpoints ou props que não existem no projeto; referências a arquivos "que deveriam existir".
 - **Consistência**: renomeações incompletas (símbolo antigo ainda referenciado), imports duplicados ou não utilizados.
 

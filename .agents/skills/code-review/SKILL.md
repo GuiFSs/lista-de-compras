@@ -26,6 +26,20 @@ Use esta skill ao revisar um PR criado por outro agente (geralmente o `sdd-orche
 - 🟡 **Minor** — melhoria clara, não impede o merge.
 - 🔵 **Nit/Questão** — sugestão de estilo ou pergunta, sem exigência.
 
+## Higiene de estilo (skill `coding-style`)
+
+Nas lentes `reviewer-regression` (sempre) e `reviewer-architecture` (quando
+aplicável), sinalize no diff — em geral 🟡 ou 🔵, nunca 🟠 se o ruído atrapalhar
+a leitura de regra sensível:
+
+- Prefácio de arquivo que reconta SPEC/PLAN/fluxo em N passos.
+- Comentário que só narra a linha seguinte (`// permite` antes de `return true`).
+- JSDoc que apenas repete o nome do símbolo.
+- Repetição de invariantes de ADR/hexagonal em barrels sem ganho de leitura.
+
+Não peçam remoção de comentários de *porquê* (segurança, timing, interop,
+hydrate). Consulte `.agents/skills/coding-style/SKILL.md`.
+
 ## Formato do parecer (por lente)
 
 Para cada achado:

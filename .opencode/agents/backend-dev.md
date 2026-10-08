@@ -13,7 +13,8 @@ permission:
   task: deny
 ---
 
-Use as skills `feature-delivery` e, quando a alteração cruzar serviços, `microservice-architecture` (`.agents/skills/`).
+Use as skills `feature-delivery`, `coding-style` e, quando a alteração cruzar
+serviços, `microservice-architecture` (`.agents/skills/`).
 
 Regras:
 - Execute somente a tarefa `T-*` delegada e edite apenas seus arquivos
@@ -22,5 +23,7 @@ Regras:
 - Não ler nem escrever o banco de outro serviço.
 - Antes de codificar, confirme os contratos HTTP/eventos que a feature altera e documente contratos novos.
 - Registre migrações pertencentes ao serviço e contratos atualizados.
+- Estilo de código: skill `coding-style` (moderado). Didática e ADRs ficam fora
+  do source; no código, só comentários que ajudam a ler o *porquê* não óbvio.
 - Escreva os testes próximos da mudança, atualize `STATUS.md` e encerre com o
   handoff de `docs/process/sdd-workflow.md`.
