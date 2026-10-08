@@ -47,6 +47,23 @@ Agente | ação permitida | resultado | ação proibida | resultado
 Resultado geral: aprovado | reprovado
 ```
 
-Não declare o enforcement validado sem executar este roteiro. Neste repositório,
-a sintaxe foi alinhada à documentação oficial, mas o teste de runtime depende do
-binário instalado no ambiente do OpenCode.
+Não declare o enforcement validado sem executar este roteiro no ambiente e na
+versão de OpenCode em uso.
+
+## Última execução
+
+```text
+Data: 2026-10-08
+OpenCode: 1.18.35 (opencode-ai)
+Comandos: opencode agent list; opencode debug config; opencode debug agent <nome>
+Agentes carregados: 15/15
+Resultado: aprovado
+```
+
+Asserções automatizadas confirmadas no ruleset resolvido:
+
+- orquestrador sem edição direta, allowlist de tarefas e git mutante em `ask`;
+- product spec restrito a docs da feature e sem shell/delegação;
+- devs/test engineer sem commit, push, merge, PR ou delegação;
+- validator limitado a `VALIDATION.md`/`STATUS.md`;
+- code reviewer e seis reviewers sem edição; delegação limitada às lentes.
