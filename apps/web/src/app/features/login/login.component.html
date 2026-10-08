@@ -16,7 +16,7 @@
       <label
         for="username"
         class="label caption"
-        [class.error]="submitted && f['username'].errors"
+        [class.error]="f['username'].errors"
         [class.focused]="isFocused('username')"
       >
         Usuário
@@ -26,10 +26,10 @@
         type="text"
         placeholder="Usuário"
         formControlName="username"
-        [class.error]="submitted && f['username'].errors"
+        [class.error]="f['username'].errors"
         [class.focused]="isFocused('username')"
         aria-describedby="username-error"
-        aria-invalid="submitted && f['username'].errors ? 'true' : 'false'"
+        aria-invalid="f['username'].errors ? 'true' : 'false'"
         required
       />
     </div>
@@ -39,7 +39,7 @@
       <label
         for="password"
         class="label caption"
-        [class.error]="submitted && f['password'].errors"
+        [class.error]="f['password'].errors"
         [class.focused]="isFocused('password')"
       >
         Senha
@@ -49,10 +49,10 @@
         type="password"
         placeholder="Senha"
         formControlName="password"
-        [class.error]="submitted && f['password'].errors"
+        [class.error]="f['password'].errors"
         [class.focused]="isFocused('password')"
         aria-describedby="password-error"
-        aria-invalid="submitted && f['password'].errors ? 'true' : 'false'"
+        aria-invalid="f['password'].errors ? 'true' : 'false'"
         required
       />
     </div>
@@ -60,32 +60,32 @@
     <!-- Mensagem de erro genérica (estado "erro") -->
     <!-- Usa aria-live role="alert" para leitores de tela -->
     <div
-      *ngIf="states.error"
+      *ngIf="states().error"
       class="error-message caption"
       role="alert"
       id="username-error"
     >
-      {{ errorMessage }}
+      {{ errorMessage() }}
     </div>
     <div
-      *ngIf="states.error"
+      *ngIf="states().error"
       class="error-message caption"
       role="alert"
       id="password-error"
     >
-      {{ errorMessage }}
+      {{ errorMessage() }}
     </div>
 
     <!-- Botão de submit -->
     <button
       type="submit"
       class="btn-primary"
-      [disabled]="states.loading || (submitted && (f['username'].errors || f['password'].errors))"
-      [class.loading]="states.loading"
+      [disabled]="states().loading || form.invalid"
+      [class.loading]="states().loading"
     >
-      <span *ngIf="states.loading">Entrando…</span>
-      <span *ngIf="!states.loading">Entrar</span>
-      <span *ngIf="states.loading" class="spinner"></span>
+      <span *ngIf="states().loading">Entrando…</span>
+      <span *ngIf="!states().loading">Entrar</span>
+      <span *ngIf="states().loading" class="spinner"></span>
     </button>
 
   </form>

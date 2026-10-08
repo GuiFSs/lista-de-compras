@@ -90,15 +90,18 @@ papel e senha próprios para cada serviço (`auth`, `shopping_list`,
 ### Atalhos npm
 
 ```bash
-npm run web         # nx serve web
-npm run api         # nx serve shopping-list-service
-npm run build       # nx run-many -t build
-npm run test        # nx run-many -t test
-npm run lint        # nx run-many -t lint
-npm run e2e         # nx e2e web-e2e
-npm run docker:up   # sobe Postgres + RabbitMQ
-npm run docker:down # derruba os containers
-npm run auth:keys   # gera o par RS256 e grava AUTH_JWT_*_B64 no .env local (sem ecoar chaves)
+npm run web                 # nx serve web (PWA, porta 4200)
+npm run ms-shopping-list    # nx serve shopping-list-service (porta 3000)
+npm run ms-auth             # nx serve auth-service (porta 3001)
+npm run ms-all              # sobe todos os serviços de uma vez (web + shopping-list + auth)
+npm run build               # nx run-many -t build
+npm run test                # nx run-many -t test
+npm run lint                # nx run-many -t lint
+npm run e2e                 # nx e2e web-e2e
+npm run docker:up           # sobe Postgres + RabbitMQ
+npm run docker:down         # derruba os containers
+npm run auth:keys           # gera o par RS256 e grava AUTH_JWT_*_B64 no .env local
+npm run auth:seed           # semeia o usuário inicial no banco auth
 ```
 
 ### Problemas conhecidos

@@ -17,7 +17,7 @@ export const appRoutes: Routes = [
     path: 'login',
     canActivate: [loginGuard],
     loadComponent: () =>
-      import('./features/login/login').then((m) => m.Login),
+      import('./features/login/login.component').then((m) => m.LoginComponent),
   },
   {
     path: '',

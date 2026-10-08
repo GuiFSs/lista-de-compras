@@ -4,14 +4,17 @@
   "license": "MIT",
   "scripts": {
     "web": "nx serve web",
-    "api": "nx serve shopping-list-service",
+    "ms-shopping-list": "nx serve shopping-list-service",
+    "ms-auth": "nx serve auth-service",
+    "ms-all": "nx run-many -t serve -p web,shopping-list-service,auth-service",
     "build": "nx run-many -t build",
     "test": "nx run-many -t test",
     "lint": "nx run-many -t lint",
     "e2e": "nx e2e web-e2e",
     "docker:up": "docker compose -f docker/compose.dev.yml up -d",
     "docker:down": "docker compose -f docker/compose.dev.yml down",
-    "auth:keys": "node scripts/generate-jwt-keys.mjs"
+    "auth:keys": "node scripts/generate-jwt-keys.mjs",
+    "auth:seed": "nx run auth-service:seed"
   },
   "private": true,
   "devDependencies": {
