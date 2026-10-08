@@ -1,4 +1,4 @@
-// Testes de integração do `POST /api/auth/login` via Fastify `inject` (T6).
+// Testes de integração do `POST /api/auth/login` via Fastify `inject` (T6/T7).
 //
 // Cobertura exigida pela T6 (PLAN.md "Estratégia de testes"):
 // - 200 com o shape exato do contrato (T3) e claims do JWT (RN11/AC13);
@@ -6,7 +6,8 @@
 // - 401 genérico — usuário inexistente == senha errada (RN7/AC3);
 // - 500 com envelope canônico sem detalhes; detalhe apenas em log (AC10);
 // - CORS/preflight da origem da PWA (ADR 0006);
-// - senha NUNCA em response nem em log (AC10, verificável).
+// - senha NUNCA em response nem em log (AC10, verificável);
+// - 429 com header `Retry-After` quando o rate limiter bloqueia (T7, RN13/AC14).
 //
 // O usuário real só existirá com o seed (T8): aqui o 200 usa um harness com
 // repositório fake em memória (overrideProvider) — não depende do banco nem
@@ -22,8 +23,10 @@ import { decodeJwt } from 'jose';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from './app.module';
 import { configureApp, LOGIN_ROUTE } from './configure-app';
+import { LOGIN_429_MESSAGE } from './login-messages';
 import { User } from '../domain/user';
 import { UserRepository } from '../application/ports/user-repository.port';
+import { LoginRateLimiter } from '../application/ports/login-rate-limiter.port';
 import { BcryptPasswordHasher } from '../infrastructure/auth/password-hasher';
 
 const USERNAME = 'usuario-teste';
@@ -330,5 +333,110 @@ describe('POST /api/auth/login — 500 erro interno (T6)', () => {
     expect(allLogs).toContain('falha simulada no banco de dados');
     expect(allLogs).not.toContain(PASSWORD);
     expect(allLogs).not.toContain(USERNAME);
+  });
+});
+
+// Fake da port `LoginRateLimiter` que responde sempre "bloqueado" — o caso de
+// uso real devolve `{ ok: false, reason: 'rate-limited', retryAfterSeconds }`
+// ANTES de consultar o repositório (AC14: o bloqueio vale antes das
+// credenciais) e o controller traduz no 429 do contrato (T7/RN13).
+class BlockedLoginRateLimiter extends LoginRateLimiter {
+  constructor(private readonly retryAfter: number) {
+    super();
+  }
+  async isBlocked(): Promise<boolean> {
+    return true;
+  }
+  async registerFailure(): Promise<void> {
+    // Fake de bloqueio: não há contagem de falhas neste harness.
+  }
+  async reset(): Promise<void> {
+    // Fake de bloqueio: não há contador a zerar neste harness.
+  }
+  async retryAfterSeconds(): Promise<number> {
+    return this.retryAfter;
+  }
+}
+
+describe('POST /api/auth/login — 429 rate limit (T7/RN13/AC14)', () => {
+  let app429: NestFastifyApplication;
+
+  beforeAll(async () => {
+    Logger.overrideLogger(recordingLogger);
+
+    // Usuário real no harness: as credenciais estão CORRETAS e ainda assim a
+    // resposta deve ser 429 — "mesmo com credenciais corretas, bloqueado até a
+    // janela expirar" (RN13/AC14).
+    const cost = Number(process.env['AUTH_PASSWORD_HASH_COST'] ?? 4);
+    const passwordHash = await new BcryptPasswordHasher(cost).hash(PASSWORD);
+    const user: User = {
+      id: USER_ID,
+      username: USERNAME,
+      passwordHash,
+      createdAt: new Date(),
+      updatedAt: null,
+    };
+    const userRepository = new InMemoryUserRepository(
+      new Map([[USERNAME, user]]),
+    );
+
+    const moduleRef: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideProvider(UserRepository)
+      .useValue(userRepository)
+      .overrideProvider(LoginRateLimiter)
+      // 41,2s restantes: o controller deve arredondar para cima (42) —
+      // PLAN.md: "Retry-After: <segundos restantes> (arredondado para cima)".
+      .useValue(new BlockedLoginRateLimiter(41.2))
+      .compile();
+
+    app429 = moduleRef.createNestApplication<NestFastifyApplication>(
+      new FastifyAdapter(),
+    );
+    await configureApp(app429);
+    await app429.init();
+    await app429.getHttpAdapter().getInstance().ready();
+  });
+
+  afterAll(async () => {
+    await app429.close();
+  });
+
+  it('429 — envelope canônico + header Retry-After arredondado para cima (RN13/AC14)', async () => {
+    // Credenciais corretas: o bloqueio vale ANTES da validação (RN13).
+    const res = await app429.inject({
+      method: 'POST',
+      url: LOGIN_ROUTE,
+      payload: { username: USERNAME, password: PASSWORD },
+    });
+
+    expect(res.statusCode).toBe(429);
+    // Envelope ÚNICO do contrato (T3/🟠-1): só statusCode+message.
+    expect(res.json()).toEqual({
+      statusCode: 429,
+      message: LOGIN_429_MESSAGE,
+    });
+    expect(Object.keys(res.json()).sort()).toEqual(['message', 'statusCode']);
+    // 41,2s restantes → ceil → 42 no header (arredondado para cima).
+    expect(res.headers['retry-after']).toBe('42');
+    // AC10: nenhuma credencial no corpo da resposta 429.
+    expect(JSON.stringify(res.json())).not.toContain(PASSWORD);
+  });
+
+  it('429 — mesmo com credenciais corretas nenhuma sessão é emitida (AC14)', async () => {
+    const res = await app429.inject({
+      method: 'POST',
+      url: LOGIN_ROUTE,
+      payload: { username: USERNAME, password: PASSWORD },
+    });
+
+    expect(res.statusCode).toBe(429);
+    const body: unknown = res.json();
+    // Nenhum token no corpo — o login não autenticou durante a janela.
+    expect(body).not.toHaveProperty('accessToken');
+    expect(JSON.stringify(body)).not.toContain('eyJ');
+    expect(JSON.stringify(body)).not.toContain(PASSWORD);
+    expect(res.headers['retry-after']).toBe('42');
   });
 });
