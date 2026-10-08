@@ -8,7 +8,7 @@
 // auth-service emitiria (AC15, requisição direta ao serviço).
 import { SignJWT, importPKCS8 } from 'jose';
 import { decodeBase64Pem } from '@lista/shared/jwt';
-import { TEST_RSA_PRIVATE_KEY_B64 } from '../../../../libs/shared/jwt/src/test-fixtures/rs256-test-keys';
+import { TEST_RSA_PRIVATE_KEY_B64 } from '@lista/shared/jwt/testing';
 
 const DEFAULT_SUBJECT = '11111111-1111-4111-8111-111111111111';
 const DEFAULT_ISSUER = 'auth-service';

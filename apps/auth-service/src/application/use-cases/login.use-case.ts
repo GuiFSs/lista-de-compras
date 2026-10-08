@@ -59,8 +59,12 @@ class NoopRateLimiter implements LoginRateLimiter {
   async isBlocked(_clientId: string): Promise<boolean> {
     return false;
   }
-  async registerFailure(_clientId: string): Promise<void> {}
-  async reset(_clientId: string): Promise<void> {}
+  async registerFailure(_clientId: string): Promise<void> {
+    // No-op proposital (T6): a política real de rate limit entra na T7.
+  }
+  async reset(_clientId: string): Promise<void> {
+    // No-op proposital (T6): sem contadores a zerar enquanto é no-op.
+  }
   async retryAfterSeconds(_clientId: string): Promise<number> {
     return 0;
   }

@@ -12,7 +12,7 @@
 //    ser hermético: o par de teste é o mesmo do auth-service em teste;
 //    `jwt-test-utils.ts` assina tokens aceitos por esta pública.
 import 'reflect-metadata';
-import { TEST_RSA_PUBLIC_KEY_B64 } from '../../../libs/shared/jwt/src/test-fixtures/rs256-test-keys';
+import { TEST_RSA_PUBLIC_KEY_B64 } from '@lista/shared/jwt/testing';
 
 process.env['DATABASE_URL'] ??=
   'postgresql://postgres:postgres@localhost:5432/shopping_list';

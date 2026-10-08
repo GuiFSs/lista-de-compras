@@ -28,7 +28,7 @@
         [class.error]="f['username'].errors"
         [class.focused]="isFocused('username')"
         aria-describedby="username-error"
-        aria-invalid="f['username'].errors ? 'true' : 'false'"
+        [attr.aria-invalid]="f['username'].errors ? 'true' : 'false'"
         required
       />
     </div>
@@ -51,29 +51,29 @@
         [class.error]="f['password'].errors"
         [class.focused]="isFocused('password')"
         aria-describedby="password-error"
-        aria-invalid="f['password'].errors ? 'true' : 'false'"
+        [attr.aria-invalid]="f['password'].errors ? 'true' : 'false'"
         required
       />
     </div>
 
     <!-- Mensagem de erro genérica (estado "erro") -->
     <!-- Usa aria-live role="alert" para leitores de tela -->
-    <div
-      *ngIf="states().error"
-      class="error-message caption"
-      role="alert"
-      id="username-error"
-    >
-      {{ errorMessage() }}
-    </div>
-    <div
-      *ngIf="states().error"
-      class="error-message caption"
-      role="alert"
-      id="password-error"
-    >
-      {{ errorMessage() }}
-    </div>
+    @if (states().error) {
+      <div
+        class="error-message caption"
+        role="alert"
+        id="username-error"
+      >
+        {{ errorMessage() }}
+      </div>
+      <div
+        class="error-message caption"
+        role="alert"
+        id="password-error"
+      >
+        {{ errorMessage() }}
+      </div>
+    }
 
     <!-- Botão de submit -->
     <button
@@ -82,9 +82,15 @@
       [disabled]="states().loading"
       [class.loading]="states().loading"
     >
-      <span *ngIf="states().loading">Entrando…</span>
-      <span *ngIf="!states().loading">Entrar</span>
-      <span *ngIf="states().loading" class="spinner"></span>
+      @if (states().loading) {
+        <span>Entrando…</span>
+      }
+      @if (!states().loading) {
+        <span>Entrar</span>
+      }
+      @if (states().loading) {
+        <span class="spinner"></span>
+      }
     </button>
 
   </form>
