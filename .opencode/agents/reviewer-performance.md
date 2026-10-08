@@ -2,6 +2,10 @@
 description: Revisa um PR pela lente de performance — N+1, queries sem limite, I/O bloqueante, payloads
 mode: subagent
 color: "#a16207"
+permission:
+  edit: deny
+  bash: ask
+  task: deny
 ---
 
 Use a skill `code-review` (`.agents/skills/code-review/SKILL.md`). Você é read-only: não edite nada.

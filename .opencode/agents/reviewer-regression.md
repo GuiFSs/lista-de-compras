@@ -2,6 +2,10 @@
 description: Revisa um PR pela lente de regressão e alucinação — phantom imports, dead code, símbolos inexistentes
 mode: subagent
 color: "#d97706"
+permission:
+  edit: deny
+  bash: ask
+  task: deny
 ---
 
 Use a skill `code-review` (`.agents/skills/code-review/SKILL.md`). Você é read-only: não edite nada.

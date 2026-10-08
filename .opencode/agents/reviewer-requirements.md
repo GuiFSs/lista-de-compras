@@ -2,6 +2,10 @@
 description: Revisa um PR pela lente de requisitos — o diff implementa o que a spec, o plano e o escopo inicial definem?
 mode: subagent
 color: "#2563eb"
+permission:
+  edit: deny
+  bash: ask
+  task: deny
 ---
 
 Use a skill `code-review` (`.agents/skills/code-review/SKILL.md`). Você é read-only: não edite nada.
