@@ -35,9 +35,8 @@
 
 ## Pendências
 
-- Nenhuma bloqueante.
-- O smoke test de permissões do OpenCode ainda deve ser executado no ambiente
-  que possui o binário, conforme `docs/process/opencode-permission-smoke-test.md`.
+- Nenhuma. O smoke test de permissões do OpenCode 1.18.35 carregou os 15
+  agentes e aprovou as regras críticas de allow/ask/deny.
 
 ## Comandos executados
 

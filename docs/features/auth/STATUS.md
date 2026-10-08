@@ -30,4 +30,4 @@
 - Arquivos alterados: testes T12–T14 e artefatos SDD da feature
 - Testes executados: auth 22, web 23, JWT 17, shopping-list 9, E2E 6; lint/typecheck/build verdes
 - Decisões: `ARCHITECTURE-REVIEW.md`, ADR 0006 e ADR 0007
-- Pendências: smoke test do OpenCode no ambiente que possui o binário
+- Pendências: nenhuma; smoke test do OpenCode 1.18.35 aprovado
