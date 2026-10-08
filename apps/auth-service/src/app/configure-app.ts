@@ -64,12 +64,14 @@ export async function configureApp(app: NestFastifyApplication): Promise<void> {
   // controller, e falha vira BadRequestException → filtro do Nest → 400
   // canônico. O bodyLimit segue a configuração do servidor (como o padrão
   // do Nest).
-  const { bodyLimit } = app.getHttpAdapter().getInstance().initialConfig;
-  app.getHttpAdapter().useBodyParser(
+  const adapter: any = app.getHttpAdapter();
+  const instance = adapter.getInstance?.();
+  const { bodyLimit } = instance?.initialConfig ?? { bodyLimit: 1048576 };
+  adapter.useBodyParser?.(
     'application/json',
     false,
     { bodyLimit },
-    (_req, body, done) => {
+    (_req: any, body: Buffer, done: (err: Error | null, result?: unknown) => void) => {
       try {
         done(null, JSON.parse(body.toString()));
       } catch {

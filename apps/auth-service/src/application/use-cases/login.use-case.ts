@@ -67,7 +67,7 @@ class NoopRateLimiter implements LoginRateLimiter {
 }
 
 export class LoginUseCase {
-  private readonly rateLimiter: LoginRateLimiter;
+  rateLimiter: LoginRateLimiter;
 
   constructor(
     private readonly userRepository: UserRepository,
@@ -104,10 +104,8 @@ export class LoginUseCase {
     if (!user) {
       // Gera/hash dummy de um segredo fixo, usando o mesmo custo de bcrypt do
       // sistema. O segredo é lido de AUTH_DUMMY_PASSWORD_SECRET (ou fallback).
-      const dummySecret = process.env['AUTH_DUMMY_PASSWORD_SECRET'] || 'lista-de-compras-dummy-secret-2026';
+      const dummySecret = process.env['AUTH_DUMMY_PASSWORD_SECRET'] ?? 'lista-de-compras-dummy-secret-2026';
       const dummyHash = await this.passwordHasher.hash(dummySecret);
-      // Compara a senha fornecida contra o hash dummy — tempo de comparação
-      // idêntico ao caminho real (bcrypt real), não uma constante de custo diferente.
       await this.passwordHasher.verify(command.password, dummyHash);
       await this.rateLimiter.registerFailure(command.clientId);
       return { ok: false, reason: 'invalid-credentials' };

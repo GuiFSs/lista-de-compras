@@ -12,7 +12,7 @@
 // - A janela começa na primeira falha do cliente.
 // - Até a janela expirar (60s), contagem acumulada de falhas determina o bloqueio.
 // - Após a janela expirar, o contador zera e um novo login é permitido.
-import { LoginRateLimiter } from '../../application/ports/login-rate-limiter.port';
+import { LoginRateLimiter } from '../application/ports/login-rate-limiter.port';
 
 // Padrões do PLAN.md / RN13-AC14
 const DEFAULT_MAX_FAILURES = 5;

@@ -2,7 +2,6 @@
 <main
   class="login"
   touch-action="manipulation"
-  (touchstart)="$event.preventDefault()"
 >
   <form
     class="login-form"
@@ -80,7 +79,7 @@
     <button
       type="submit"
       class="btn-primary"
-      [disabled]="states().loading || form.invalid"
+      [disabled]="states().loading"
       [class.loading]="states().loading"
     >
       <span *ngIf="states().loading">Entrando…</span>

@@ -100,6 +100,7 @@ export class SessionService {
     const storedToken = localStorage.getItem(STORAGE_KEY);
     if (storedToken) {
       accessToken.set(storedToken);
+      this.startExpiryTimer(storedToken);
     }
   }
 
@@ -148,8 +149,7 @@ export class SessionService {
     // agendar — `isTokenExpired` já trata esses casos na
     // leitura da sessão.
     const payload = jwtDecodePayload(token);
-    const expMs =
-      typeof payload?.exp === 'number' ? payload.exp * 1000 : NaN;
+    const expMs = typeof payload?.exp === 'number' ? payload.exp * 1000 : NaN;
     const delay = expMs - Date.now();
     if (!Number.isFinite(delay) || delay <= 0) return;
     this.expiryTimeout = setTimeout(() => {

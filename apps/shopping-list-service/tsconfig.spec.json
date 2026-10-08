@@ -8,9 +8,16 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
+  "references": [
+    {
+      "path": "../../libs/shared/jwt/tsconfig.lib.json"
+    }
+  ],
   "include": [
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
-    "src/**/*.d.ts"
+    "src/**/*.d.ts",
+    "src/test-fixtures/**/*.ts",
+    "src/test-setup.ts"
   ]
 }

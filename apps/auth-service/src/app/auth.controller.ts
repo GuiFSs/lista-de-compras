@@ -19,6 +19,7 @@ import {
   Logger,
   Post,
   Req,
+  Res,
   UnauthorizedException,
   HttpException,
 } from '@nestjs/common';
@@ -27,7 +28,7 @@ import type {
   LoginRequest,
   LoginSuccessResponse,
 } from '@lista/contracts';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyRequest, FastifyReply } from 'fastify';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import {
   LOGIN_400_MESSAGE,
@@ -80,6 +81,7 @@ export class AuthController {
   async login(
     @Req() req: FastifyRequest,
     @Body() body: unknown,
+    @Res({ passthrough: true }) res: FastifyReply,
   ): Promise<LoginSuccessResponse> {
     // RN1: validação no servidor — campos obrigatórios, strings não vazias
     // (a PWA já valida antes de enviar — AC6). Corpo inválido → 400 canônico.
@@ -98,8 +100,8 @@ export class AuthController {
 
     try {
       // Extrair username e password do corpo parseado
-      const username = (parsedBody as Record<string, unknown>).username as string;
-      const password = (parsedBody as Record<string, unknown>).password as string;
+      const username = (parsedBody as LoginRequest).username;
+      const password = (parsedBody as LoginRequest).password;
 
       const result = await this.loginUseCase.execute({
         username,
@@ -111,15 +113,11 @@ export class AuthController {
       if (!result.ok) {
         if (result.reason === 'rate-limited') {
           // T7: retornar 429 com envelope canônico + header Retry-After.
-          // Usamos o retryAfterSeconds do resultado do use case, ou caímos
-          // de volta para o rate limiter do use case como respaldo.
-          const retryAfter =
-            result.retryAfterSeconds ??
-            await this.loginUseCase.rateLimiter.retryAfterSeconds(req.ip);
-          return req.reply
-            .status(429)
-            .header('Retry-After', String(Math.ceil(retryAfter)))
-            .json({ statusCode: 429, message: LOGIN_429_MESSAGE });
+          const retryAfter = result.retryAfterSeconds ?? 0;
+          res.status(429);
+          res.header('Retry-After', String(Math.ceil(retryAfter)));
+          res.status(429).send({ statusCode: 429, message: LOGIN_429_MESSAGE } as any);
+          return {} as LoginSuccessResponse;
         }
         // RN7/AC3: 401 genérico — igual para usuário inexistente e senha
         // errada; não indica campo nem expõe dado sensível.

@@ -43,9 +43,14 @@ export const authInterceptorFn: HttpInterceptorFn = (
     return next(request);
   }
 
+  // Anexa token apenas a requisições da mesma origem
   const token = session.accessToken();
-
   if (!token) {
+    return next(request);
+  }
+
+  // Não anexar token para requisições cross-origin
+  if (!request.url.startsWith('/') && !request.url.includes('localhost')) {
     return next(request);
   }
 

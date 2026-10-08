@@ -17,7 +17,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: Error, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
-    const request = ctx.getRequest();
 
     // Apenas transforma erros de JSON malformado do Fastify/Nest;
     // outros erros seguem o fluxo normal.
