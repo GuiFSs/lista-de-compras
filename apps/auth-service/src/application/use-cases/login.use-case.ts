@@ -1,13 +1,12 @@
 // Caso de uso de login — puro (domínio/aplicação), sem HTTP, NestJS ou banco.
 //
 // Fluxo definido no PLAN.md ("Regras de domínio e casos de uso"):
-//   1. LoginRateLimiter: bloqueado → erro genérico 429 (AC14 — vale antes da
-//      validação de credenciais; a política real entra na T7, em T6 o limiter
-//      é um no-op injetável).
+//   1. LoginRateLimiter: bloqueado → erro genérico 429 (AC-14 — vale antes da
+//      validação de credenciais).
 //   2. UserRepository.findByUsername(username) → User | null.
 //   3. `null` → MESMO erro genérico do passo 4 (RN7: não revela se o usuário
-//      existe). A comparação contra hash dummy de mesmo custo + registro da
-//      falha no rate limiter entram na T7 (🟡-3); em T6 registra-se no no-op.
+//      existe). A comparação contra hash dummy de mesmo custo e o registro da
+//      falha no rate limiter evitam enumeração e contam a tentativa (🟡-3).
 //   4. PasswordHasher.verify — falha ⇒ registra falha e responde 401 genérico;
 //      sucesso ⇒ zera o contador do cliente.
 //   5. TokenSigner.sign(user) → JWT RS256 24h → 200.
@@ -51,19 +50,18 @@ export type LoginUseCaseResult =
     };
 
 /**
- * Implementação vazia do `LoginRateLimiter` usada em T6, quando o adaptador
- * real ainda não existe (T7). Mantém a estrutura do caso de uso final: o
- * limiter é sempre consultado/notificado, mas nunca bloqueia nesta tarefa.
+ * Fallback para testes unitários isolados que não exercitam rate limit.
+ * A composição de produção sempre injeta `MemoryRateLimiter`.
  */
 class NoopRateLimiter implements LoginRateLimiter {
   async isBlocked(_clientId: string): Promise<boolean> {
     return false;
   }
   async registerFailure(_clientId: string): Promise<void> {
-    // No-op proposital (T6): a política real de rate limit entra na T7.
+    // No-op somente no fallback de teste.
   }
   async reset(_clientId: string): Promise<void> {
-    // No-op proposital (T6): sem contadores a zerar enquanto é no-op.
+    // No-op somente no fallback de teste.
   }
   async retryAfterSeconds(_clientId: string): Promise<number> {
     return 0;
@@ -83,7 +81,7 @@ export class LoginUseCase {
   }
 
   async execute(command: LoginCommand): Promise<LoginUseCaseResult> {
-    // 1. Bloqueio da janela vale ANTES das credenciais (AC14/RN13).
+    // 1. Bloqueio da janela vale ANTES das credenciais (AC-14/RN13).
     if (await this.rateLimiter.isBlocked(command.clientId)) {
       const retryAfter = await this.rateLimiter.retryAfterSeconds(
         command.clientId,
@@ -101,8 +99,8 @@ export class LoginUseCase {
     );
 
     // 3. Usuário inexistente — mesmo resultado genérico de senha errada (RN7).
-    //    T7: comparar senha contra hash bcrypt real de um segredo aleatório
-    //    fixo, gerado com o mesmo `AUTH_PASSWORD_HASH_COST` — tempo de comparação
+    //    Compara contra hash bcrypt de segredo fixo com o mesmo custo — tempo
+    //    de comparação
     //    idêntico ao caminho real (🟡-3). Registrar a falha no rate limiter
     //    como qualquer outra senha errada.
     if (!user) {

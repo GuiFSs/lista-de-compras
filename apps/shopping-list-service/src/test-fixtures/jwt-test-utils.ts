@@ -5,7 +5,7 @@
 // das duas é segredo e nenhuma protege nada). O `test-setup.ts` define
 // `AUTH_JWT_PUBLIC_KEY_B64` com a pública deste par, então um token assinado
 // aqui é exatamente o que o guard aceita — simulando o JWT que o
-// auth-service emitiria (AC15, requisição direta ao serviço).
+// auth-service emitiria (AC-15, requisição direta ao serviço).
 import { SignJWT, importPKCS8 } from 'jose';
 import { decodeBase64Pem } from '@lista/shared/jwt';
 import { TEST_RSA_PRIVATE_KEY_B64 } from '@lista/shared/jwt/testing';

@@ -1,6 +1,6 @@
 # shared/jwt
 
-Verificação **local** de JWT na borda HTTP dos microserviços (RN12/AC15,
+Verificação **local** de JWT na borda HTTP dos microserviços (RN12/AC-15,
 ADR 0007) — framework-free, construída sobre [`jose`](https://github.com/panva/jose)
 (sem builds nativos).
 

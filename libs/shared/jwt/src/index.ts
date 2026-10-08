@@ -1,4 +1,4 @@
-// Verificação local de JWT (RN12/AC15 — ADR 0007), framework-free.
+// Verificação local de JWT (RN12/AC-15 — ADR 0007), framework-free.
 //
 // Exporta o verificador RS256 (`verifyJwt`), a extração do token do header
 // (`extractBearerToken`) e a decodificação do base64 single-line do `.env`

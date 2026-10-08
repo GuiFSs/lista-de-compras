@@ -15,7 +15,7 @@
 //
 // Assim como o authGuard, o guard INJETA o SessionService para
 // forçar a hydration do storage antes de decidir (recarga de
-// página com sessão válida em /login — AC12/AC13).
+// página com sessão válida em /login — AC-12/AC-13).
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { SessionService } from './session.service';

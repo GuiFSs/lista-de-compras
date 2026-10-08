@@ -1,4 +1,4 @@
-// Guard global de autenticação da borda HTTP (RN12/AC15 — ADR 0007).
+// Guard global de autenticação da borda HTTP (RN12/AC-15 — ADR 0007).
 //
 // É APENAS o plug que conecta o verificador framework-free de
 // `@lista/shared/jwt` ao NestJS: não contém lógica de validação. Extrai o

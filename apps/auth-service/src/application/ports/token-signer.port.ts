@@ -5,7 +5,7 @@
 // RS256 e a biblioteca `jose` ficam no adaptador em `src/infrastructure/auth`.
 import { User } from '../../domain/user';
 
-/** Validade do token: 24h em segundos (RN11/AC13, `exp = iat + 86400`). */
+/** Validade do token: 24h em segundos (RN11/AC-13, `exp = iat + 86400`). */
 export const JWT_TTL_SECONDS = 86400;
 
 export abstract class TokenSigner {

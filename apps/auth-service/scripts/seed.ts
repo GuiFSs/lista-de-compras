@@ -8,8 +8,8 @@
  * - `AUTH_SEED_USERNAME` (default `lista` no .env.example) e
  *   `AUTH_SEED_PASSWORD` definem a conta única v1 (RN8).
  * - Aborta com mensagem clara se `AUTH_SEED_PASSWORD` estiver vazia/ausente
- *   (proteção do AC7: nunca semear senha vazia nem `undefined`).
- * - Aplica bcrypt no custo `AUTH_PASSWORD_HASH_COST` (RN4/AC8) reutilizando o
+ *   (proteção do AC-07: nunca semear senha vazia nem `undefined`).
+ * - Aplica bcrypt no custo `AUTH_PASSWORD_HASH_COST` (RN4/AC-08) reutilizando o
  *   adaptador `BcryptPasswordHasher` de T5 — mesma regra do hash do login.
  * - Upsert idempotente por `username` (`ON CONFLICT (username) DO UPDATE`):
  *   re-executar reaplica o hash se a senha do `.env` mudou (`.env` é a fonte
@@ -17,7 +17,7 @@
  * - Conta única v1 (RN8/🟡-4): também remove linhas `users` fora do usuário
  *   semeado, com log de aviso — evita linha órfã se o usuário mudar entre
  *   execuções.
- * - Logs informam o usuário e a ação; NUNCA a senha (nem o hash) — AC10.
+ * - Logs informam o usuário e a ação; NUNCA a senha (nem o hash) — AC-10.
  *
  * Script operacional fora das camadas hexagonais: não é serviço HTTP nem
  * broker (RN13), não roda dentro do Nest — compõe os adaptadores de `src/`
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
     fail(
       `não encontrei o .env na raiz do projeto (verifiquei em: ${envPath}). ` +
         'Copie .env.example para .env e defina AUTH_SEED_PASSWORD ' +
-        '(senha local, nunca versionada — AC7).',
+        '(senha local, nunca versionada — AC-07).',
     );
   }
   // Carrega o `.env` da raiz. Variáveis já presentes no ambiente (ex.: as
@@ -65,11 +65,11 @@ async function main(): Promise<void> {
   const password = process.env.AUTH_SEED_PASSWORD ?? '';
   const cost = Number.parseInt(process.env.AUTH_PASSWORD_HASH_COST ?? '12', 10);
 
-  // AC7: senha vazia/ausente aborta — `.env` parcial não gera conta inútil.
+  // AC-07: senha vazia/ausente aborta — `.env` parcial não gera conta inútil.
   if (!password.trim()) {
     fail(
       'AUTH_SEED_PASSWORD está vazia ou ausente no `.env` da raiz. ' +
-        'Defina uma senha local antes de semear (RN4/AC7).',
+        'Defina uma senha local antes de semear (RN4/AC-07).',
     );
   }
   if (!Number.isInteger(cost) || cost < 4 || cost > 31) {
@@ -107,7 +107,7 @@ async function main(): Promise<void> {
       .where(eq(users.username, username))
       .limit(1);
 
-    // 2) RN4/AC8: para o banco vai apenas o hash bcrypt — nunca o valor puro.
+    // 2) RN4/AC-08: para o banco vai apenas o hash bcrypt — nunca o valor puro.
     const passwordHash = await new BcryptPasswordHasher(cost).hash(password);
 
     // 3) Upsert idempotente por username: re-executar reaplica o hash se a
@@ -120,7 +120,7 @@ async function main(): Promise<void> {
         set: { passwordHash, updatedAt: new Date() },
       });
 
-    // AC10: log com o usuário e a ação — NUNCA a senha (nem o hash).
+    // AC-10: log com o usuário e a ação — NUNCA a senha (nem o hash).
     console.log(
       `${SCRIPT} conta única semeada com sucesso ` +
         `(usuário: "${username}"; linha ${existing ? 'atualizada' : 'inserida'}).`,

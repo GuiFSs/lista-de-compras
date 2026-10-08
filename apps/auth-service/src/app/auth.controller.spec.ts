@@ -1,12 +1,12 @@
 // Testes de integração do `POST /api/auth/login` via Fastify `inject` (T6).
 //
 // Cobertura exigida pela T6 (PLAN.md "Estratégia de testes"):
-// - 200 com o shape exato do contrato (T3) e claims do JWT (RN11/AC13);
+// - 200 com o shape exato do contrato (T3) e claims do JWT (RN11/AC-13);
 // - 400 para payload inválido (RN1) com o envelope canônico (T3/🟠-1);
-// - 401 genérico — usuário inexistente == senha errada (RN7/AC3);
-// - 500 com envelope canônico sem detalhes; detalhe apenas em log (AC10);
+// - 401 genérico — usuário inexistente == senha errada (RN7/AC-03);
+// - 500 com envelope canônico sem detalhes; detalhe apenas em log (AC-10);
 // - CORS/preflight da origem da PWA (ADR 0006);
-// - senha NUNCA em response nem em log (AC10, verificável).
+// - senha NUNCA em response nem em log (AC-10, verificável).
 //
 // O usuário real só existirá com o seed (T8): aqui o 200 usa um harness com
 // repositório fake em memória (overrideProvider) — não depende do banco nem
@@ -24,7 +24,9 @@ import { AppModule } from './app.module';
 import { configureApp, LOGIN_ROUTE } from './configure-app';
 import { User } from '../domain/user';
 import { UserRepository } from '../application/ports/user-repository.port';
+import { LoginRateLimiter } from '../application/ports/login-rate-limiter.port';
 import { BcryptPasswordHasher } from '../infrastructure/auth/password-hasher';
+import { MemoryRateLimiter } from '../infrastructure/memory-rate-limiter';
 
 const USERNAME = 'usuario-teste';
 const PASSWORD = 'senha-secreta-de-teste';
@@ -35,7 +37,7 @@ const LOGIN_400_BODY = {
 };
 const LOGIN_401_BODY = { statusCode: 401, message: 'Credenciais inválidas' };
 
-/** Gravador de logs para verificar AC10 (senha/nome de usuário fora dos logs). */
+/** Gravador de logs para verificar AC-10 (senha/nome de usuário fora dos logs). */
 const capturedLogs: unknown[][] = [];
 const recordingLogger = {
   log: (...args: unknown[]) => capturedLogs.push(args),
@@ -67,7 +69,7 @@ describe('POST /api/auth/login — integração via inject (T6)', () => {
   let app: NestFastifyApplication;
 
   beforeAll(async () => {
-    // Captura TODOS os logs do servidor para as asserções de AC10.
+    // Captura TODOS os logs do servidor para as asserções de AC-10.
     Logger.overrideLogger(recordingLogger);
 
     // Hash no MESMO custo de teste usado pelos adaptadores (test-setup);
@@ -107,7 +109,7 @@ describe('POST /api/auth/login — integração via inject (T6)', () => {
     Logger.overrideLogger([]);
   });
 
-  it('200 — shape exato do contrato e claims do JWT (RN5/RN11/AC2)', async () => {
+  it('200 — shape exato do contrato e claims do JWT (RN5/RN11/AC-02)', async () => {
     const res = await app.inject({
       method: 'POST',
       url: LOGIN_ROUTE,
@@ -135,7 +137,7 @@ describe('POST /api/auth/login — integração via inject (T6)', () => {
     expect(claims.exp).toBeTypeOf('number');
     expect(claims.exp! - claims.iat!).toBe(86400);
 
-    // AC10: a resposta não contém a senha.
+    // AC-10: a resposta não contém a senha.
     expect(JSON.stringify(body)).not.toContain(PASSWORD);
   });
 
@@ -180,7 +182,7 @@ describe('POST /api/auth/login — integração via inject (T6)', () => {
     expect(res.json()).toEqual(LOGIN_400_BODY);
   });
 
-  it('401 genérico — usuário inexistente == senha errada (RN7/AC3)', async () => {
+  it('401 genérico — usuário inexistente == senha errada (RN7/AC-03)', async () => {
     const unknownUser = await app.inject({
       method: 'POST',
       url: LOGIN_ROUTE,
@@ -202,7 +204,7 @@ describe('POST /api/auth/login — integração via inject (T6)', () => {
       'statusCode',
     ]);
 
-    // AC10/AC3: nada de senha (nem a errada) ou nome de usuário no corpo.
+    // AC-10/AC-03: nada de senha (nem a errada) ou nome de usuário no corpo.
     const bodies = `${JSON.stringify(unknownUser.json())}${JSON.stringify(
       wrongPassword.json(),
     )}`;
@@ -268,7 +270,7 @@ describe('POST /api/auth/login — integração via inject (T6)', () => {
     expect(denied.headers['access-control-allow-origin']).toBeUndefined();
   });
 
-  it('AC10 — nenhum log das respostas 200/400/401 contém a senha', () => {
+  it('AC-10 — nenhum log das respostas 200/400/401 contém a senha', () => {
     expect(JSON.stringify(capturedLogs)).not.toContain(PASSWORD);
     expect(JSON.stringify(capturedLogs)).not.toContain(USERNAME);
   });
@@ -278,7 +280,7 @@ describe('POST /api/auth/login — 500 erro interno (T6)', () => {
   let app500: NestFastifyApplication;
 
   beforeAll(async () => {
-    // Captura TODOS os logs do servidor para as asserções de AC10.
+    // Captura TODOS os logs do servidor para as asserções de AC-10.
     Logger.overrideLogger(recordingLogger);
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -318,17 +320,97 @@ describe('POST /api/auth/login — 500 erro interno (T6)', () => {
     expect(res.json()).toEqual({ statusCode: 500, message: 'Erro interno' });
     expect(Object.keys(res.json()).sort()).toEqual(['message', 'statusCode']);
 
-    // Corpo 500 NUNCA expõe detalhes internos nem credenciais (AC10).
+    // Corpo 500 NUNCA expõe detalhes internos nem credenciais (AC-10).
     const body = JSON.stringify(res.json());
     expect(body).not.toContain('falha simulada');
     expect(body).not.toContain(PASSWORD);
     expect(body).not.toContain(USERNAME);
 
-    // O detalhe do erro interno existe APENAS no log do servidor (AC10),
+    // O detalhe do erro interno existe APENAS no log do servidor (AC-10),
     // e mesmo o log não contém credenciais.
     const allLogs = JSON.stringify(capturedLogs);
     expect(allLogs).toContain('falha simulada no banco de dados');
     expect(allLogs).not.toContain(PASSWORD);
     expect(allLogs).not.toContain(USERNAME);
+  });
+});
+
+describe('POST /api/auth/login — rate limit (T7/AC-14)', () => {
+  let rateLimitedApp: NestFastifyApplication;
+  let now = 1_000;
+
+  beforeAll(async () => {
+    const cost = Number(process.env['AUTH_PASSWORD_HASH_COST'] ?? 4);
+    const passwordHash = await new BcryptPasswordHasher(cost).hash(PASSWORD);
+    const user: User = {
+      id: USER_ID,
+      username: USERNAME,
+      passwordHash,
+      createdAt: new Date(),
+      updatedAt: null,
+    };
+    const userRepository = new InMemoryUserRepository(
+      new Map([[USERNAME, user]]),
+    );
+    const limiter = new MemoryRateLimiter({
+      maxFailures: 2,
+      windowMs: 60_000,
+      clock: () => now,
+    });
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideProvider(UserRepository)
+      .useValue(userRepository)
+      .overrideProvider(LoginRateLimiter)
+      .useValue(limiter)
+      .compile();
+
+    rateLimitedApp =
+      moduleRef.createNestApplication<NestFastifyApplication>(
+        new FastifyAdapter(),
+      );
+    await configureApp(rateLimitedApp);
+    await rateLimitedApp.init();
+    await rateLimitedApp.getHttpAdapter().getInstance().ready();
+  });
+
+  afterAll(async () => {
+    await rateLimitedApp.close();
+  });
+
+  it('bloqueia até credenciais corretas e libera após a janela', async () => {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const failure = await rateLimitedApp.inject({
+        method: 'POST',
+        url: LOGIN_ROUTE,
+        payload: {
+          username: attempt === 0 ? 'nao-existe' : USERNAME,
+          password: 'incorreta',
+        },
+      });
+      expect(failure.statusCode).toBe(401);
+    }
+
+    const blocked = await rateLimitedApp.inject({
+      method: 'POST',
+      url: LOGIN_ROUTE,
+      payload: { username: USERNAME, password: PASSWORD },
+    });
+    expect(blocked.statusCode).toBe(429);
+    expect(blocked.json()).toEqual({
+      statusCode: 429,
+      message: 'Muitas tentativas de login. Aguarde e tente novamente.',
+    });
+    expect(blocked.headers['retry-after']).toBe('60');
+
+    now += 60_000;
+    const recovered = await rateLimitedApp.inject({
+      method: 'POST',
+      url: LOGIN_ROUTE,
+      payload: { username: USERNAME, password: PASSWORD },
+    });
+    expect(recovered.statusCode).toBe(200);
   });
 });

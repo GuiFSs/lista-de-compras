@@ -36,7 +36,7 @@ Campos obrigatórios (RN1): página não-string, ausente ou vazia → **400**.
 
 - `accessToken`: JWT assinado em **RS256** com claims `JwtClaims`
   (`sub` uuid · `iss` (`AUTH_JWT_ISSUER`, default `auth-service`) · `iat` ·
-  `exp` = `iat + 86400`), válido por **24h** (RN11/AC13).
+  `exp` = `iat + 86400`), válido por **24h** (RN11/AC-13).
 - `tokenType`: sempre `"Bearer"` — a PWA envia o token no header
   `Authorization: Bearer <jwt>`.
 - `expiresIn`: validade em segundos (**86400**), correspondente ao `exp` do
@@ -54,18 +54,18 @@ Todos os erros usam **um único shape**:
   curto do tipo de erro) e **nunca é dependido pelos clientes** — a PWA
   consome apenas `statusCode` e `message` (decisão 🟠-1).
 - `message` é sempre genérica, em PT.
-- Nenhum corpo contém a senha (AC10); o corpo do **500 nunca expõe detalhes
+- Nenhum corpo contém a senha (AC-10); o corpo do **500 nunca expõe detalhes
   internos** — detalhes vão apenas para o log do servidor.
 
 | Status | Significado | `message` (PT, genérica) |
 | --- | --- | --- |
 | 400 | Payload inválido (campos ausentes, não-string ou vazios) | `Nome de usuário e senha são obrigatórios` |
 | 401 | Credenciais inválidas (genérico; não distingue usuário inexistente de senha errada) | `Credenciais inválidas` |
-| 429 | Limite de tentativas com falha atingido na janela (RN13/AC14) + header `Retry-After: <segundos>` | `Muitas tentativas de login. Aguarde e tente novamente.` |
+| 429 | Limite de tentativas com falha atingido na janela (RN13/AC-14) + header `Retry-After: <segundos>` | `Muitas tentativas de login. Aguarde e tente novamente.` |
 | 500 | Erro interno não previsto (ex.: banco indisponível) | `Erro interno` |
 
 > 429 vale **antes** da validação de credenciais: mesmo com credenciais
-> corretas, o login é bloqueado até a janela expirar (AC14).
+> corretas, o login é bloqueado até a janela expirar (AC-14).
 
 ## Contratos de eventos
 

@@ -8,7 +8,7 @@
  * Payload do `POST /api/auth/login`.
  *
  * Campos obrigatórios (RN1): ausência, não-string ou valor vazio resulta em
- * 400 pelo servidor; a PWA valida antes de enviar (AC6).
+ * 400 pelo servidor; a PWA valida antes de enviar (AC-06).
  */
 export interface LoginRequest {
   username: string;
@@ -19,7 +19,7 @@ export interface LoginRequest {
  * Resposta 200 do `POST /api/auth/login` — sessão iniciada.
  *
  * - `accessToken`: JWT assinado em RS256 com claims `JwtClaims`
- *   (válido por 24h — RN11/AC13).
+ *   (válido por 24h — RN11/AC-13).
  * - `tokenType`: sempre `"Bearer"`; a PWA envia o token no header
  *   `Authorization: Bearer <jwt>`.
  * - `expiresIn`: validade em segundos (86400), correspondente ao `exp` do JWT.
@@ -38,7 +38,7 @@ export interface LoginSuccessResponse {
  * - `error` é **opcional** (nome curto do tipo de erro, presente ou não
  *   conforme o transport) e **nunca deve ser dependido pelos clientes**:
  *   a PWA consome apenas `statusCode` e `message` (T11).
- * - `message` é sempre genérica, em PT; nenhum corpo contém a senha (AC10)
+ * - `message` é sempre genérica, em PT; nenhum corpo contém a senha (AC-10)
  *   e o corpo do 500 nunca expõe detalhes internos (detalhes apenas em log
  *   no servidor).
  */

@@ -10,7 +10,7 @@ import { JwtAuthModule } from '../api/http/auth/jwt-auth.module';
  * Os casos de uso e o domínio ficam em `src/application` e `src/domain`
  * e não dependem do NestJS (arquitetura hexagonal - ADR 0001/0004).
  *
- * `JwtAuthModule` registra o guard global de autenticação (RN12/AC15 —
+ * `JwtAuthModule` registra o guard global de autenticação (RN12/AC-15 —
  * ADR 0007): toda rota exige JWT válido; falha → 401 uniforme.
  */
 @Module({

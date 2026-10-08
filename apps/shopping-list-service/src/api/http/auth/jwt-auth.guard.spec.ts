@@ -1,4 +1,4 @@
-// Integração do guard global de JWT (AC15/RN12 — ADR 0007).
+// Integração do guard global de JWT (AC-15/RN12 — ADR 0007).
 //
 // Requisição DIRETA ao shopping-list-service (sem gateway), via `inject` do
 // adaptador Fastify:
@@ -31,7 +31,7 @@ class PublicTestController {
 
 const UNAUTHORIZED_BODY = { statusCode: 401, message: 'Não autorizado' };
 
-describe('JwtAuthGuard (APP_GUARD global — AC15)', () => {
+describe('JwtAuthGuard (APP_GUARD global — AC-15)', () => {
   let app: NestFastifyApplication;
 
   beforeAll(async () => {
@@ -107,7 +107,7 @@ describe('JwtAuthGuard (APP_GUARD global — AC15)', () => {
     expect(response.json()).toEqual(UNAUTHORIZED_BODY);
   });
 
-  it('200 com JWT válido emitido com o par de chaves do auth (AC15)', async () => {
+  it('200 com JWT válido emitido com o par de chaves do auth (AC-15)', async () => {
     const token = await signTestJwt();
     const response = await app.inject({
       method: 'GET',

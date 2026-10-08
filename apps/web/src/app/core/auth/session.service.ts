@@ -2,7 +2,7 @@
 //
 // An Angular injectable that exposes reactive signals (signal) for consumption
 // by the template, guard and interceptor. Persists the JWT in localStorage
-// with the key `lcd.accessToken` (RN11/AC13).
+// with the key `lcd.accessToken` (RN11/AC-13).
 //
 // RN11: JWT validade por 24h, sem refresh token. Ao expirar, logout + redirect.
 //
@@ -17,7 +17,7 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 
-// --- Chave fixa no localStorage (RN11/AC13) ---
+// --- Chave fixa no localStorage (RN11/AC-13) ---
 export const SESSION_STORAGE_KEY = 'lcd.accessToken';
 const STORAGE_KEY = SESSION_STORAGE_KEY;
 

@@ -1,4 +1,4 @@
-// App é só o ponto de montagem do roteador (AC1):
+// App é só o ponto de montagem do roteador (AC-01):
 // - sem sessão → `/login` (tela cheia, sem app-bar);
 // - com sessão → `AuthenticatedShell` (app-bar + logout) renderiza o resto.
 import { Component } from '@angular/core';

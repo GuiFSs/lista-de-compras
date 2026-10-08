@@ -93,7 +93,7 @@ input[type="password"].focused {
   display: block;
 }
 
-/* Botão primary — altura mínima 44px (AC4), pill --radius-full */
+/* Botão primary — altura mínima 44px (AC-04), pill --radius-full */
 .btn-primary {
   width: 100%;
   padding: var(--space-sm) var(--space-lg);
@@ -108,14 +108,14 @@ input[type="password"].focused {
   transition: opacity 0.2s, transform 0.1s;
   box-sizing: border-box;
   touch-action: manipulation;
-  min-height: 44px; /* AC4: alvo de toque ≥ 44px */
+  min-height: 44px; /* AC-04: alvo de toque ≥ 44px */
 }
 
 .btn-primary:active:not(:disabled) {
   transform: scale(0.97);
 }
 
-/* Estado: disabled (AC4 — impede envio duplicado) */
+/* Estado: disabled (AC-04 — impede envio duplicado) */
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;

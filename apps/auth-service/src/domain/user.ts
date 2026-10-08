@@ -9,7 +9,7 @@ export interface User {
   id: string;
   /** Nome de usuário único (RN1). */
   username: string;
-  /** Hash bcrypt da senha — nunca o valor puro (RN4/AC8). */
+  /** Hash bcrypt da senha — nunca o valor puro (RN4/AC-08). */
   passwordHash: string;
   createdAt: Date;
   /** Atualizado pelo upsert do seed; nulo enquanto nunca atualizado. */

@@ -21,7 +21,7 @@ export class JoseTokenSigner implements TokenSigner {
   ) {}
 
   async sign(user: User): Promise<string> {
-    // iat explícito para garantir exp = iat + 86400 exatamente (RN11/AC13).
+    // iat explícito para garantir exp = iat + 86400 exatamente (RN11/AC-13).
     const iat = Math.floor(Date.now() / 1000);
     return new SignJWT({})
       .setProtectedHeader({ alg: 'RS256', typ: 'JWT' })

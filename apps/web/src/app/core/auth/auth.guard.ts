@@ -1,4 +1,4 @@
-// AuthGuard — guarde rotas que exigem sessão ativa (RN10/AC12).
+// AuthGuard — guarde rotas que exigem sessão ativa (RN10/AC-12).
 //
 // - Se há sessão válida (token no signal + não expirado): permite.
 // - Se NÃO há sessão válida: redireciona para /login, preservando a
@@ -6,7 +6,7 @@
 //
 // O guard INJETA o SessionService antes de ler a sessão: o serviço
 // é o responsável por hidratar o token do localStorage (recarga de
-// página/deep link — AC12/AC13). Sem a injeção, o guard lería o
+// página/deep link — AC-12/AC-13). Sem a injeção, o guard lería o
 // signal antes de o serviço nascer e veria "sem sessão" mesmo com
 // token válido armazenado.
 import { inject } from '@angular/core';

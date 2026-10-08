@@ -55,6 +55,7 @@ __screenshots__/
 
 # saida dos testes e2e (playwright)
 test-output/
+test-results/
 
 vite.config.*.timestamp*
 

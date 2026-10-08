@@ -22,7 +22,7 @@ describe('AppModule (smoke do setup)', () => {
     await app.init();
     await app.getHttpAdapter().getInstance().ready();
 
-    // A rota `/api` agora é protegida pelo guard global (AC15/ADR 0007):
+    // A rota `/api` agora é protegida pelo guard global (AC-15/ADR 0007):
     // o smoke envia um JWT válido assinado com o par de teste (o mesmo que
     // o auth-service usaria em produção com as chaves do `.env`).
     const token = await signTestJwt();

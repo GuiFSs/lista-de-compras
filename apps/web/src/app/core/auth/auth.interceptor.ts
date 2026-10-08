@@ -25,10 +25,10 @@ import { SessionService } from './session.service';
  *
  * - Endpoint público de login (`AUTH_API_LOGIN_URL`): repassa sem
  *   header e sem tratamento de 401 — ali 401 significa "credenciais
- *   inválidas" (AC3), não fim de sessão.
+ *   inválidas" (AC-03), não fim de sessão.
  * - Demais requisições: com token, anexa o header; 401 → logout +
  *   volta ao login preservando a URL pretendida como `returnUrl`
- *   (AC12) e **re lança** o erro para quem chamou (o observador
+ *   (AC-12) e **re lança** o erro para quem chamou (o observador
  *   continua recebendo o `HttpErrorResponse`).
  */
 export const authInterceptorFn: HttpInterceptorFn = (
@@ -38,7 +38,7 @@ export const authInterceptorFn: HttpInterceptorFn = (
   const session = inject(SessionService);
   const router = inject(Router);
 
-  // Endpoint público: sem header, sem tratamento de 401 (AC3).
+  // Endpoint público: sem header, sem tratamento de 401 (AC-03).
   if (request.url === AUTH_API_LOGIN_URL) {
     return next(request);
   }
@@ -64,7 +64,7 @@ export const authInterceptorFn: HttpInterceptorFn = (
     catchError((err: unknown) => {
       if (err && (err as { status?: number }).status === 401) {
         session.logout();
-        // Preserva a URL pretendida como returnUrl (AC12).
+        // Preserva a URL pretendida como returnUrl (AC-12).
         router.navigate(['/login'], {
           queryParams: { returnUrl: router.url },
         });

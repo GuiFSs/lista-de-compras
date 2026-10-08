@@ -5,10 +5,10 @@
 // - resultado do caso de uso → status/body do contrato (T3);
 // - o envelope de erro canônico `ApiErrorResponse` é SEMPRE o de
 //   @lista/contracts (statusCode/message garantidos; error ausente/opcional
-//   e nunca dependido pela PWA — 🟠-1); mensagens PT genéricas (RN7/AC3);
+//   e nunca dependido pela PWA — 🟠-1); mensagens PT genéricas (RN7/AC-03);
 // - o corpo do 500 é sempre { statusCode: 500, message: "Erro interno" },
 //   sem detalhes; detalhes internos vão apenas para o log do servidor, sem
-//   credenciais (AC10).
+//   credenciais (AC-10).
 import {
   BadRequestException,
   Body,
@@ -84,14 +84,14 @@ export class AuthController {
     @Res({ passthrough: true }) res: FastifyReply,
   ): Promise<LoginSuccessResponse> {
     // RN1: validação no servidor — campos obrigatórios, strings não vazias
-    // (a PWA já valida antes de enviar — AC6). Corpo inválido → 400 canônico.
+    // (a PWA já valida antes de enviar — AC-06). Corpo inválido → 400 canônico.
     // O corpo pode vir como string (Fastify inject com JSON malformado) ou
     // objeto (Fastify parseado). Parseamos aqui para garantir o envelope
     // canônico de erro consistente (T3/🟠-1).
     const parsedBody = parseBody(body);
 
     // RN1: validação no servidor — campos obrigatórios, strings não vazias
-    // (a PWA já valida antes de enviar — AC6). Corpo inválido → 400 canônico.
+    // (a PWA já valida antes de enviar — AC-06). Corpo inválido → 400 canônico.
     if (!isValidLoginRequest(parsedBody)) {
       throw new BadRequestException(
         canonicalError(HttpStatus.BAD_REQUEST, LOGIN_400_MESSAGE),
@@ -112,7 +112,7 @@ export class AuthController {
 
       if (!result.ok) {
         if (result.reason === 'rate-limited') {
-          // T7/AC14: 429 com envelope canônico + header Retry-After (RN13).
+          // T7/AC-14: 429 com envelope canônico + header Retry-After (RN13).
           // O header é gravado no reply (passthrough: o Nest não zera headers
           // já definidos) e a exceção carrega o corpo — o filtro de exceções
           // aplica status 429 + envelope. Evita `send()` manual (que seria
@@ -125,7 +125,7 @@ export class AuthController {
             HttpStatus.TOO_MANY_REQUESTS,
           );
         }
-        // RN7/AC3: 401 genérico — igual para usuário inexistente e senha
+        // RN7/AC-03: 401 genérico — igual para usuário inexistente e senha
         // errada; não indica campo nem expõe dado sensível.
         throw new UnauthorizedException(
           canonicalError(HttpStatus.UNAUTHORIZED, LOGIN_401_MESSAGE),
@@ -143,7 +143,7 @@ export class AuthController {
       if (error instanceof HttpException) {
         throw error;
       }
-      // AC10: detalhes internos só em log (sem credenciais); corpo 500 genérico.
+      // AC-10: detalhes internos só em log (sem credenciais); corpo 500 genérico.
       this.logger.error(
         'Falha inesperada no login',
         error instanceof Error ? (error.stack ?? error.message) : String(error),

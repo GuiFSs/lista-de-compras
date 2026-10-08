@@ -1,5 +1,5 @@
 // Helpers do `returnUrl` — a rota que a pessoa tentava acessar antes de ser
-// levada ao login (RN10/AC12: guard de retorno, deep links e recarga passam
+// levada ao login (RN10/AC-12: guard de retorno, deep links e recarga passam
 // pelo login e voltam à rota original).
 
 /**

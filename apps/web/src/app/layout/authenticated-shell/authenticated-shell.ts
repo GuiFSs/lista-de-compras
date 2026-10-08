@@ -18,7 +18,7 @@ export class AuthenticatedShell {
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
 
-  /** Logout manual (RN11/AC13): encerra a sessão e volta ao login. */
+  /** Logout manual (RN11/AC-13): encerra a sessão e volta ao login. */
   logout(): void {
     this.session.logout();
     void this.router.navigate(['/login']);

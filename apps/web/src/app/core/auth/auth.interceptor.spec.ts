@@ -1,7 +1,7 @@
-// Testes do interceptor HTTP de autenticação (RN12/AC13).
+// Testes do interceptor HTTP de autenticação (RN12/AC-13).
 //
 // `Authorization: Bearer <jwt>` em requisições autenticadas; endpoint público
-// de login ignorado (sem header e sem tratamento de 401 — AC3); 401 numa
+// de login ignorado (sem header e sem tratamento de 401 — AC-03); 401 numa
 // requisição que carregava o token → logout + volta ao login com `returnUrl`.
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import {
@@ -108,7 +108,7 @@ describe('authInterceptor', () => {
 
     const req = http.expectOne((r) => r.url === AUTH_API_LOGIN_URL);
     expect(req.request.headers.has('Authorization')).toBe(false);
-    // 401 aqui é "credenciais inválidas" (AC3): a sessão NÃO é encerrada.
+    // 401 aqui é "credenciais inválidas" (AC-03): a sessão NÃO é encerrada.
     req.flush(
       { statusCode: 401, message: 'Credenciais inválidas' },
       { status: 401, statusText: 'Unauthorized' },
@@ -139,7 +139,7 @@ describe('authInterceptor', () => {
     );
 
     expect(error).toBeInstanceOf(HttpErrorResponse);
-    // Sessão encerrada (storage limpo) e redirect preservando a URL (AC12).
+    // Sessão encerrada (storage limpo) e redirect preservando a URL (AC-12).
     expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
     expect(session.hasValidSession()).toBe(false);
     expect(navigateSpy).toHaveBeenCalledWith(['/login'], {

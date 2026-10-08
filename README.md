@@ -102,7 +102,7 @@ npm run e2e                 # nx e2e web-e2e
 npm run docker:up           # sobe Postgres + RabbitMQ
 npm run docker:down         # derruba os containers
 npm run auth:keys           # gera o par RS256 e grava AUTH_JWT_*_B64 no .env local
-npm run auth:seed           # semeia o usuário inicial no banco auth
+npm run auth:seed           # aplica migrações e semeia o usuário inicial no banco auth
 ```
 
 ### Problemas conhecidos

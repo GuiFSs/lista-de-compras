@@ -14,7 +14,7 @@
 // - Após a janela expirar, o contador zera e um novo login é permitido.
 import { LoginRateLimiter } from '../application/ports/login-rate-limiter.port';
 
-// Padrões do PLAN.md / RN13-AC14
+// Padrões do PLAN.md / RN13-AC-14
 const DEFAULT_MAX_FAILURES = 5;
 const DEFAULT_WINDOW_MS = 60_000; // 60 segundos
 
@@ -37,16 +37,20 @@ export class MemoryRateLimiter implements LoginRateLimiter {
 
   constructor(config: MemoryRateLimiterConfig = {}) {
     this.maxFailures =
-      config.maxFailures ?? DEFAULT_MAX_FAILURES ?? Number(process.env['AUTH_RATE_LIMIT_MAX_FAILURES'] ?? DEFAULT_MAX_FAILURES);
+      config.maxFailures ??
+      Number(
+        process.env['AUTH_RATE_LIMIT_MAX_FAILURES'] ?? DEFAULT_MAX_FAILURES,
+      );
     this.windowMs =
-      config.windowMs ?? DEFAULT_WINDOW_MS ?? Number(process.env['AUTH_RATE_LIMIT_WINDOW_MS'] ?? DEFAULT_WINDOW_MS);
+      config.windowMs ??
+      Number(process.env['AUTH_RATE_LIMIT_WINDOW_MS'] ?? DEFAULT_WINDOW_MS);
     this.clock = config.clock ?? (() => Date.now());
     this.store = new Map();
   }
 
   /**
    * Retorna `true` quando o cliente está bloqueado na janela (>= max falhas).
-   * A checagem acontece ANTES de validar credenciais (RN13/AC14: mesmo com
+   * A checagem acontece ANTES de validar credenciais (RN13/AC-14: mesmo com
    * credenciais corretas, bloqueado até a janela expirar).
    */
   async isBlocked(clientId: string): Promise<boolean> {

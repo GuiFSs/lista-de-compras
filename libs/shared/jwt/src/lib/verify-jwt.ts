@@ -1,4 +1,4 @@
-// Verificador local de JWT (RN12/AC15 — ADR 0007).
+// Verificador local de JWT (RN12/AC-15 — ADR 0007).
 //
 // Framework-free: não depende de NestJS/Fastify/banco — é a lib pura que cada
 // microserviço usa na própria borda HTTP. Construída sobre `jose` (sem builds
