@@ -10,7 +10,7 @@ será a única API chamada pela PWA; ele encaminhará as requisições aos servi
 internos". Porém o gateway ainda não existe: ele depende da feature **"API
 Gateway"** do backlog, e a feature Autenticação (spec aprovada em
 `docs/features/auth/SPEC.md`) precisa entregar login real nesta rodada, com a PWA
-obtendo um JWT (AC1/AC2).
+obtendo um JWT (AC-01/AC-02).
 
 A spec fechou, então, uma decisão de produto: a PWA chama o microserviço de
 autenticação **diretamente**, como exceção temporária à ADR 0001, até o gateway

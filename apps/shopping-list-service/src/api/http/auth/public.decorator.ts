@@ -2,7 +2,7 @@
 //
 // O guard global (`JwtAuthGuard`/APP_GUARD) nasce com este suporte para
 // rotas públicas futuras (healthcheck etc.). Na v1 NENHUMA rota usa:
-// todas as rotas do shopping-list-service exigem token válido (AC15).
+// todas as rotas do shopping-list-service exigem token válido (AC-15).
 import { SetMetadata } from '@nestjs/common';
 
 /** Chave de metadata lida pelo guard (Reflector). */

@@ -8,7 +8,11 @@
 - <lib> <ver-antiga> → <ver-nova> (ou "Nenhuma lib alterada")
 
 ## Testes/Validação
-- <evidência: teste rodado, critério de aceite verificado>
+- <comando + resultado>
+- ACs comprovados: <AC-01, ...>
 
 ## Refs
-- docs/features/<feature>/
+- Feature: `docs/features/<feature>/`
+- Tarefas: <T-01, ...>
+- Validação: `docs/features/<feature>/VALIDATION.md`
+- ADRs: <links ou "nenhuma">

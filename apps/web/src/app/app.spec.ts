@@ -1,6 +1,6 @@
 // Smoke do App (nova navegação, T10):
 // a raiz virou só o `<router-outlet>` — sem sessão, a PWA redireciona para
-// a tela de login (tela cheia, sem app-bar) — AC1/AC12.
+// a tela de login (tela cheia, sem app-bar) — AC-01/AC-12.
 import { provideLocationMocks } from '@angular/common/testing';
 import { TestBed } from '@angular/core/testing';
 import {
@@ -37,7 +37,7 @@ describe('App', () => {
     expect(compiled.querySelector('.app-bar')).toBeNull();
   });
 
-  it('sem sessão, a rota raiz redireciona para o login — tela cheia (AC1/AC12)', async () => {
+  it('sem sessão, a rota raiz redireciona para o login — tela cheia (AC-01/AC-12)', async () => {
     const router = TestBed.inject(Router);
     const fixture = TestBed.createComponent(App);
 

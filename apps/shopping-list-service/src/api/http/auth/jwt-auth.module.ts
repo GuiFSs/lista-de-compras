@@ -1,7 +1,7 @@
 // Módulo da borda HTTP de autenticação do shopping-list-service.
 //
 // Registra o `JwtAuthGuard` como APP_GUARD global: toda rota do serviço
-// exige JWT válido (RN12/AC15), exceto rotas anotadas com `@Public()` (na
+// exige JWT válido (RN12/AC-15), exceto rotas anotadas com `@Public()` (na
 // v1 nenhuma usa — 🟡-2). O guard lê `AUTH_JWT_PUBLIC_KEY_B64` e
 // `AUTH_JWT_ISSUER` do `.env` da raiz (ConfigModule global, ADR 0004).
 import { Module } from '@nestjs/common';

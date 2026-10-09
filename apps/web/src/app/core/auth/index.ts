@@ -1,4 +1,3 @@
-// Barrel do core de autenticação — consumo único pelos guards, shell e rotas.
 export {
   AUTH_API_BASE_URL,
   AUTH_API_LOGIN_URL,

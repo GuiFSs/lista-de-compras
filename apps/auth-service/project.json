@@ -64,7 +64,16 @@
         "command": "drizzle-kit generate"
       }
     },
+    "db:migrate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/auth-service",
+        "command": "drizzle-kit migrate --config drizzle.config.ts"
+      }
+    },
     "seed": {
+      "dependsOn": ["db:migrate"],
       "executor": "nx:run-commands",
       "cache": false,
       "options": {

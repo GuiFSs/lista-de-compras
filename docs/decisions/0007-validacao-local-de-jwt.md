@@ -71,7 +71,7 @@ o `PLAN.md` da feature); a spec não criava esta ADR.
 
 ## Consequências
 
-- **A v1 funciona sem gateway** (AC15 verificável por requisição direta a cada
+- **A v1 funciona sem gateway** (AC-15 verificável por requisição direta a cada
   serviço) e **continua válida quando o gateway existir**: nenhum serviço
   depende de chamada central para decidir autorização.
 - **Cada serviço novo precisa da chave pública no `.env` local** (`AUTH_JWT_PUBLIC_KEY_B64`) e do `AUTH_JWT_ISSUER` coerente — passo documentado no README e no `.env.example`.

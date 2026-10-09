@@ -1,39 +1,51 @@
 ---
 name: git-workflow
-description: Commit, branch and push rules for Lista de Compras — one Conventional Commit per SDD gate, branch per feature, push and PR only with explicit user approval.
+description: Commit, branch, push, PR and merge rules for Lista de Compras — traceable task commits, PR-first integration and explicit approval for every remote or integration action.
 ---
 
 # Fluxo de git
 
-Use esta skill sempre que um gate do SDD for aprovado ou quando o usuário pedir para subir código.
+Use esta skill para qualquer operação git de uma feature.
 
-## Decisões (2026-10-06)
+## Princípios
 
-- Um **commit por gate** cumprido do SDD (não por tarefa, nem um só commit por feature).
 - **Branch por feature**: `feature/<nome-da-feature>`, criada quando o plano é aprovado.
-- **Push somente com aprovação explícita do usuário**; nunca automático.
-- **PR opcional após push**: também só com aprovação explícita; corpo gerado a partir dos commits e das mudanças de dependências.
+- Commits pequenos por tarefa; o corpo referencia `T-*`, `AC-*` e
+  `docs/features/<feature>/`.
+- Gates são comprovados por `STATUS.md`, checklists e evidências, não pela
+  quantidade de commits.
+- Somente o `sdd-orchestrator` executa git mutante.
+- **Commit por T**: após handoff `concluída` com testes da tarefa verdes, o
+  orquestrador comita **sem** nova aprovação do usuário, antes da próxima T.
+- Push, criação de PR e merge exigem aprovações explícitas e separadas.
+- PR é o caminho principal de integração quando existe remoto.
 
 ## Passos
 
-1. Confirme qual gate foi aprovado (spec, plano, implementação+testes, validação).
-2. Se o plano acabou de ser aprovado e a branch não existe, crie `feature/<nome-da-feature>` a partir de `master`.
-3. Verifique `git status` e **nunca inclua** credenciais, segredos, tokens ou senhas (regra do AGENTS.md).
-4. Faça o commit em Conventional Commits com escopo de serviço/área:
-   - Gates de spec, plano e validação: `docs(<escopo>): ...`
-   - Gate de implementação: `feat(<escopo>): ...` (ou `fix`/`refactor` quando couber)
-   - Escopos típicos: `auth`, `list`, `history`, `gateway`, `infra`, `docs`
-   - O corpo do commit referencia `docs/features/<feature>/` e os critérios de aceite atendidos.
-5. Somente o `sdd-orchestrator` executa git; subagents não commitam.
-6. Após o gate de validação, incorpore a feature ao `master` com merge `--no-ff` e mensagem referenciando a feature.
-7. Para push: apresente ao usuário o resumo (branch, commits, destino) e aguarde aprovação explícita.
-8. **PR (opcional)**: após o push, pergunte ao usuário se quer abrir PR também. Se sim:
+1. Confirme `STATUS.md`, tarefa/gate e branch atual.
+2. Crie `feature/<nome>` a partir de `master` depois da aprovação canônica do
+   plano (`Aprovado pelo usuário em YYYY-MM-DD`).
+3. Após cada `T-*` com handoff `concluída` e evidência de teste verde:
+   - inspecione status/diff e exclua segredos, credenciais, tokens, senhas e
+     mudanças fora da tarefa;
+   - faça o commit Conventional Commits com escopo (`docs(auth)`, `feat(list)`,
+     `test(history)`, `fix(gateway)`); referencie `T-*` e `AC-*` no corpo;
+   - **não** peça aprovação do usuário para esse commit.
+4. Para push, apresente branch, commits e destino; aguarde aprovação.
+5. Depois do push, ofereça criar PR. Com nova aprovação:
    - Colete do branch: `git log master..HEAD --oneline`, arquivos mudados (`git diff master...HEAD --stat`) e alterações de dependências (`git diff master...HEAD -- '**/package.json' '**/package-lock.json'`).
    - Monte título e corpo no template `.github/pull_request_template.md` (bullets curtos: Feito, Mudanças, Dependências, Testes/Validação, Refs).
    - Abra com `gh pr create --base master --head feature/<nome> --title "..." --body "..."`. Se o `gh` não estiver disponível, gere a URL de compare pré-preenchida (`https://github.com/<owner>/<repo>/compare/master...<branch>?title=...&body=...`) e ofereça abri-la no navegador.
-   - O PR também exige aprovação explícita do usuário antes de ser criado.
+6. Ofereça a revisão consultiva adaptativa do `code-reviewer`. O parecer é
+   publicado como comentário no PR via `gh pr comment` (skill `code-review`).
+7. Faça merge somente após `VALIDATION.md` aprovada, checks/revisão tratados e
+   nova aprovação explícita do usuário.
 
-## Observações
+## Fallback sem remoto
 
-- Trabalho que não é feature (setup, docs de processo) vai direto ao `master`.
-- Sem aprovação de push, o trabalho permanece local na branch da feature.
+Se o repositório não tiver remoto, após validação aprovada e autorização do
+usuário faça merge local `--no-ff`. Não faça merge local antes de abrir um PR:
+isso elimina o diff da branch e torna o fluxo ambíguo.
+
+Trabalho que não é feature (setup e documentação de processo) pode ir direto ao
+`master` em commits coerentes. Sem aprovação de push, tudo permanece local.

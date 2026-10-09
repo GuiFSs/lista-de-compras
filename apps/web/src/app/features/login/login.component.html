@@ -1,97 +1,92 @@
-<!-- Tela de login — mobile-first, 4 estados (vazio/carregando/erro/sucesso) -->
-<main
-  class="login"
-  touch-action="manipulation"
->
-  <form
-    class="login-form"
-    [formGroup]="form"
-    (ngSubmit)="onSubmit($event)"
-    novalidate
-  >
+<main class="login" touch-action="manipulation">
+  <div class="login-column">
+    <header class="login-brand">
+      <h1 class="login-brand__title" id="login-brand-title">Lista de Compras</h1>
+      <p class="login-brand__subtitle">Entre para ver a lista</p>
+    </header>
 
-    <!-- Usuário -->
-    <div class="field-wrapper">
-      <label
-        for="username"
-        class="label caption"
-        [class.error]="f['username'].errors"
-        [class.focused]="isFocused('username')"
-      >
-        Usuário
-      </label>
-      <input
-        id="username"
-        type="text"
-        placeholder="Usuário"
-        formControlName="username"
-        [class.error]="f['username'].errors"
-        [class.focused]="isFocused('username')"
-        aria-describedby="username-error"
-        [attr.aria-invalid]="f['username'].errors ? 'true' : 'false'"
-        required
-      />
-    </div>
-
-    <!-- Senha -->
-    <div class="field-wrapper">
-      <label
-        for="password"
-        class="label caption"
-        [class.error]="f['password'].errors"
-        [class.focused]="isFocused('password')"
-      >
-        Senha
-      </label>
-      <input
-        id="password"
-        type="password"
-        placeholder="Senha"
-        formControlName="password"
-        [class.error]="f['password'].errors"
-        [class.focused]="isFocused('password')"
-        aria-describedby="password-error"
-        [attr.aria-invalid]="f['password'].errors ? 'true' : 'false'"
-        required
-      />
-    </div>
-
-    <!-- Mensagem de erro genérica (estado "erro") -->
-    <!-- Usa aria-live role="alert" para leitores de tela -->
-    @if (states().error) {
-      <div
-        class="error-message caption"
-        role="alert"
-        id="username-error"
-      >
-        {{ errorMessage() }}
-      </div>
-      <div
-        class="error-message caption"
-        role="alert"
-        id="password-error"
-      >
-        {{ errorMessage() }}
-      </div>
-    }
-
-    <!-- Botão de submit -->
-    <button
-      type="submit"
-      class="btn-primary"
-      [disabled]="states().loading"
-      [class.loading]="states().loading"
+    <form
+      class="login-form"
+      [formGroup]="form"
+      (ngSubmit)="onSubmit($event)"
+      novalidate
+      aria-labelledby="login-brand-title"
     >
-      @if (states().loading) {
-        <span>Entrando…</span>
-      }
-      @if (!states().loading) {
-        <span>Entrar</span>
-      }
-      @if (states().loading) {
-        <span class="spinner"></span>
-      }
-    </button>
+      <div class="login-fields">
+        <div class="field-wrapper">
+          <label
+            for="username"
+            class="label"
+            [class.error]="f['username'].errors"
+            [class.focused]="isFocused('username')"
+          >
+            Usuário
+          </label>
+          <input
+            id="username"
+            type="text"
+            placeholder="Usuário"
+            formControlName="username"
+            autocomplete="username"
+            [class.error]="f['username'].errors"
+            [class.focused]="isFocused('username')"
+            (focus)="onFocus('username')"
+            (blur)="onBlur()"
+            [attr.aria-describedby]="states().error ? 'login-form-error' : null"
+            [attr.aria-invalid]="f['username'].errors ? 'true' : 'false'"
+            required
+          />
+        </div>
 
-  </form>
+        <div class="field-wrapper">
+          <label
+            for="password"
+            class="label"
+            [class.error]="f['password'].errors"
+            [class.focused]="isFocused('password')"
+          >
+            Senha
+          </label>
+          <input
+            id="password"
+            type="password"
+            placeholder="Senha"
+            formControlName="password"
+            autocomplete="current-password"
+            [class.error]="f['password'].errors"
+            [class.focused]="isFocused('password')"
+            (focus)="onFocus('password')"
+            (blur)="onBlur()"
+            [attr.aria-describedby]="states().error ? 'login-form-error' : null"
+            [attr.aria-invalid]="f['password'].errors ? 'true' : 'false'"
+            required
+          />
+        </div>
+      </div>
+
+      @if (states().error) {
+        <div
+          class="error-message"
+          role="alert"
+          id="login-form-error"
+        >
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <button
+        type="submit"
+        class="btn-primary"
+        [disabled]="states().loading"
+        [class.loading]="states().loading"
+      >
+        @if (states().loading) {
+          <span>Entrando…</span>
+          <span class="spinner" aria-hidden="true"></span>
+        } @else {
+          <span>Entrar</span>
+        }
+      </button>
+    </form>
+  </div>
 </main>

@@ -9,7 +9,7 @@ import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   username: text('username').notNull().unique(),
-  // RN4/AC8: apenas o hash bcrypt (nunca o valor puro).
+  // RN4/AC-08: apenas o hash bcrypt (nunca o valor puro).
   passwordHash: text('password_hash').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()

@@ -1,4 +1,4 @@
-// Testes dos guards de rota — RN10/AC12 (returnUrl, deep link, recarga).
+// Testes dos guards de rota — RN10/AC-12 (returnUrl, deep link, recarga).
 //
 // Usa o `RouterTestingHarness` com as rotas REAIS da aplicação (skill
 // angular-developer / router-testing): guard, lazy do login e shell
@@ -47,14 +47,14 @@ describe('guards de autenticação', () => {
     window.localStorage.clear();
   });
 
-  it('sem sessão, a rota raiz cai na tela de login (AC1/AC12)', async () => {
+  it('sem sessão, a rota raiz cai na tela de login (AC-01/AC-12)', async () => {
     expect(router.url).toBe('/login');
     expect(harness.fixture.nativeElement.querySelector('app-login')).toBeTruthy();
     // Login é tela cheia: fora do shell (sem app-bar).
     expect(harness.fixture.nativeElement.querySelector('.app-bar')).toBeNull();
   });
 
-  it('deep link sem sessão → /login com a URL pretendida em returnUrl (AC12)', async () => {
+  it('deep link sem sessão → /login com a URL pretendida em returnUrl (AC-12)', async () => {
     await harness.navigateByUrl('/compras/2026');
     await harness.fixture.whenStable();
 
@@ -64,10 +64,10 @@ describe('guards de autenticação', () => {
     expect(returnUrl).toBe('/compras/2026');
   });
 
-  it('recarga com sessão válida continua na rota, dentro do shell (AC13)', async () => {
+  it('recarga com sessão válida continua na rota, dentro do shell (AC-13)', async () => {
     // Simula a recarga: o token já está no localStorage antes de o serviço
     // de sessão nascer — ele será criado a partir do storage quando o guard
-    // rodar (AC12).
+    // rodar (AC-12).
     window.localStorage.setItem(SESSION_STORAGE_KEY, makeValidToken());
 
     TestBed.resetTestingModule();
@@ -84,7 +84,7 @@ describe('guards de autenticação', () => {
     expect(harness.fixture.nativeElement.querySelector('nav')).toBeNull();
   });
 
-  it('após o login, returnUrl devolve à rota original (AC12)', async () => {
+  it('após o login, returnUrl devolve à rota original (AC-12)', async () => {
     // 1) deep link sem sessão → login guarda a URL pretendida
     await harness.navigateByUrl('/compras/2026');
     await harness.fixture.whenStable();

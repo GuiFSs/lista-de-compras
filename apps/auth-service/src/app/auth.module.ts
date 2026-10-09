@@ -1,10 +1,7 @@
 // Módulo da feature login: wiring do controller (borda HTTP) com o caso de
-// uso e as portas/adaptadores de T5. A política de rate limit (429) entra na
-// T7 — o MemoryRateLimiter substitui o NoopRateLimiter do T6, implementando
-// a port `LoginRateLimiter` com política em memória por IP, relógio injetável
-// e configuração por env (AUTH_RATE_LIMIT_MAX_FAILURES / AUTH_RATE_LIMIT_WINDOW_MS).
-// Quando a T7 estiver completa, este adaptador será injetado automaticamente no
-// LoginUseCase, substituindo o no-op.
+// uso e as portas/adaptadores. `MemoryRateLimiter` implementa a port
+// `LoginRateLimiter` com política em memória por IP e configuração por env
+// (AUTH_RATE_LIMIT_MAX_FAILURES / AUTH_RATE_LIMIT_WINDOW_MS).
 import { Module } from '@nestjs/common';
 import { LoginRateLimiter } from '../application/ports/login-rate-limiter.port';
 import { PasswordHasher } from '../application/ports/password-hasher.port';

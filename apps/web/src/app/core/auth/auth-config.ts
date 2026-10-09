@@ -14,6 +14,6 @@ export const AUTH_API_BASE_URL = 'http://localhost:3001';
  *
  * Endpoint **público** (não exige token): nem o interceptor anexa o header
  * `Authorization`, nem um 401 aqui é tratado como fim de sessão — 401 nesse
- * endpoint significa "credenciais inválidas" (AC3), erro de negócio da T11.
+ * endpoint significa "credenciais inválidas" (AC-03), erro de negócio da T11.
  */
 export const AUTH_API_LOGIN_URL = `${AUTH_API_BASE_URL}/api/auth/login`;

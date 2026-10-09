@@ -1,4 +1,4 @@
-// Testes do SessionService — núcleo da sessão (RN11/AC12/AC13).
+// Testes do SessionService — núcleo da sessão (RN11/AC-12/AC-13).
 //
 // Padrão do repo (skill angular-developer): fake timers para o timer de
 // expiração, spy no localStorage, e o router real de `provideRouter` (sem
@@ -90,7 +90,7 @@ describe('SessionService', () => {
     expect(service.isAuthenticated()).toBe(false);
   });
 
-  it('recarrega a sessão do localStorage ao recriar o serviço (recarga, AC12)', () => {
+  it('recarrega a sessão do localStorage ao recriar o serviço (recarga, AC-12)', () => {
     const token = makeValidToken();
     window.localStorage.setItem(SESSION_STORAGE_KEY, token);
 
@@ -111,7 +111,7 @@ describe('SessionService', () => {
     expect(service.hasValidSession()).toBe(true);
   });
 
-  it('isExpired() decodifica o payload e compara exp (RN11/AC13)', () => {
+  it('isExpired() decodifica o payload e compara exp (RN11/AC-13)', () => {
     // Sem token → sem sessão.
     expect(service.isExpired()).toBe(true);
 

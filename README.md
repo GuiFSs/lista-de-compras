@@ -13,6 +13,7 @@ O projeto é também um ambiente de aprendizado prático de Angular, arquitetura
 - [Decisão arquitetural: setup do front, back e e2e](docs/decisions/0004-setup-do-front-do-back-e-do-e2e.md)
 - [Lições do setup inicial](docs/lessons/2026-10-07-setup-inicial.md)
 - [Plano de setup do SDD](docs/plans/2026-10-06-sdd-setup.md)
+- [Fluxo SDD canônico](docs/process/sdd-workflow.md)
 
 Toda decisão arquitetural relevante é registrada como ADR antes (ou junto) da mudança correspondente.
 
@@ -101,7 +102,7 @@ npm run e2e                 # nx e2e web-e2e
 npm run docker:up           # sobe Postgres + RabbitMQ
 npm run docker:down         # derruba os containers
 npm run auth:keys           # gera o par RS256 e grava AUTH_JWT_*_B64 no .env local
-npm run auth:seed           # semeia o usuário inicial no banco auth
+npm run auth:seed           # aplica migrações e semeia o usuário inicial no banco auth
 ```
 
 ### Problemas conhecidos
@@ -111,6 +112,12 @@ npm run auth:seed           # semeia o usuário inicial no banco auth
 
 ## Fluxo SDD com agentes
 
-Spec (`product-spec`) → Plano (`tech-planner`) → Revisão (`architecture-review` quando cruza serviços) → Implementação (`backend-dev`/`angular-dev`) → Testes (`test-engineer`) → Validação (`feature-validator`), orquestrado por `sdd-orchestrator`.
+Spec (`product-spec`) → Plano (`tech-planner`) → Revisão
+(`architecture-review` quando cruza serviços) → Implementação
+(`backend-dev`/`angular-dev`) → Auditoria de testes (`test-engineer`) →
+Validação (`feature-validator`), orquestrado por `sdd-orchestrator`.
 
-Cada feature vive em `docs/features/<feature>/` com `SPEC.md` e `PLAN.md`; o gate entre fases é a aprovação do usuário ou do validador. Ver `AGENTS.md` para as regras completas (commits por gate, branch `feature/<nome>`, push só com aprovação).
+Cada feature vive em `docs/features/<feature>/` com estado, spec, plano e
+validação versionados. Usuário aprova spec/plano e operações de integração; o
+validador comprova os critérios de aceite. Ver `AGENTS.md` e
+`docs/process/sdd-workflow.md`.
