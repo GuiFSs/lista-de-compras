@@ -17,6 +17,8 @@
 - Tarefa em andamento: <T-XX ou "nenhuma">
 - Tarefas concluídas: <T-XX, T-YY ou "nenhuma">
 - Critérios comprovados: <AC-XX ou "nenhum">
+- ACs reabertos: <AC-XX ou "nenhum">
+- Tarefas reabertas: <T-XX ou "nenhuma">
 
 ## Pendências e bloqueios
 

@@ -28,10 +28,15 @@ Verifique:
   Se o handoff do `test-engineer` não registrou a corrida, devolva ao
   orquestrador sem aprovar.
 - Se Superfície de UI = não: evidência unitária/integração por AC.
+- Checklist de documentação do template (contratos, ADR, README/`.env.example`,
+  lessons se aplicável, STATUS final).
+- Se Superfície de UI = sim: checklist de design do template (tokens, 4 estados,
+  mobile-first, foco/toque, erro visível, modo escuro via tokens).
 - Contratos HTTP/eventos documentados e consistentes.
 - ADR registrada quando a implementação gerou decisão arquitetural.
 - Documentação da feature atualizada se ambiguidades foram resolvidas.
 
 Registre evidência por `AC-*`, comandos executados e pendências claras. Se
 houver pendências que mudem comportamento, contrato ou arquitetura, devolva ao
-orquestrador; não aprove. Encerre com o handoff do fluxo SDD.
+orquestrador; não aprove. Em reprova, liste ACs a reabrir para o orquestrador
+atualizar o STATUS (retrabalho). Encerre com o handoff do fluxo SDD.

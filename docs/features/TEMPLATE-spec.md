@@ -2,7 +2,7 @@
 
 **Status:** Rascunho | Pronta para aprovação | Aprovada
 **Última atualização:** AAAA-MM-DD
-**Aprovação do usuário:** pendente | aprovada em AAAA-MM-DD
+**Aprovação do usuário:** pendente | `Aprovado pelo usuário em AAAA-MM-DD`
 
 ## Objetivo
 
@@ -60,4 +60,4 @@
 - [ ] Critérios `AC-*` são verificáveis e não prescrevem implementação.
 - [ ] Contratos afetados estão identificados.
 - [ ] Não há decisão bloqueante aberta.
-- [ ] Usuário aprovou explicitamente a spec.
+- [ ] Artefato contém a frase canônica `Aprovado pelo usuário em YYYY-MM-DD`.

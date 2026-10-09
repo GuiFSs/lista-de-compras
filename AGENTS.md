@@ -22,29 +22,35 @@ Não presuma regras de produto, integrações, dados ou experiência de uso aind
 - Preserve a arquitetura hexagonal: domínio e casos de uso não dependem de framework, banco, broker ou HTTP.
 - Cada serviço é dono exclusivo de seus dados; integração entre serviços ocorre por contratos HTTP ou eventos documentados.
 - Nunca versionar credenciais, segredos, tokens nem senhas em texto puro.
-- Git: commits pequenos e rastreáveis em branch `feature/<nome>`;
-  Conventional Commits com escopo; push, PR e merge só com aprovações
-  explícitas e separadas do usuário (skill `git-workflow`).
+- Git: commits por `T-*` em branch `feature/<nome>` (orquestrador, Conventional
+  Commits); push, PR e merge só com aprovações explícitas e separadas do
+  usuário (skill `git-workflow`).
 - Testes: todas as falhas de teste DEVEM ser resolvidas antes de avançar para a próxima fase do SDD. Se uma falha não puder ser resolvida, pare e pergunte ao usuário como prosseguir — nunca avance para a próxima etapa com falhas da etapa atual. Exceção: testes que forem realmente difíceis de mockar/setar podem ser removidos, mas apenas com aprovação explícita do usuário.
 - Nunca usar o tipo `any` do TypeScript no código (front-end e back-end, app e libs, produção e testes). Em vez dele, use `unknown` + *narrowing* (type guards), genéricos com `extends` ou tipos de domínio. A regra é imposta pelo lint: `@typescript-eslint/no-explicit-any: error` em `eslint.config.mjs` (raiz), então `npm run lint` falha se alguém reintroduzir um `any` — inclusive em arquivos de teste. Exceção só em casos raros, com aprovação explícita do usuário e com `// eslint-disable-next-line @typescript-eslint/no-explicit-any` + justificativa escrita ao lado; sem isso, o gate de implementação não passa.
 - Explique decisões e mudanças de modo didático no **chat, handoff, ADR ou `docs/lessons/`**, conectando-as aos objetivos de aprendizado. No **código**, siga a skill `coding-style`: comentários moderados que ajudam a ler o *porquê* não óbvio — sem prefácios que recontam SPEC/PLAN nem narrativa da linha seguinte.
 
 ## Ciclo SDD
 
-Cada feature segue: **Spec → Plano → Implementação → Validação**, com
-`STATUS.md`, `SPEC.md`, `PLAN.md` e `VALIDATION.md` em
-`docs/features/<feature>/`. Usuário aprova spec e plano; o
-`feature-validator` aprova tecnicamente a validação; push, PR e merge continuam
-sendo decisões do usuário. O processo canônico está em
-`docs/process/sdd-workflow.md`. Features/fixes com superfície de UI exigem
-evidência Playwright em `apps/web-e2e` (comando + resultado registrados;
-ADR 0008); backend-only fecha com unitário/integração.
+Cada feature (e bugfix) segue: **Spec → Plano → Implementação → Validação**,
+com `STATUS.md`, `SPEC.md`, `PLAN.md` e `VALIDATION.md` em
+`docs/features/<feature>/`. Spec e plano só fecham com a frase canônica
+`Aprovado pelo usuário em YYYY-MM-DD`. O `feature-validator` aprova a
+validação; push, PR e merge continuam decisões do usuário. Processo canônico:
+`docs/process/sdd-workflow.md` (retomada via STATUS, retrabalho, commit por T,
+checklists de docs/design).
 
-O `sdd-orchestrator` delega por tarefa do `PLAN.md`, sequencialmente por padrão.
-No máximo duas tarefas independentes e com arquivos disjuntos podem rodar em
-paralelo.
+O `sdd-orchestrator` lê e, se preciso, corrige só o `STATUS.md`; delega por
+tarefa do `PLAN.md` (sequencial por padrão; no máximo duas em paralelo se
+independentes e com arquivos disjuntos); após cada T concluída com testes
+verdes, comita sem nova aprovação (skill `git-workflow`).
 
-Após o PR (push aprovado), o `code-reviewer` pode revisar o PR a pedido do usuário: é consultivo, não bloqueia o merge e não edita código. Detalhes em `docs/plans/2026-10-06-sdd-setup.md`.
+Features/fixes com superfície de UI exigem evidência Playwright em
+`apps/web-e2e` (comando + resultado; ADR 0008); backend-only fecha com
+unitário/integração.
+
+Após o PR (push aprovado), o `code-reviewer` pode revisar a pedido: consultivo,
+parecer via `gh pr comment`, sem editar código. Detalhes em
+`docs/plans/2026-10-06-sdd-setup.md`.
 
 Agentes (`.opencode/agents/`):
 

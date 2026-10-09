@@ -3,7 +3,7 @@
 **Status:** Rascunho | Em revisão | Aprovado
 **Spec:** `docs/features/<feature>/SPEC.md`
 **Última atualização:** AAAA-MM-DD
-**Aprovação do usuário:** pendente | aprovada em AAAA-MM-DD
+**Aprovação do usuário:** pendente | `Aprovado pelo usuário em AAAA-MM-DD`
 
 ## Contexto
 
@@ -56,8 +56,10 @@ um teste Playwright por AC; preferir jornadas que cubram vários ACs.
 
 ## Tarefas
 
-Cada tarefa deve ter escopo executável por um único agente. Só podem rodar em
-paralelo tarefas sem dependência e com arquivos permitidos disjuntos.
+Cada tarefa deve ter escopo executável por um único agente. Preferir tarefas
+pequenas (um módulo ou responsabilidade estreita), cada uma com comando de
+teste executável; sem teto fixo de arquivos. Só podem rodar em paralelo tarefas
+sem dependência e com arquivos permitidos disjuntos.
 
 Se Superfície de UI = sim, inclua ao menos uma tarefa `T-*` de E2E Playwright
 (`test-engineer` ou `angular-dev`) com arquivos em `apps/web-e2e` e evidência
@@ -75,10 +77,11 @@ esperada = comando + resultado verde.
 ## Gate do plano
 
 - [ ] Todas as tarefas referenciam ao menos um `AC-*` ou justificam trabalho técnico.
+- [ ] Tarefas preferem escopo pequeno e cada uma declara comando de teste.
 - [ ] `Superfície de UI: sim|não` está declarada com justificativa.
 - [ ] Se UI = sim: matriz AC ↔ E2E completa e tarefa Playwright com comando `npx nx e2e web-e2e` (ou filtro).
 - [ ] Dependências, arquivos permitidos, testes e evidências estão explícitos.
 - [ ] Contratos e ownership estão definidos.
 - [ ] Revisão arquitetural foi concluída quando obrigatória.
 - [ ] Não há decisão de comportamento, contrato ou arquitetura em aberto.
-- [ ] Usuário aprovou explicitamente o plano.
+- [ ] Artefato contém a frase canônica `Aprovado pelo usuário em YYYY-MM-DD`.

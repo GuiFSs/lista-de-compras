@@ -23,4 +23,5 @@ Regras:
   aprovação e passagem ao plano.
 - Critérios de aceite devem ser verificáveis.
 - Se uma decisão alterar arquitetura, proponha uma nova ADR em `docs/decisions/`.
+- O gate da spec só fecha com `Aprovado pelo usuário em YYYY-MM-DD` no SPEC.md.
 - Ao encerrar, atualize `STATUS.md` e use o handoff estruturado do fluxo SDD.

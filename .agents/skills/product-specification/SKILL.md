@@ -15,7 +15,8 @@ Use esta skill quando uma feature de produto estiver sendo descoberta ou detalha
 3. Diferencie fatos confirmados de decisões em aberto. Não preencha lacunas por conta própria.
 4. Faça perguntas somente quando forem necessárias para tornar o comportamento implementável.
 5. Se a resposta alterar uma decisão de arquitetura, crie ou atualize uma ADR; caso contrário, mantenha a decisão na especificação da feature.
-6. Não aprove a spec com decisão bloqueante aberta; registre aprovação explícita
-   do usuário e o handoff em `STATUS.md`.
+6. Não aprove a spec com decisão bloqueante aberta. O gate só fecha com a frase
+   canônica `Aprovado pelo usuário em YYYY-MM-DD` no `SPEC.md` e o handoff em
+   `STATUS.md`.
 
 Não use esta skill para implementar a feature nem para escolher tecnologias já decididas.

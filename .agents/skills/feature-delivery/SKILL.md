@@ -13,14 +13,20 @@ Também aplique a skill `coding-style` (comentários moderados, sem narrativa de
    os limites do serviço afetado.
 2. Confirme que a tarefa `T-*` está pronta e limite edições aos arquivos
    permitidos no plano.
-3. Antes de codificar, confirme os contratos HTTP e de eventos que a feature altera. Documente contratos novos ou modificados.
-4. Mantenha regras de negócio em domínio e casos de uso. Framework HTTP, PostgreSQL, RabbitMQ e clientes externos são adapters.
+3. Antes de codificar, confirme os contratos HTTP e de eventos que a feature
+   altera. Documente contratos novos ou modificados **na própria T**.
+4. Mantenha regras de negócio em domínio e casos de uso. Framework HTTP,
+   PostgreSQL, RabbitMQ e clientes externos são adapters.
 5. Escreva código no estilo `coding-style`: nomes claros; comentários só para
    *porquê* não óbvio (segurança, interop, restrição); didática no handoff.
-6. Escreva ou atualize testes proporcionais ao risco da regra e execute a validação relevante.
-7. Atualize a documentação somente quando a ambiguidade tiver sido resolvida
-   pelo usuário; nunca escolha a regra.
+6. Escreva ou atualize testes proporcionais ao risco da regra e execute a
+   validação relevante.
+7. Ao tocar contratos, setup/env ou resolver ambiguidade já confirmada pelo
+   usuário: atualize na própria T o README, `.env.example` e/ou
+   `docs/lessons/` (só se houver aprendizado transferível — não criar arquivo
+   vazio). Nunca escolha regra de produto em aberto.
 8. Atualize `STATUS.md` e entregue o handoff de
    `docs/process/sdd-workflow.md`.
 
-Pare e peça decisão se faltar uma regra que altere a experiência, o contrato público ou os limites entre serviços.
+Pare e peça decisão se faltar uma regra que altere a experiência, o contrato
+público ou os limites entre serviços.

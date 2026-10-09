@@ -21,8 +21,10 @@ aprovada, o escopo e as ADRs (incluindo ADR 0008). Produza
 Declare `Superfície de UI: sim|não` com justificativa. Se UI = sim, o plano
 deve ter matriz AC ↔ E2E e ao menos uma tarefa Playwright em `apps/web-e2e`
 com evidência `npx nx e2e web-e2e` (ou filtro); sem isso o gate do plano não
-fecha. Cada tarefa deve ter ID, ACs, agente, arquivos permitidos, dependências,
-testes/comandos e evidência esperada. Atualize `STATUS.md` e entregue o handoff
-estruturado definido em `docs/process/sdd-workflow.md`.
+fecha. Preferir tarefas pequenas; cada tarefa deve ter ID, ACs, agente,
+arquivos permitidos, dependências, comando de teste e evidência esperada.
+Atualize `STATUS.md` e entregue o handoff estruturado definido em
+`docs/process/sdd-workflow.md`.
 
-Não inicie implementação. O plano só é considerado pronto quando o usuário confirmar explicitamente.
+Não inicie implementação. O plano só fecha o gate com a frase canônica
+`Aprovado pelo usuário em YYYY-MM-DD` no `PLAN.md`.

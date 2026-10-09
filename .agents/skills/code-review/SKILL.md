@@ -56,9 +56,14 @@ Ao final da lente: resumo de 1–3 linhas e, se aplicável, o que ficou sem veri
 - Ordene por severidade.
 - Veredito: `APPROVE` (sem 🔴; 🟠 com justificativa aceitável), `REQUEST CHANGES` (🔴 presentes, ou 🟠 sem justificativa) ou `COMMENT` (só 🟡/🔵).
 - Apresente tudo ao usuário; a decisão de merge é sempre dele.
+- Persista o parecer consolidado como comentário no PR com
+  `gh pr comment <n> --body "..."` (fallback: colar o parecer no chat e pedir
+  ao usuário publicar). **Não** criar `REVIEW.md` no repositório.
 
 ## Regras
 
-- Revisores são **read-only**: nunca edite arquivos, nunca rode git mutante, nunca faça merge.
+- Revisores são **read-only** no código da feature: nunca edite arquivos do
+  produto, nunca rode git mutante, nunca faça merge. Publicar o parecer via
+  `gh pr comment` é permitido.
 - Todo achado precisa de evidência no diff; não invente problemas (a revisão também não pode alucinar).
 - Se o PR não tiver spec (Refs vazio), a lente de requisitos revisa contra `docs/product/initial-scope.md` e sinaliza a ausência de spec como achado.
