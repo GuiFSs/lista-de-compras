@@ -38,6 +38,22 @@ describe('LoginComponent', () => {
     http.verify();
   });
 
+  it('mostra marca display e subtítulo na hierarquia de entrada (guia §4)', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+
+    const title = fixture.nativeElement.querySelector(
+      '.login-brand__title',
+    ) as HTMLHeadingElement;
+    const subtitle = fixture.nativeElement.querySelector(
+      '.login-brand__subtitle',
+    ) as HTMLParagraphElement;
+
+    expect(title.tagName).toBe('H1');
+    expect(title.textContent?.trim()).toBe('Lista de Compras');
+    expect(subtitle.textContent?.trim()).toBe('Entre para ver a lista');
+  });
+
   it('não envia com campos vazios e mantém o estado vazio (AC-06)', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     fixture.detectChanges();

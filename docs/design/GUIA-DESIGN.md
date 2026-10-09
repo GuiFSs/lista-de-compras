@@ -185,7 +185,65 @@ Campo de texto **nunca** usa pill; CTA **nunca** usa raio quadrado.
 
 ---
 
-## 4. Padrões de componentes
+## 4. Composição de telas
+
+Tokens e componentes sozinhos não bastam: toda tela nova deve ser **composta**
+com hierarquia, agrupamento e receita do tipo. Linguagem Notion-calma — sem
+landing, gradiente de marketing ou motion decorativo.
+
+Exemplo canônico de auth: `apps/web/src/app/features/login/` (marca display +
+subtítulo + form + CTA). Skill operacional: `.agents/skills/ui-design/`.
+
+### Hierarquia do primeiro viewport
+
+1. Sinal principal (marca ou título da tela).
+2. Apoio curto (uma frase).
+3. Conteúdo interativo (lista, form, empty state).
+4. Ação primária (um `primary` por tela).
+
+Em telas de **marca/entrada** (login), o nome do produto (`Lista de Compras`)
+em `--font-size-display` é **obrigatório** — não opcional. Remover a marca e
+ainda parecer “qualquer form” = composição reprovada.
+
+### Agrupamento por whitespace
+
+Blocos lógicos (marca → formulário → ação) usam ritmo maior **entre** grupos
+(`--space-lg` / `--space-xl`) e menor **dentro** do grupo (`--space-md` /
+`--space-sm`). Um único `gap` uniforme em toda a tela apaga a hierarquia.
+
+### Superfície vs canvas
+
+- Fundo de página: `--color-canvas`.
+- Campos, app bar, sheets: `--color-surface` + hairline.
+- Formulário de entrada: coluna limpa (~360px), sem card decorativo só para
+  “parecer UI”. Evitar o **void** — form flutuando sem marca, título ou
+  agrupamento.
+
+### Uma composição, um trabalho
+
+Cada tela tem um propósito. Na entrada, não montar dashboard de cards; na
+lista, o conteúdo da lista é o protagonista.
+
+### Receitas por tipo de tela
+
+| Tipo | Estrutura obrigatória |
+| --- | --- |
+| **Auth / entrada** | Marca (`display`) + frase de apoio (`body`, `ink-muted`) + form com labels + um CTA `primary`. Fora da bottom nav. Ver login canônico. |
+| **Lista / conteúdo** | App bar + coluna única; se vazio, empty state rico (não tela em branco). |
+| **Empty state** | Sticker/ilustração + título + frase curta + CTA primary (ver §5 Empty states). |
+| **Formulário de app** | Título `h1`/`h2` + campos agrupados por whitespace + CTA no terço inferior (polegar). |
+
+### Anti-padrões (reprovam composição)
+
+- Form sozinho no viewport sem marca nem título.
+- Placeholder no lugar de hierarquia tipográfica (rótulo/título ausentes).
+- Tudo com o mesmo espaçamento, sem grupos visuais.
+- “Cumpriu tokens / 4 estados” sem hierarquia — ainda é tela feia e reprovável
+  no checklist de design.
+
+---
+
+## 5. Padrões de componentes
 
 Regras para serem aplicadas nas specs de feature (os componentes serão criados
 nas respectivas implementações).
@@ -267,7 +325,7 @@ nas respectivas implementações).
 
 ---
 
-## 5. UX mobile-first e acessibilidade
+## 6. UX mobile-first e acessibilidade
 
 - **Uma coluna** sempre; `md+` apenas centraliza em `--container-max` e reserva
   mais respiro lateral.
@@ -288,7 +346,7 @@ nas respectivas implementações).
 
 ---
 
-## 6. Do's and Don'ts
+## 7. Do's and Don'ts
 
 ### Do
 
@@ -299,6 +357,8 @@ nas respectivas implementações).
 - Aplicar tracking negativo dos tokens nos títulos (é o que dá o "set" do Notion).
 - Declarar na spec os 4 estados da tela (carregando/vazio/erro/sucesso).
 - Títulos em 600/700, corpo em 400.
+- Classificar o tipo de tela e aplicar a receita da §4 antes de implementar.
+- Em auth/entrada: marca em `--font-size-display` + subtítulo + form + CTA.
 
 ### Don't
 
@@ -310,3 +370,5 @@ nas respectivas implementações).
 - Não hardcodar cor, px de espaço ou raio fora dos tokens.
 - Não enterrar erro só em console: erro sempre visível na tela (campo ou toast).
 - Não entregar tela sem estado vazio nem sem estado de carregamento.
+- Não entregar form “no vazio” (sem marca/título/agrupamento) mesmo com tokens
+  corretos — isso é anti-padrão de composição (§4).

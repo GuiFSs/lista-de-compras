@@ -31,7 +31,9 @@ Verifique:
 - Checklist de documentação do template (contratos, ADR, README/`.env.example`,
   lessons se aplicável, STATUS final).
 - Se Superfície de UI = sim: checklist de design do template (tokens, 4 estados,
-  mobile-first, foco/toque, erro visível, modo escuro via tokens).
+  mobile-first, foco/toque, erro visível, modo escuro via tokens, hierarquia
+  tipográfica, agrupamento por whitespace, receita do tipo de tela — guia §4 /
+  skill `ui-design`). Form/conteúdo no void → reprova.
 - Contratos HTTP/eventos documentados e consistentes.
 - ADR registrada quando a implementação gerou decisão arquitetural.
 - Documentação da feature atualizada se ambiguidades foram resolvidas.

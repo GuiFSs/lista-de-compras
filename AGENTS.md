@@ -7,11 +7,11 @@ Este repositório é, ao mesmo tempo, um produto utilizável e um ambiente de ap
 Leia antes de alterar ou especificar uma feature:
 
 - `docs/product/initial-scope.md`
-- `docs/design/GUIA-DESIGN.md` — design mobile-first, UX e tokens visuais
+- `docs/design/GUIA-DESIGN.md` — design mobile-first, UX, tokens e composição de telas (§4)
 - ADRs em `docs/decisions/`
 - `docs/process/sdd-workflow.md` — fluxo, gates, DoR/DoD e handoffs
 - Lições aplicáveis em `docs/lessons/`
-- As skills aplicáveis em `.agents/skills/` (SDD do projeto, incl. `coding-style`) e `.opencode/skills/` (oficiais do framework, ex.: `angular-developer`)
+- As skills aplicáveis em `.agents/skills/` (SDD do projeto, incl. `coding-style` e `ui-design` para telas) e `.opencode/skills/` (oficiais do framework, ex.: `angular-developer`)
 
 Não presuma regras de produto, integrações, dados ou experiência de uso ainda não documentados. Durante a implementação de uma feature, faça perguntas apenas quando a resposta mudar o comportamento, o contrato ou a arquitetura.
 

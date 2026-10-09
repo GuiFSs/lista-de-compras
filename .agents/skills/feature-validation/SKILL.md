@@ -18,7 +18,10 @@ Use esta skill na fase final do SDD.
 4. Preencha as checklists do template de validação:
    - **documentação** (contratos, ADR se houver, README/`.env.example` se
      setup mudou, lessons se houver aprendizado transferível, STATUS final);
-   - **design** (obrigatória se Superfície de UI = sim; N/A se não-UI).
+   - **design** (obrigatória se Superfície de UI = sim; N/A se não-UI): tokens,
+     4 estados, mobile-first, foco/toque, erro visível, dark via tokens, **e
+     composição** (hierarquia tipográfica, agrupamento por whitespace, receita
+     do tipo de tela — guia §4 / skill `ui-design`). Form no void reprova.
 5. Produza `docs/features/<feature>/VALIDATION.md` a partir do template com
    resultado, evidências (coluna Playwright quando UI), comandos e pendências
    por `AC-*`.

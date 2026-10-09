@@ -22,6 +22,11 @@ test('sem sessão, a PWA carrega e redireciona para o login', async ({ page }) =
   await expect(page.locator('app-root')).toBeVisible();
   // Login é tela cheia, fora da navegação (AC-01): sem app-bar nem bottom nav.
   await expect(page.locator('.app-bar')).toHaveCount(0);
+  // Receita auth §4: marca display + subtítulo antes do form.
+  await expect(
+    page.getByRole('heading', { name: 'Lista de Compras', level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByText('Entre para ver a lista')).toBeVisible();
 });
 
 test('campos vazios não enviam login (AC-06)', async ({ page }) => {

@@ -37,6 +37,9 @@ Regras (ADR 0008):
 - [ ] Contraste e foco (`:focus-visible`); alvos de toque ≥44px.
 - [ ] Erro visível na UI (não só no console).
 - [ ] Modo escuro via tokens (sem hardcoded).
+- [ ] Hierarquia tipográfica presente (marca/título adequado ao tipo de tela).
+- [ ] Agrupamento visual por whitespace (não form/conteúdo solto no void).
+- [ ] Receita do tipo de tela do guia §4 aplicada (skill `ui-design`).
 
 Se Superfície de UI = não: marcar esta seção como N/A.
 

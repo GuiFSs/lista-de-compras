@@ -32,7 +32,9 @@
 
 ## Design e UX
 
-- Padrões seguidos: `docs/design/GUIA-DESIGN.md`
+- Padrões: `docs/design/GUIA-DESIGN.md` (§4 Composição) · skill `ui-design`
+- Tipo de tela: auth/entrada | lista/conteúdo | empty state | formulário de app
+- Hierarquia do primeiro viewport: <marca/título → apoio → conteúdo → CTA>
 - Componentes/tokens usados: <botões, campos, listas, sheets...>
 - Comportamento mobile: <bottom nav, ações no polegar, etc.>
 
