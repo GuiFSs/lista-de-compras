@@ -4,9 +4,10 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-13
-**Próxima ação:** Onda 7 — delegar **T-12** (sheet de item adicionar/editar +
-duplicidade; dep T-11) — sozinha. Depois **T-13** → **T-14** (sequenciais) →
-**T-16** → **T-17**.
+**Próxima ação:** Onda 7 — **T-12** (sheet de item adicionar/editar + duplicidade;
+dep T-11) **em andamento** ∥ **T-18** (corretiva autorizada pelo usuário:
+corrida de duplicidade no `POST /items` + nit do README de contratos) **em
+andamento**. Depois **T-13** → **T-14** (sequenciais) → **T-16** → **T-17**.
 
 ## Artefatos
 
@@ -36,8 +37,11 @@ duplicidade; dep T-11) — sozinha. Depois **T-13** → **T-14** (sequenciais) �
 
 ## Execução
 
-- Tarefa em andamento: nenhuma (Onda 6 concluída — **T-11** ∥ **T-15**)
-- Tarefas concluídas: T-01 … T-11, **T-15** (faltam T-12, T-13, T-14, T-16, T-17)
+- Tarefa em andamento: **T-12** (sheet de item; `angular-dev`) ∥ **T-18**
+  (corretiva de backend autorizada pelo usuário; `backend-dev`) — arquivos
+  disjuntos (`apps/web` × `apps/shopping-list-service` + `libs/contracts`)
+- Tarefas concluídas: T-01 … T-11, T-15 (faltam T-12, T-13, T-14, T-16, T-17 +
+  a corretiva T-18)
 - Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres
   real** (T-15 — suíte `shopping-list-service` com 156 testes, 14 arquivos);
   camada de dados da PWA (T-10) e **tela Lista** (T-11 — suíte `web` com 112
@@ -57,20 +61,21 @@ duplicidade; dep T-11) — sozinha. Depois **T-13** → **T-14** (sequenciais) �
   executar). O orquestrador rodou `nx sync` e commitou o ajuste de
   `apps/web/tsconfig.app.json` em `f5a68a4` (`npx nx sync:check` verde). **Gate de
   UI (T-17) desbloqueado.**
-- **Decisão aberta — aguarda o usuário:** em POSTs **concorrentes** com o mesmo
-  nome de item, o `CreateShoppingListItemUseCase` faz *read-then-write* (TOCTOU); o
-  índice único barra o segundo row, mas o erro sobe cru e a borda responde **500 em
-  vez de 409**. A spec **não define** essa corrida (nenhum AC cobre). Não foi
-  alterado nenhum código. Proposta (a confirmar com o usuário): traduzir o erro
-  `23505` na criação para o **409** canônico (`duplicate-item-name` +
-  `duplicateOf`) — tarefa de correção no backend.
+- **Decisão resolvida pelo usuário (2026-10-13):** em POSTs **concorrentes** com o
+  mesmo nome, o `CreateShoppingListItemUseCase` faz *read-then-write* (TOCTOU) e o
+  erro do índice único subia como **500 em vez de 409**. O usuário autorizou a
+  correção — **T-18** (backend, em andamento): tratar a violação `23505` de forma
+  *bounded* (reler e reaplicar a decisão de duplicidade; soma quando
+  `duplicateResolution: 'sum-planned-quantity'`, senão **409** canônico), sem 500 e
+  sem duplicata. A spec é silente sobre a corrida; a correção só alinha a corrida à
+  regra de duplicidade **já documentada** (nenhum AC novo).
 - **Encaminhamento (não bloqueio):** o contrato do **evento de conclusão de compra**
   (previsto na ADR 0001) fica para a **feature de histórico** — fora desta rodada.
 - **Pré-requisito de teste (novo):** a suíte `shopping-list-service` agora **exige
   Docker no ar + `db:migrate`** (a integração de T-15 usa PostgreSQL real):
   `npm run docker:up` + `npx nx run shopping-list-service:db:migrate`.
-- **Nit de doc (não bloqueio):** `libs/contracts/README.md` poderia citar a mensagem
-  `Corpo da requisição inválido` (follow-up opcional).
+- **Nit de doc (aprovado em 2026-10-13, em T-18):** `libs/contracts/README.md`
+  passa a citar a mensagem canônica `Corpo da requisição inválido` (JSON malformado).
 - **Nota de escopo (resolvida):** para T-06 honrar o contrato **201 (criado) / 200
   (soma aplicada)** do `POST /items`, o orquestrador autorizou uma alteração
   **aditiva** em `create-shopping-list-item.use-case.ts`/`shopping-list-result.ts`
