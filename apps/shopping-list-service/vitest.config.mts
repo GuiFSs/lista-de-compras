@@ -25,6 +25,8 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['src/test-setup.ts'],
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    passWithNoTests: true,
+    // Sem passWithNoTests (docs/lessons/2026-10-07-setup-inicial.md, "Padrões
+    // gerais" §2): verde sem execução é pior que vermelho — uma suíte que não
+    // roda nenhum teste deve falhar.
   },
 });
