@@ -1,0 +1,57 @@
+@switch (status()) {
+  @case ('loading') {
+    <div class="list-skeleton" role="status" aria-busy="true">
+      <span class="visually-hidden">Carregando a lista…</span>
+      @for (row of skeletonRows; track row) {
+        <span class="list-skeleton__row" aria-hidden="true">
+          <span class="list-skeleton__target"></span>
+          <span class="list-skeleton__lines">
+            <span class="list-skeleton__line"></span>
+            <span class="list-skeleton__line list-skeleton__line--short"></span>
+          </span>
+        </span>
+      }
+    </div>
+  }
+
+  @case ('error') {
+    <div class="load-error" role="alert">
+      <h2 class="load-error__title">Não foi possível carregar a lista</h2>
+      <p class="load-error__message">{{ loadError() }}</p>
+      <button type="button" class="btn-secondary" (click)="retry()">Tentar novamente</button>
+    </div>
+  }
+
+  @default {
+    @if (items().length === 0) {
+      <div class="empty">
+        <p class="empty__sticker" aria-hidden="true">🧺</p>
+        <h2 class="empty__title">Sua lista está vazia</h2>
+        <p class="empty__text">
+          Adicione o primeiro item e leve a lista para o mercado.
+        </p>
+        <button type="button" class="btn-primary empty__cta" (click)="onAddItem()">
+          Adicionar item
+        </button>
+      </div>
+    } @else {
+      <p class="summary">{{ summary() }}</p>
+
+      <ul class="list" role="list">
+        @for (item of items(); track item.id) {
+          <li class="list__item">
+            <app-item-row
+              [item]="item"
+              (togglePurchased)="onTogglePurchased()"
+              (openActions)="onOpenActions()"
+            />
+          </li>
+        }
+      </ul>
+
+      <button type="button" class="btn-primary list__add" (click)="onAddItem()">
+        Adicionar item
+      </button>
+    }
+  }
+}
