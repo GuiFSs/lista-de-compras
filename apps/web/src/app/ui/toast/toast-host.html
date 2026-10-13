@@ -1,0 +1,26 @@
+<div class="toast-stack" role="region" aria-label="Notificações">
+  @for (toast of toasts(); track toast.id) {
+    <div
+      class="toast"
+      [class.toast--error]="toast.variant === 'error'"
+      [attr.role]="toast.variant === 'error' ? 'alert' : 'status'"
+    >
+      <p class="toast__message">{{ toast.message }}</p>
+
+      @if (toast.action; as action) {
+        <button type="button" class="toast__action" (click)="runAction(toast)">
+          {{ action.label }}
+        </button>
+      }
+
+      <button
+        type="button"
+        class="toast__dismiss"
+        aria-label="Dispensar"
+        (click)="dismiss(toast.id)"
+      >
+        <app-icon-close />
+      </button>
+    </div>
+  }
+</div>
