@@ -4,10 +4,9 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-13
-**Próxima ação:** Onda 3 em curso — T-04 e T-05 concluídas; **T-08** (primitivas de
-UI) em andamento. Ao concluir T-08: **T-09** (shell autenticado; dep T-08) e, em
-paralelo, **T-06** (borda HTTP; deps T-02/T-04/T-05 já concluídas — projeto
-distinto, arquivos disjuntos). Depois **T-10** (camada de dados da PWA).
+**Próxima ação:** Onda 4 em curso — **T-09** (shell autenticado; dep T-08) ∥
+**T-06** (borda HTTP; deps T-02/T-04/T-05) em andamento. Depois **T-10** (camada
+de dados da PWA; dep T-02) e **T-11** (tela Lista; dep T-08/T-09/T-10).
 
 ## Artefatos
 
@@ -37,8 +36,8 @@ distinto, arquivos disjuntos). Depois **T-10** (camada de dados da PWA).
 
 ## Execução
 
-- Tarefa em andamento: T-08 (primitivas de UI, `apps/web/src/app/ui/**`)
-- Tarefas concluídas: T-01, T-02, T-03, T-04, T-05, T-07
+- Tarefa em andamento: T-09 (shell autenticado) ∥ T-06 (borda HTTP)
+- Tarefas concluídas: T-01, T-02, T-03, T-04, T-05, T-07, T-08
 - Critérios comprovados: nenhum AC fechado ainda (a prova integrada/final é T-06,
   T-15 e T-17); T-03/T-04/T-05 entregam as regras do domínio, a persistência e os
   casos de uso
@@ -51,27 +50,27 @@ distinto, arquivos disjuntos). Depois **T-10** (camada de dados da PWA).
   2026-10-13); a implementação pode começar pela Onda 1.
 - **Encaminhamento (não bloqueio):** o contrato do **evento de conclusão de compra**
   (previsto na ADR 0001) fica para a **feature de histórico** — fora desta rodada.
+- **Nota de escopo (autorizada):** para T-06 honrar o contrato **201 (criado) / 200
+  (soma aplicada)** do `POST /items`, o orquestrador autorizou uma alteração
+  **aditiva** em `create-shopping-list-item.use-case.ts`/`shopping-list-result.ts`
+  (expor a distinção criar×somar), mantendo os testes verdes. Entra na avaliação de
+  T-06 no `Último handoff` quando a tarefa fechar.
 
 ## Último handoff
 
-- Agente: `backend-dev` (T-05, mais recente)
-- Tarefa: T-05 — casos de uso (`apps/shopping-list-service/src/application/use-cases/**`)
+- Agente: `angular-dev` (T-08, mais recente)
+- Tarefa: T-08 — primitivas de UI (`apps/web/src/app/ui/**`)
 - Estado: concluída
-- Arquivos alterados: use-cases (obter, criar, editar, excluir, restaurar, marcar,
-  desmarcar, concluir) + `shopping-list-result.ts` (erros de negócio tipados) +
-  `load-active-items.ts` + fake/fixtures em `use-cases/testing/` + specs (6 arquivos);
-  `application/index.ts` e `use-cases/index.ts` (barrels)
-- ACs cobertos: AC-07, AC-08/CD-13, AC-09, AC-11, AC-12, AC-16, AC-19, AC-20, AC-21,
-  AC-24 (camada de aplicação; prova integrada fica em T-15)
-- Testes executados: `npx nx test shopping-list-service` (82 verdes, 12 arquivos;
-  28 de casos de uso); `npx nx lint shopping-list-service` verde;
-  `npx nx typecheck shopping-list-service` e `build` verdes
-- Decisões registradas: erros de negócio tipados sem HTTP/mensagem PT
-  (`validation`→400, `not-found`→404, `duplicate-item-name`/`name-conflict`→409);
-  toda operação devolve a lista ativa ordenada (RN-19); criação soma sem segundo
-  item; edição em conflito não soma nem aplica (item inalterado); `id` via
-  `randomUUID` e tempo via `new Date()` (sem port de relógio/id nesta rodada)
-- Commits: `428d807` (T-05)
-- Pendências: nenhuma. Consumidor direto: T-06 (borda HTTP, `useFactory` no módulo
-  Nest, mapeando os `code` de `ShoppingListError` para 400/404/409)
-- Próximo passo recomendado: T-09 (dep T-08) ∥ T-06 (deps concluídas)
+- Arquivos alterados: `bottom-sheet/*`, `toast/*` (service + host + model),
+  `icons/*` (7 SVGs inline + `icon.scss`), `ui/index.ts` (barrel público)
+- ACs cobertos: AC-25 (bottom sheet acessível: foco preso, fecha com botão e Esc,
+  `--color-overlay`, `--radius-xl`), AC-23 (toast: confirmação auto-dismiss ≈4s com
+  ação "Desfazer"; erro permanece até o descarte), ícones inline (sem dependência)
+- Testes executados: `npx nx test web` (52 verdes, 9 arquivos); `npx nx lint web`
+  (All files pass linting); `npx nx build web` (sucesso)
+- Decisões registradas: primitivas em `apps/web/src/app/ui` (não `libs/ui-web` —
+  sem consumidor; já decidido no PLAN); `BottomSheet` controlado pelo consumidor
+  (`@if` + output `closed`, input `closeOnBackdrop`); sem cor/espaço hardcoded
+- Commits: `4a1b7ec` (T-08)
+- Pendências: nenhuma. Consumidores: T-11…T-14
+- Próximo passo recomendado: Onda 4 — T-09 (shell) ∥ T-06 (borda HTTP)
