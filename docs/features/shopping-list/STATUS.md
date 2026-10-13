@@ -4,9 +4,9 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-13
-**Próxima ação:** orquestrador cria a branch `feature/shopping-list` e inicia a
-**Onda 1** (**T-01** ∥ **T-02**), comitando por `T-*` (Conventional Commits) após
-cada tarefa com testes verdes.
+**Próxima ação:** Onda 2 — delegar **T-03** (domínio, `apps/shopping-list-service/src/domain/**`)
+∥ **T-07** (env/docs, `.env.example`/`README.md`), comitando por `T-*` após cada
+tarefa com testes verdes.
 
 ## Artefatos
 
@@ -36,9 +36,10 @@ cada tarefa com testes verdes.
 
 ## Execução
 
-- Tarefa em andamento: nenhuma (branch `feature/shopping-list` ainda a criar)
-- Tarefas concluídas: nenhuma
-- Critérios comprovados: nenhum
+- Tarefa em andamento: nenhuma
+- Tarefas concluídas: T-01, T-02
+- Critérios comprovados: nenhum AC fechado ainda (T-01/T-02 são arquitetura/base de
+  contrato; habilitam AC-04–AC-24)
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
@@ -51,22 +52,18 @@ cada tarefa com testes verdes.
 
 ## Último handoff
 
-- Agente: `tech-planner`
-- Tarefa: ajuste do `PLAN.md` à decisão **CD-13** (duplicidade na edição) + fechamento
-  do gate do plano
-- Estado: concluída
-- Arquivos alterados: `docs/features/shopping-list/PLAN.md`,
-  `docs/features/shopping-list/STATUS.md`
-- ACs cobertos: `AC-07`, `AC-08`, `AC-09` (duplicidade na criação × edição) — regra
-  ajustada em domínio, contrato, tarefas T-02/T-05/T-06/T-12, estratégia de testes,
-  matriz AC ↔ E2E e T-17; os demais 23 ACs permanecem como no plano aprovado
-- Testes executados: não aplicável (fase de plano; sem código)
-- Decisões registradas: **CD-13** (na edição, renomear para um nome já existente em
-  outro item **não aplica** e **não soma** — conflito visível no formulário; renomear
-  para o próprio nome normalizado aplica; a **criação** segue em **CD-02/AC-07** com
-  pergunta/soma via `duplicateResolution`); o antigo **DP-01** foi **removido**
-- Pendências: nenhuma para o gate; evento de conclusão de compra segue para a feature
-  de histórico
-- Próximo passo recomendado: orquestrador cria a branch `feature/shopping-list` e
-  delega a **Onda 1** (**T-01** ∥ **T-02**); após cada `T-*` com testes verdes, comita
-  antes da próxima onda
+- Agente: `backend-dev` (T-01 e T-02)
+- Tarefa: T-02 — contratos HTTP em `libs/contracts` (mais recente)
+- Estado: concluída (T-01 e T-02)
+- Arquivos alterados: `libs/contracts/src/http/shopping-list.ts` (novo),
+  `libs/contracts/src/http/index.ts`, `libs/contracts/README.md` (T-02);
+  T-01 sem alterações (ADR 0009 conferida, consistente com template/plano/spec)
+- ACs cobertos: base de contrato para AC-04–AC-24 (não fecha AC sozinho)
+- Testes executados: `npx nx build contracts` e `npx nx lint contracts` — verdes (T-02);
+  T-01: revisão de doc (`git diff docs/decisions` vazio)
+- Decisões registradas: ADR 0009 (conferida, sem alteração); CD-13 refletida no
+  contrato (`UpdateShoppingListItemRequest` sem `duplicateResolution`)
+- Commits: `12a8b43` (T-02); T-01 sem alterações (sem commit)
+- Pendências: nenhuma. Consumidores dos contratos: T-03/T-05/T-06 (serviço) e
+  T-10/T-17 (PWA/E2E)
+- Próximo passo recomendado: Onda 2 — T-03 (domínio) ∥ T-07 (env/docs)
