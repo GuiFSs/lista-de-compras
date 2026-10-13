@@ -4,10 +4,9 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-13
-**Próxima ação:** Onda 6 — delegar **T-11** (tela Lista; dep T-08/T-09/T-10) ∥
-**T-15** (auditoria de testes do backend; dep T-06) — projetos disjuntos
-(`web` × `shopping-list-service`). Depois **T-12** → T-13 → T-14 (sequenciais)
-→ T-16 → T-17.
+**Próxima ação:** Onda 7 — delegar **T-12** (sheet de item adicionar/editar +
+duplicidade; dep T-11) — sozinha. Depois **T-13** → **T-14** (sequenciais) →
+**T-16** → **T-17**.
 
 ## Artefatos
 
@@ -37,52 +36,90 @@
 
 ## Execução
 
-- Tarefa em andamento: **T-15** (auditoria de testes do backend; dep T-06) — em
-  execução, em paralelo com T-11 (projetos/arquivos disjuntos)
-- Tarefas concluídas: T-01, T-02, T-03, T-04, T-05, T-06, T-07, T-08, T-09, **T-10**
-- Critérios comprovados: backend completo (T-01–T-07, 144 testes) e camada de
-  dados da PWA (T-10 — API tipada + store em signals; suíte `web` com 96 testes
-  verdes); a prova integrada com Postgres (AC-09/AC-21/AC-24) e a de UI
-  (AC-01–AC-26) ainda dependem de T-15/T-16/T-17
+- Tarefa em andamento: nenhuma (Onda 6 concluída — **T-11** ∥ **T-15**)
+- Tarefas concluídas: T-01 … T-11, **T-15** (faltam T-12, T-13, T-14, T-16, T-17)
+- Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres
+  real** (T-15 — suíte `shopping-list-service` com 156 testes, 14 arquivos);
+  camada de dados da PWA (T-10) e **tela Lista** (T-11 — suíte `web` com 112
+  testes, 16 arquivos); E2E de auth sem regressão (`npx nx e2e web-e2e`, 6 verdes)
+- ACs com evidência executável até aqui: AC-01–AC-13, AC-17–AC-22, AC-24, AC-25
+  (unit/integração); AC-14/AC-15/AC-16/AC-23/AC-26 dependem de T-12/T-13/T-14, e a
+  prova **Playwright** da matriz (AC-01–AC-26 na UI) fica em T-17
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
 ## Pendências e bloqueios
 
-- **Nenhum bloqueio.** O gate do plano está fechado (frase canônica registrada em
-  2026-10-13); a implementação pode começar pela Onda 1.
+- **Nenhum bloqueio** para T-12 (Onda 7). O gate do plano segue fechado.
+- **Sync do workspace (resolvido):** T-10 passou `apps/web` a importar
+  `@lista/contracts` sem registrar a *project reference*, deixando o workspace fora
+  de sync (`nx sync:check`/`nx build` (workspace)/`nx e2e` falhavam antes de
+  executar). O orquestrador rodou `nx sync` e commitou o ajuste de
+  `apps/web/tsconfig.app.json` em `f5a68a4` (`npx nx sync:check` verde). **Gate de
+  UI (T-17) desbloqueado.**
+- **Decisão aberta — aguarda o usuário:** em POSTs **concorrentes** com o mesmo
+  nome de item, o `CreateShoppingListItemUseCase` faz *read-then-write* (TOCTOU); o
+  índice único barra o segundo row, mas o erro sobe cru e a borda responde **500 em
+  vez de 409**. A spec **não define** essa corrida (nenhum AC cobre). Não foi
+  alterado nenhum código. Proposta (a confirmar com o usuário): traduzir o erro
+  `23505` na criação para o **409** canônico (`duplicate-item-name` +
+  `duplicateOf`) — tarefa de correção no backend.
 - **Encaminhamento (não bloqueio):** o contrato do **evento de conclusão de compra**
   (previsto na ADR 0001) fica para a **feature de histórico** — fora desta rodada.
+- **Pré-requisito de teste (novo):** a suíte `shopping-list-service` agora **exige
+  Docker no ar + `db:migrate`** (a integração de T-15 usa PostgreSQL real):
+  `npm run docker:up` + `npx nx run shopping-list-service:db:migrate`.
+- **Nit de doc (não bloqueio):** `libs/contracts/README.md` poderia citar a mensagem
+  `Corpo da requisição inválido` (follow-up opcional).
 - **Nota de escopo (resolvida):** para T-06 honrar o contrato **201 (criado) / 200
   (soma aplicada)** do `POST /items`, o orquestrador autorizou uma alteração
   **aditiva** em `create-shopping-list-item.use-case.ts`/`shopping-list-result.ts`
-  (`created?: boolean`), agora implementada e com testes verdes (ver `Último handoff`).
+  (`created?: boolean`), implementada e com testes verdes.
 
-## Último handoff
+## Últimos handoffs (Onda 6)
 
-- Agente: `angular-dev` (T-10, mais recente concluída; **T-15 em execução** no
-  `test-engineer`)
-- Tarefa: T-10 — camada de dados da PWA
-  (`apps/web/src/app/features/shopping-list/data/**`,
-  `apps/web/src/app/features/shopping-list/state/**`,
-  `apps/web/src/app/core/shopping-list/**`)
+### T-15 — auditoria de testes do backend (`test-engineer`)
+
 - Estado: concluída
-- Arquivos alterados: `ShoppingListApiService` (8 rotas tipadas por
-  `@lista/contracts`), `shopping-list-config.ts`
-  (`SHOPPING_LIST_API_BASE_URL`, default `http://localhost:3000` — ADR 0009),
-  `api-error.ts`, store em signals (`loading/loaded/error`, single-flight por
-  operação, releitura silenciosa sem fantasma, janela de undo de 4s, 409
-  distinguível: criação = fluxo × edição = conflito) + specs
-- ACs cobertos: AC-02, AC-07, AC-08, AC-11, AC-19, AC-20, AC-22, AC-23, AC-24, AC-26
-- Testes executados: `npx nx test web` (96 verdes, 14 arquivos); `npx nx lint` e
-  `npx nx build` verdes
-- Decisões registradas: a ordem/verdade vem do serviço (RN-19); nada da lista em
-  `localStorage` (AC-24); base URL por `InjectionToken` (ADR 0009)
-- Observações (não-AC, registradas): follow-ups opcionais do backend seguem em
-  aberto (doc de `libs/contracts/README.md` poderia citar `Corpo da requisição
-  inválido`; corpo malformado sem token responde 400 canônico, como no auth-service)
-- Commits: `5c5c67f` (T-10)
-- Pendências: nenhuma bloqueante. **Backend completo** (T-01–T-07) e **camada de
-  dados da PWA completa** (T-10)
-- Próximo passo recomendado: Onda 6 — T-11 (dep T-08/T-09/T-10) ∥ T-15
-  (dep T-06, em execução)
+- Arquivos alterados:
+  `apps/shopping-list-service/src/integration/shopping-list-postgres.spec.ts`
+  (novo — 12 testes com o `AppModule` real: Drizzle + Postgres, truncando
+  `shopping_list_items` entre casos); `apps/shopping-list-service/vitest.config.mts`
+  (remove `passWithNoTests: true`)
+- ACs cobertos: AC-09, AC-21, AC-24 (prova com banco real) + contrato de
+  AC-04–AC-13, AC-17–AC-20 (integrado à suíte `inject` já existente)
+- Testes executados: `npx nx test shopping-list-service` (**156 verdes**, 14
+  arquivos; pré-requisito `npm run docker:up` + `db:migrate`; banco deixado com 0
+  linhas); `npx nx lint shopping-list-service` verde
+- Decisões registradas: ADR 0001 (dono exclusivo dos dados — a suíte usa o banco
+  real `shopping_list`); AC-24 provado com 2ª instância `NestFastifyApplication`
+  (novo Pool); AC-21 provado por **ausência estrutural** (schema sem tabela de
+  compra, sem rota `/history`, mensageria esqueleto) + hard delete físico
+- Observações: os testes por `inject` usam repositório em memória; a **prova de
+  banco real** veio só nesta tarefa (era a lacuna auditada)
+- Commit: `940f291`
+
+### T-11 — tela Lista (`angular-dev`)
+
+- Estado: concluída
+- Arquivos alterados:
+  `apps/web/src/app/features/shopping-list/shopping-list-page.{ts,html,scss,spec.ts}`
+  (novo), `apps/web/src/app/features/shopping-list/item-row.{ts,html,scss,spec.ts}`
+  (novo), `apps/web/src/app/app.routes.ts` (`''` → `ShoppingListPage`), remoção de
+  `apps/web/src/app/features/home/**`
+- ACs cobertos: AC-01, AC-02, AC-03, AC-12, AC-18, AC-22, AC-24, AC-25
+- Testes executados: `npx nx test web` (**112 verdes**, 16 arquivos); `npx nx lint
+  web` e `npx nx build web` verdes; `npx nx e2e web-e2e` (6 verdes — regressão de auth)
+- Decisões registradas: ordem/verdade vêm do serviço (a tela não reordena — RN-19);
+  `ItemRow` é conteúdo puro com outputs `togglePurchased`/`openActions` para
+  T-13/T-14; o conteúdo **não** readiciona o espaçamento da bottom nav (o shell já
+  reserva via `.content-with-bottom-nav`)
+- Observações: os sheets (T-12/T-13/T-14) ainda não existem — as ações ficam com
+  *seams* no-op; o host de toasts é T-14
+- Commit: `7018081`
+
+### Correção de infraestrutura (`sdd-orchestrator`)
+
+- `apps/web/tsconfig.app.json` — project reference de `libs/contracts` (via
+  `nx sync`); desbloqueia `nx sync:check`/`nx build`/`nx e2e` (ver "Pendências").
+  Commit `f5a68a4`.
