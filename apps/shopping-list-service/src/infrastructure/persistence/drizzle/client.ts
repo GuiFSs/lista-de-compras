@@ -6,3 +6,5 @@ export const createDb = (connectionString: string) => {
   const pool = new Pool({ connectionString });
   return drizzle(pool, { schema });
 };
+
+export type ShoppingListDb = ReturnType<typeof createDb>;
