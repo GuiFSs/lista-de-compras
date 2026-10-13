@@ -4,10 +4,10 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-13
-**Próxima ação:** concluir a Onda 2 — **T-03** (domínio,
-`apps/shopping-list-service/src/domain/**`) está em andamento; T-07 (env/docs) já
-concluída. Em seguida, Onda 3 — **T-04** (dep T-03) ∥ **T-08** (`apps/web/src/app/ui`),
-comitando por `T-*` após cada tarefa com testes verdes.
+**Próxima ação:** Onda 3 — delegar **T-04** (persistência Drizzle + índice único
+parcial + port/adaptador; dep T-03) ∥ **T-08** (primitivas de UI,
+`apps/web/src/app/ui`), comitando por `T-*` após cada tarefa com testes verdes.
+(Ondas 1–2 concluídas: T-01, T-02, T-03, T-07.)
 
 ## Artefatos
 
@@ -37,10 +37,10 @@ comitando por `T-*` após cada tarefa com testes verdes.
 
 ## Execução
 
-- Tarefa em andamento: T-03 (domínio, `apps/shopping-list-service/src/domain/**`)
-- Tarefas concluídas: T-01, T-02, T-07
-- Critérios comprovados: nenhum AC fechado ainda (T-01/T-02 são arquitetura/base de
-  contrato; habilitam AC-04–AC-24)
+- Tarefa em andamento: nenhuma (T-04 ∥ T-08 a delegar na Onda 3)
+- Tarefas concluídas: T-01, T-02, T-03, T-07
+- Critérios comprovados: nenhum AC fechado ainda (T-01/T-02/T-03/T-07 são
+  arquitetura/base/domínio; habilitam AC-05–AC-21)
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
@@ -53,19 +53,28 @@ comitando por `T-*` após cada tarefa com testes verdes.
 
 ## Último handoff
 
-- Agente: `backend-dev` (T-07, mais recente) e `backend-dev` (T-01/T-02)
-- Tarefa: T-07 — env e docs (`.env.example`/`README.md`) (mais recente)
-- Estado: concluída (T-07)
-- Arquivos alterados: `.env.example` (`SHOPPING_LIST_CORS_ORIGINS` comentada,
-  default `http://localhost:4200`), `README.md` (base URL local/ADR 0009, Docker
-  obrigatório e comandos `db:generate`/`db:migrate`) — T-07
-- ACs cobertos: nenhum (T-07 é infra/doc, sem AC de produto)
-- Testes executados: revisão de doc (`git --no-pager diff -- .env.example README.md`)
-  — sem suíte aplicável
-- Decisões registradas: nenhuma nova (T-07 documenta ADR 0009 §1–§4 e ADR 0007)
-- Commits: `a0e9941` (T-07)
-- Pendências: os targets `db:generate`/`db:migrate` ainda não existem em
-  `project.json` — são criados por T-04 (arquivos permitidos já incluem o
-  `project.json`); o README documenta os nomes exatos do `PLAN.md`
-- Próximo passo recomendado: concluir a Onda 2 (T-03 domínio, em andamento) e
-  então a Onda 3 — T-04 (dep T-03) ∥ T-08 (`apps/web/src/app/ui`)
+- Agente: `backend-dev` (T-03, mais recente)
+- Tarefa: T-03 — domínio puro (`apps/shopping-list-service/src/domain/**`)
+- Estado: concluída
+- Arquivos alterados: `domain/item-name.ts`, `domain/item-unit.ts`,
+  `domain/item-validation.ts`, `domain/shopping-list-item.ts` (novos),
+  `domain/index.ts` (barrel) e 3 specs; **mais** `tsconfig.app.json` e
+  `tsconfig.spec.json` do serviço (referência de projeto a `libs/contracts`)
+- ACs cobertos: AC-05, AC-06, AC-07, AC-08/CD-13, AC-09 (predicado de unicidade),
+  AC-11 (removedAt), AC-12 (comprado segue na lista), AC-16, AC-18, AC-20, AC-21
+- Testes executados: `npx nx test shopping-list-service` (48 verdes; 39 de
+  domínio); `npx nx build shopping-list-service` (sucesso);
+  `npx nx lint shopping-list-service` (sucesso); `npx nx sync:check` (up to date)
+- Decisões registradas: nenhuma nova de produto/contrato — T-03 consome o contrato
+  de T-02 (`ITEM_UNITS`/`ItemUnit`) sem duplicar a lista; erros de validação são
+  códigos de domínio; a tradução PT/HTTP fica na borda (T-06); CD-13 exposta via
+  união discriminada de `applyItemChanges`
+- **Nota de escopo (correção autorizada):** T-03 teve o escopo **ampliado** para os
+  dois `tsconfig` do serviço — o import de `@lista/contracts` no domínio exige a
+  referência de projeto em `tsconfig.app.json`/`tsconfig.spec.json` (sincronização
+  do Nx; mesma convenção do `auth-service`), sem a qual `nx build`/`nx sync:check`
+  falhavam. Config de workspace, sem código de produto novo
+- Commits: `6b97a1e` (T-03)
+- Pendências: nenhuma. Consumidores do domínio: T-04 (adapter), T-05 (casos de uso),
+  T-06 (borda HTTP)
+- Próximo passo recomendado: Onda 3 — T-04 (dep T-03) ∥ T-08 (`apps/web/src/app/ui`)
