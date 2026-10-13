@@ -4,9 +4,10 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-13
-**Próxima ação:** Onda 4 em curso — **T-09** (shell autenticado; dep T-08) ∥
-**T-06** (borda HTTP; deps T-02/T-04/T-05) em andamento. Depois **T-10** (camada
-de dados da PWA; dep T-02) e **T-11** (tela Lista; dep T-08/T-09/T-10).
+**Próxima ação:** Onda 4 — T-09 (shell autenticado) concluída; **T-06** (borda
+HTTP) em andamento. Ao fechar T-06: **T-10** (camada de dados da PWA; dep T-02) ∥
+**T-15** (auditoria de testes do backend; dep T-06), depois **T-11** (tela Lista) e
+a cadeia sequencial T-12 → T-13 → T-14, seguidas de T-16 e T-17.
 
 ## Artefatos
 
@@ -36,8 +37,8 @@ de dados da PWA; dep T-02) e **T-11** (tela Lista; dep T-08/T-09/T-10).
 
 ## Execução
 
-- Tarefa em andamento: T-09 (shell autenticado) ∥ T-06 (borda HTTP)
-- Tarefas concluídas: T-01, T-02, T-03, T-04, T-05, T-07, T-08
+- Tarefa em andamento: T-06 (borda HTTP)
+- Tarefas concluídas: T-01, T-02, T-03, T-04, T-05, T-07, T-08, T-09
 - Critérios comprovados: nenhum AC fechado ainda (a prova integrada/final é T-06,
   T-15 e T-17); T-03/T-04/T-05 entregam as regras do domínio, a persistência e os
   casos de uso
@@ -58,19 +59,27 @@ de dados da PWA; dep T-02) e **T-11** (tela Lista; dep T-08/T-09/T-10).
 
 ## Último handoff
 
-- Agente: `angular-dev` (T-08, mais recente)
-- Tarefa: T-08 — primitivas de UI (`apps/web/src/app/ui/**`)
+- Agente: `angular-dev` (T-09, mais recente)
+- Tarefa: T-09 — shell autenticado (`apps/web/src/app/layout/**`)
 - Estado: concluída
-- Arquivos alterados: `bottom-sheet/*`, `toast/*` (service + host + model),
-  `icons/*` (7 SVGs inline + `icon.scss`), `ui/index.ts` (barrel público)
-- ACs cobertos: AC-25 (bottom sheet acessível: foco preso, fecha com botão e Esc,
-  `--color-overlay`, `--radius-xl`), AC-23 (toast: confirmação auto-dismiss ≈4s com
-  ação "Desfazer"; erro permanece até o descarte), ícones inline (sem dependência)
-- Testes executados: `npx nx test web` (52 verdes, 9 arquivos); `npx nx lint web`
-  (All files pass linting); `npx nx build web` (sucesso)
-- Decisões registradas: primitivas em `apps/web/src/app/ui` (não `libs/ui-web` —
-  sem consumidor; já decidido no PLAN); `BottomSheet` controlado pelo consumidor
-  (`@if` + output `closed`, input `closeOnBackdrop`); sem cor/espaço hardcoded
-- Commits: `4a1b7ec` (T-08)
-- Pendências: nenhuma. Consumidores: T-11…T-14
-- Próximo passo recomendado: Onda 4 — T-09 (shell) ∥ T-06 (borda HTTP)
+- Arquivos alterados: `layout/shell-chrome/*` (`ShellChromeService` + modelo +
+  barrel), `layout/bottom-nav/*` (3 abas, `<nav>` semântico), `layout/
+  authenticated-shell/*` (app bar com título/ações por rota + "Sair" + bottom nav);
+  **mais** `core/auth/auth.guard.spec.ts` (asserção obsoleta corrigida)
+- ACs cobertos: AC-01 (shell + navegação), AC-25 (título/ações por rota, "Sair"
+  sempre presente, alvos ≥44px, tokens)
+- Testes executados: `npx nx test web` (65 verdes, 12 arquivos); `npx nx lint web`
+  (All files pass); `npx nx build web` (sucesso); `npx nx e2e web-e2e` (6 verdes —
+  regressão de auth preservada)
+- Decisões registradas: `ShellChromeService.contribute(chrome, destroyRef)` com
+  auto-reset no destroy da rota (evita título preso); ação de ícone via
+  `NgComponentOutlet` (`Type<unknown>`); bottom nav com `<nav>` semântico; reserva
+  de espaço do conteúdo via `.content-with-bottom-nav`/`--bottom-nav-height`
+  (**T-11 não deve duplicar**)
+- **Nota de escopo (autorizada):** ampliação mínima aprovada para usar `<nav>`
+  semântico e corrigir a asserção obsoleta de `auth.guard.spec.ts` (que afirmava
+  ausência de nav no shell autenticado) — em vez de manter o workaround. Sem impacto
+  em T-11 (`BottomNav` consumido por `app-bottom-nav`)
+- Commits: `1da53e9` (T-09)
+- Pendências: nenhuma. Consumidores: T-11 (título/ações por rota)
+- Próximo passo recomendado: T-10 (dep T-02) ∥ T-15 (dep T-06), após T-06 fechar
