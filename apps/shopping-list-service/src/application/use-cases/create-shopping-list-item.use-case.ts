@@ -54,7 +54,11 @@ export class CreateShoppingListItemUseCase {
         createdAt: now,
       }),
     );
-    return { ok: true, items: await loadActiveItems(this.repository) };
+    return {
+      ok: true,
+      items: await loadActiveItems(this.repository),
+      created: true,
+    };
   }
 
   private async resolveExisting(
@@ -79,6 +83,10 @@ export class CreateShoppingListItemUseCase {
     if (summed !== existing) {
       await this.repository.update(summed);
     }
-    return { ok: true, items: await loadActiveItems(this.repository) };
+    return {
+      ok: true,
+      items: await loadActiveItems(this.repository),
+      created: false,
+    };
   }
 }

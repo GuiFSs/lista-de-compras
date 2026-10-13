@@ -23,5 +23,14 @@ export type ShoppingListError =
 
 /** Resposta de toda operação: lista ativa completa (RN-19) ou falha de negócio. */
 export type ShoppingListResult =
-  | { readonly ok: true; readonly items: ShoppingListItem[] }
+  | {
+      readonly ok: true;
+      readonly items: ShoppingListItem[];
+      /**
+       * Só a criação define: `true` quando inseriu um item novo, `false` quando
+       * aplicou a soma a um item existente — a borda decide 201 × 200 (CD-02).
+       * Ausente nas demais operações.
+       */
+      readonly created?: boolean;
+    }
   | { readonly ok: false; readonly error: ShoppingListError };
