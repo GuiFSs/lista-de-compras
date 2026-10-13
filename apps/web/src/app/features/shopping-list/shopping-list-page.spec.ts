@@ -1,9 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { computed, signal } from '@angular/core';
-import type { ShoppingListItem } from '@lista/contracts';
+import type {
+  CreateShoppingListItemRequest,
+  ShoppingListItem,
+  UpdateShoppingListItemRequest,
+} from '@lista/contracts';
 import { DEFAULT_SHELL_TITLE, ShellChromeService } from '../../layout/shell-chrome';
+import { ToastService } from '../../ui';
 import { ShoppingListPage } from './shopping-list-page';
 import { ShoppingListStore, type ShoppingListStatus } from './state';
+import type { CreateItemOutcome, UpdateItemOutcome } from './state';
+
+/** Deixa as microtasks drenarem antes de checar a tela. */
+const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 function item(overrides: Partial<ShoppingListItem> = {}): ShoppingListItem {
   return {
@@ -42,6 +51,20 @@ class StoreStub {
     () => this.items().filter((value) => value.purchased !== null).length,
   );
   readonly load = vi.fn(async () => undefined);
+  readonly saving = signal(false);
+  readonly mutationError = signal<string | null>(null);
+  readonly clearMutationError = vi.fn(() => this.mutationError.set(null));
+  readonly createItem = vi.fn((request: CreateShoppingListItemRequest): Promise<CreateItemOutcome> => {
+    void request;
+    return Promise.resolve({ kind: 'created' });
+  });
+  readonly updateItem = vi.fn(
+    (id: string, request: UpdateShoppingListItemRequest): Promise<UpdateItemOutcome> => {
+      void id;
+      void request;
+      return Promise.resolve({ kind: 'updated' });
+    },
+  );
 }
 
 describe('ShoppingListPage', () => {
@@ -204,5 +227,67 @@ describe('ShoppingListPage', () => {
 
     expect(store.items()).toHaveLength(1);
     expect(element.querySelector('.list-skeleton')).toBeNull();
+  });
+
+  it('o CTA do vazio abre o formulário e salvar pede a criação com os opcionais vazios (AC-04)', async () => {
+    store.status.set('loaded');
+    const fixture = mount();
+    const element = root(fixture);
+    const show = vi.spyOn(TestBed.inject(ToastService), 'show');
+
+    (element.querySelector('.empty__cta') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.bottom-sheet__title')?.textContent?.trim()).toBe(
+      'Adicionar item',
+    );
+
+    const name = element.querySelector('#item-name') as HTMLInputElement;
+    name.value = 'Café';
+    name.dispatchEvent(new Event('input'));
+    (element.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    await flush();
+    fixture.detectChanges();
+
+    expect(store.createItem).toHaveBeenCalledWith({
+      name: 'Café',
+      plannedQuantity: null,
+      unit: null,
+      plannedPrice: null,
+    });
+    // Sucesso fecha o formulário e confirma na tela (toast é do host de T-14).
+    expect(show).toHaveBeenCalledWith('Item adicionado');
+    expect(element.querySelector('.item-form')).toBeNull();
+  });
+
+  it('a ação da linha abre o formulário de edição já preenchido (AC-10)', () => {
+    store.status.set('loaded');
+    store.items.set([
+      item({ id: 'a', name: 'Arroz', plannedQuantity: 2, unit: 'kg', plannedPrice: 12.5 }),
+    ]);
+    const fixture = mount();
+    const element = root(fixture);
+
+    (element.querySelector('.item-row__actions') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.bottom-sheet__title')?.textContent?.trim()).toBe('Editar item');
+    expect((element.querySelector('#item-name') as HTMLInputElement).value).toBe('Arroz');
+    expect((element.querySelector('#item-quantity') as HTMLInputElement).value).toBe('2');
+    expect((element.querySelector('#item-unit') as HTMLSelectElement).value).toBe('kg');
+    expect((element.querySelector('#item-price') as HTMLInputElement).value).toBe('12,5');
+  });
+
+  it('a falha de mutação do store vira um toast persistente e é consumida (AC-23)', async () => {
+    store.status.set('loaded');
+    const fixture = mount();
+    const error = vi.spyOn(TestBed.inject(ToastService), 'error');
+
+    store.mutationError.set('Falha de rede. Verifique a conexão e tente novamente.');
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(error).toHaveBeenCalledWith('Falha de rede. Verifique a conexão e tente novamente.');
+    expect(store.clearMutationError).toHaveBeenCalled();
   });
 });

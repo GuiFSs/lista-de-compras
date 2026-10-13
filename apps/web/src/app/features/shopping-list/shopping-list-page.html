@@ -43,7 +43,7 @@
             <app-item-row
               [item]="item"
               (togglePurchased)="onTogglePurchased()"
-              (openActions)="onOpenActions()"
+              (openActions)="onOpenActions($event)"
             />
           </li>
         }
@@ -54,4 +54,13 @@
       </button>
     }
   }
+}
+
+@if (formOpen()) {
+  <app-item-form-sheet
+    [mode]="formMode()"
+    [item]="formItem()"
+    (closed)="onFormClosed()"
+    (saved)="onFormSaved()"
+  />
 }

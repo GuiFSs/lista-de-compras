@@ -1,0 +1,106 @@
+<app-bottom-sheet [heading]="heading()" (closed)="cancel()">
+  <form class="item-form" (submit)="onSubmit($event)" novalidate>
+    <div class="item-form__fields">
+      <div class="field">
+        <label class="field__label" for="item-name">
+          Nome <span class="field__required" aria-hidden="true">*</span>
+          <span class="visually-hidden">(obrigatório)</span>
+        </label>
+        <input
+          id="item-name"
+          class="field__input"
+          type="text"
+          autocomplete="off"
+          [value]="name()"
+          [class.field__input--error]="nameError()"
+          [attr.aria-invalid]="nameError() ? 'true' : null"
+          [attr.aria-describedby]="nameError() ? 'item-name-error' : null"
+          (input)="onNameInput($event)"
+        />
+        @if (nameError(); as message) {
+          <p class="field__error" id="item-name-error" role="alert">{{ message }}</p>
+        }
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field__label" for="item-quantity">Quantidade</label>
+          <input
+            id="item-quantity"
+            class="field__input"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            [value]="plannedQuantityInput()"
+            [class.field__input--error]="quantityError()"
+            [attr.aria-invalid]="quantityError() ? 'true' : null"
+            [attr.aria-describedby]="quantityError() ? 'item-quantity-error' : null"
+            (input)="onQuantityInput($event)"
+          />
+          @if (quantityError(); as message) {
+            <p class="field__error" id="item-quantity-error" role="alert">{{ message }}</p>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="item-unit">Unidade</label>
+          <select
+            #unitSelect
+            id="item-unit"
+            class="field__input"
+            (change)="onUnitChange($event)"
+          >
+            @for (option of units; track option) {
+              <option [value]="option" [selected]="option === unit()">{{ option }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="item-price">Preço (R$)</label>
+        <input
+          id="item-price"
+          class="field__input"
+          type="text"
+          inputmode="decimal"
+          autocomplete="off"
+          [value]="plannedPriceInput()"
+          [class.field__input--error]="priceError()"
+          [attr.aria-invalid]="priceError() ? 'true' : null"
+          [attr.aria-describedby]="priceError() ? 'item-price-error' : null"
+          (input)="onPriceInput($event)"
+        />
+        @if (priceError(); as message) {
+          <p class="field__error" id="item-price-error" role="alert">{{ message }}</p>
+        }
+      </div>
+    </div>
+
+    @if (conflict(); as message) {
+      <p class="item-form__conflict" role="alert">{{ message }}</p>
+    }
+
+    <div class="item-form__actions">
+      <button type="button" class="btn-secondary" (click)="cancel()">Cancelar</button>
+      <button type="submit" class="btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Salvando…' : 'Salvar' }}
+      </button>
+    </div>
+  </form>
+</app-bottom-sheet>
+
+@if (duplicate(); as existing) {
+  <app-bottom-sheet heading="Item já existe" [closeOnBackdrop]="false" (closed)="rejectSum()">
+    <p class="duplicate__text">
+      Já existe um item com esse nome ({{ existing.name }}). Deseja somar a quantidade que você
+      informou?
+    </p>
+    <div class="duplicate__actions">
+      <button type="button" class="btn-secondary" (click)="rejectSum()">Não somar</button>
+      <button type="button" class="btn-primary" [disabled]="saving()" (click)="confirmSum()">
+        {{ saving() ? 'Salvando…' : 'Somar quantidade' }}
+      </button>
+    </div>
+  </app-bottom-sheet>
+}

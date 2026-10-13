@@ -1,0 +1,236 @@
+import {
+  Component,
+  ElementRef,
+  AfterViewInit,
+  OnInit,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+  viewChild,
+} from '@angular/core';
+import type {
+  CreateShoppingListItemRequest,
+  ItemUnit,
+  ShoppingListItem,
+  UpdateShoppingListItemRequest,
+} from '@lista/contracts';
+import { ITEM_UNITS } from '@lista/contracts';
+import { BottomSheet } from '../../ui';
+import type { DuplicateOf } from './data';
+import { ShoppingListStore } from './state';
+
+export type ItemFormMode = 'create' | 'edit';
+
+/**
+ * Valor decimal digitado com vírgula ou ponto (RN-06): `null` quando o campo
+ * opcional está vazio; `NaN` quando não é número (bloqueia o envio).
+ */
+function parseOptionalDecimal(raw: string): number | null {
+  const normalized = raw.trim().replace(',', '.');
+  if (normalized === '') return null;
+  return Number(normalized);
+}
+
+/** Prefill do input no mesmo formato aceito na digitação (vírgula decimal). */
+function formatDecimal(value: number): string {
+  return String(value).replace('.', ',');
+}
+
+/**
+ * Formulário de item (guia §5): um bottom sheet para adicionar e editar. A
+ * validação é local (não envia requisição inválida) e o 409 tem dois fluxos:
+ * na **criação** pergunta se soma ao existente (AC-07/CD-02); na **edição** é
+ * conflito terminal mostrado no formulário, sem soma (AC-08/CD-13). O erro de
+ * rede fica na tela (persistente) — a tela consome `mutationError` do store.
+ */
+@Component({
+  selector: 'app-item-form-sheet',
+  imports: [BottomSheet],
+  templateUrl: './item-form-sheet.html',
+  styleUrl: './item-form-sheet.scss',
+})
+export class ItemFormSheet implements OnInit, AfterViewInit {
+  private readonly store = inject(ShoppingListStore);
+
+  readonly mode = input.required<ItemFormMode>();
+  readonly item = input<ShoppingListItem | null>(null);
+
+  readonly closed = output<void>();
+  readonly saved = output<void>();
+
+  protected readonly units = ITEM_UNITS;
+
+  protected readonly name = signal('');
+  protected readonly plannedQuantityInput = signal('');
+  protected readonly unit = signal<ItemUnit | ''>('');
+  protected readonly plannedPriceInput = signal('');
+  protected readonly submitted = signal(false);
+  protected readonly submitting = signal(false);
+  protected readonly conflict = signal<string | null>(null);
+  protected readonly duplicate = signal<DuplicateOf | null>(null);
+
+  protected readonly heading = computed(() =>
+    this.mode() === 'create' ? 'Adicionar item' : 'Editar item',
+  );
+  protected readonly saving = computed(() => this.submitting() || this.store.saving());
+
+  protected readonly nameError = computed(() =>
+    this.submitted() && this.name().trim() === '' ? 'Informe o nome do item.' : null,
+  );
+  protected readonly quantityError = computed(() =>
+    this.optionalNumberError(this.plannedQuantityInput(), (value) =>
+      value <= 0 ? 'A quantidade deve ser maior que zero.' : null,
+    ),
+  );
+  protected readonly priceError = computed(() =>
+    this.optionalNumberError(this.plannedPriceInput(), (value) =>
+      value < 0 ? 'O preço não pode ser negativo.' : null,
+    ),
+  );
+  protected readonly hasErrors = computed(() =>
+    Boolean(this.nameError() ?? this.quantityError() ?? this.priceError()),
+  );
+
+  /** Guarda o request da criação para reenviar a soma quando a pessoa confirma (CD-02). */
+  private pendingCreate: CreateShoppingListItemRequest | null = null;
+
+  private readonly unitSelect = viewChild<ElementRef<HTMLSelectElement>>('unitSelect');
+
+  ngOnInit(): void {
+    const item = this.item();
+    if (this.mode() !== 'edit' || item === null) return;
+
+    this.name.set(item.name);
+    this.plannedQuantityInput.set(
+      item.plannedQuantity === null ? '' : formatDecimal(item.plannedQuantity),
+    );
+    this.unit.set(item.unit ?? '');
+    this.plannedPriceInput.set(item.plannedPrice === null ? '' : formatDecimal(item.plannedPrice));
+  }
+
+  ngAfterViewInit(): void {
+    // `[selected]` marca a opção da unidade, mas quando não há unidade todas ficam
+    // desmarcadas e o navegador seleciona a primeira. `selectedIndex = -1` preserva
+    // o campo opcional visualmente vazio em vez de exibir "unidade" no payload nulo
+    // (AC-04); roda depois de o `@for` criar as opções, o que o binding não garante.
+    const select = this.unitSelect()?.nativeElement;
+    if (select !== undefined && this.unit() === '') select.selectedIndex = -1;
+  }
+
+  protected onNameInput(event: Event): void {
+    this.name.set((event.target as HTMLInputElement).value);
+    // O conflito de edição some quando a pessoa corrige o nome para tentar de novo.
+    this.conflict.set(null);
+  }
+
+  protected onQuantityInput(event: Event): void {
+    this.plannedQuantityInput.set((event.target as HTMLInputElement).value);
+  }
+
+  protected onUnitChange(event: Event): void {
+    this.unit.set((event.target as HTMLSelectElement).value as ItemUnit | '');
+  }
+
+  protected onPriceInput(event: Event): void {
+    this.plannedPriceInput.set((event.target as HTMLInputElement).value);
+  }
+
+  protected onSubmit(event: Event): void {
+    event.preventDefault();
+    void this.save();
+  }
+
+  protected cancel(): void {
+    this.closed.emit();
+  }
+
+  /** Confirma a soma ao item existente (AC-07): o serviço soma, não o cliente. */
+  protected async confirmSum(): Promise<void> {
+    const request = this.pendingCreate;
+    if (this.submitting() || request === null) return;
+
+    this.submitting.set(true);
+    try {
+      const outcome = await this.store.createItem({
+        ...request,
+        duplicateResolution: 'sum-planned-quantity',
+      });
+      if (outcome.kind === 'created') this.saved.emit();
+      else if (outcome.kind === 'duplicate') this.duplicate.set(outcome.duplicateOf);
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  /** Recusar a soma não muda nada: fecha a pergunta e o formulário segue com o digitado. */
+  protected rejectSum(): void {
+    this.duplicate.set(null);
+  }
+
+  private async save(): Promise<void> {
+    this.submitted.set(true);
+    this.conflict.set(null);
+
+    if (this.submitting() || this.hasErrors()) return;
+    if (this.mode() === 'create') await this.create();
+    else await this.update();
+  }
+
+  private async create(): Promise<void> {
+    this.duplicate.set(null);
+    this.submitting.set(true);
+    this.pendingCreate = {
+      name: this.name().trim(),
+      plannedQuantity: parseOptionalDecimal(this.plannedQuantityInput()),
+      unit: this.selectedUnit(),
+      plannedPrice: parseOptionalDecimal(this.plannedPriceInput()),
+    };
+
+    try {
+      const outcome = await this.store.createItem(this.pendingCreate);
+      if (outcome.kind === 'created') this.saved.emit();
+      else if (outcome.kind === 'duplicate') this.duplicate.set(outcome.duplicateOf);
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  private async update(): Promise<void> {
+    const item = this.item();
+    if (item === null) return;
+
+    this.submitting.set(true);
+    const request: UpdateShoppingListItemRequest = {
+      name: this.name().trim(),
+      plannedQuantity: parseOptionalDecimal(this.plannedQuantityInput()),
+      unit: this.selectedUnit(),
+      plannedPrice: parseOptionalDecimal(this.plannedPriceInput()),
+    };
+
+    try {
+      const outcome = await this.store.updateItem(item.id, request);
+      if (outcome.kind === 'updated') this.saved.emit();
+      else if (outcome.kind === 'conflict') this.conflict.set('Já existe um item com esse nome');
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  private selectedUnit(): ItemUnit | null {
+    const unit = this.unit();
+    return unit === '' ? null : unit;
+  }
+
+  private optionalNumberError(
+    raw: string,
+    check: (value: number) => string | null,
+  ): string | null {
+    if (!this.submitted()) return null;
+    const value = parseOptionalDecimal(raw);
+    if (value === null) return null;
+    if (Number.isNaN(value)) return 'Informe um número válido.';
+    return check(value);
+  }
+}
