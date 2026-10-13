@@ -4,9 +4,10 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-13
-**Próxima ação:** Onda 2 — delegar **T-03** (domínio, `apps/shopping-list-service/src/domain/**`)
-∥ **T-07** (env/docs, `.env.example`/`README.md`), comitando por `T-*` após cada
-tarefa com testes verdes.
+**Próxima ação:** concluir a Onda 2 — **T-03** (domínio,
+`apps/shopping-list-service/src/domain/**`) está em andamento; T-07 (env/docs) já
+concluída. Em seguida, Onda 3 — **T-04** (dep T-03) ∥ **T-08** (`apps/web/src/app/ui`),
+comitando por `T-*` após cada tarefa com testes verdes.
 
 ## Artefatos
 
@@ -36,8 +37,8 @@ tarefa com testes verdes.
 
 ## Execução
 
-- Tarefa em andamento: nenhuma
-- Tarefas concluídas: T-01, T-02
+- Tarefa em andamento: T-03 (domínio, `apps/shopping-list-service/src/domain/**`)
+- Tarefas concluídas: T-01, T-02, T-07
 - Critérios comprovados: nenhum AC fechado ainda (T-01/T-02 são arquitetura/base de
   contrato; habilitam AC-04–AC-24)
 - ACs reabertos: nenhum
@@ -52,18 +53,19 @@ tarefa com testes verdes.
 
 ## Último handoff
 
-- Agente: `backend-dev` (T-01 e T-02)
-- Tarefa: T-02 — contratos HTTP em `libs/contracts` (mais recente)
-- Estado: concluída (T-01 e T-02)
-- Arquivos alterados: `libs/contracts/src/http/shopping-list.ts` (novo),
-  `libs/contracts/src/http/index.ts`, `libs/contracts/README.md` (T-02);
-  T-01 sem alterações (ADR 0009 conferida, consistente com template/plano/spec)
-- ACs cobertos: base de contrato para AC-04–AC-24 (não fecha AC sozinho)
-- Testes executados: `npx nx build contracts` e `npx nx lint contracts` — verdes (T-02);
-  T-01: revisão de doc (`git diff docs/decisions` vazio)
-- Decisões registradas: ADR 0009 (conferida, sem alteração); CD-13 refletida no
-  contrato (`UpdateShoppingListItemRequest` sem `duplicateResolution`)
-- Commits: `12a8b43` (T-02); T-01 sem alterações (sem commit)
-- Pendências: nenhuma. Consumidores dos contratos: T-03/T-05/T-06 (serviço) e
-  T-10/T-17 (PWA/E2E)
-- Próximo passo recomendado: Onda 2 — T-03 (domínio) ∥ T-07 (env/docs)
+- Agente: `backend-dev` (T-07, mais recente) e `backend-dev` (T-01/T-02)
+- Tarefa: T-07 — env e docs (`.env.example`/`README.md`) (mais recente)
+- Estado: concluída (T-07)
+- Arquivos alterados: `.env.example` (`SHOPPING_LIST_CORS_ORIGINS` comentada,
+  default `http://localhost:4200`), `README.md` (base URL local/ADR 0009, Docker
+  obrigatório e comandos `db:generate`/`db:migrate`) — T-07
+- ACs cobertos: nenhum (T-07 é infra/doc, sem AC de produto)
+- Testes executados: revisão de doc (`git --no-pager diff -- .env.example README.md`)
+  — sem suíte aplicável
+- Decisões registradas: nenhuma nova (T-07 documenta ADR 0009 §1–§4 e ADR 0007)
+- Commits: `a0e9941` (T-07)
+- Pendências: os targets `db:generate`/`db:migrate` ainda não existem em
+  `project.json` — são criados por T-04 (arquivos permitidos já incluem o
+  `project.json`); o README documenta os nomes exatos do `PLAN.md`
+- Próximo passo recomendado: concluir a Onda 2 (T-03 domínio, em andamento) e
+  então a Onda 3 — T-04 (dep T-03) ∥ T-08 (`apps/web/src/app/ui`)
