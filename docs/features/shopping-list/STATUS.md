@@ -4,10 +4,10 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-13
-**Próxima ação:** Onda 7 — **T-12** (sheet de item adicionar/editar + duplicidade;
-dep T-11) **em andamento** ∥ **T-18** (corretiva autorizada pelo usuário:
-corrida de duplicidade no `POST /items` + nit do README de contratos) **em
-andamento**. Depois **T-13** → **T-14** (sequenciais) → **T-16** → **T-17**.
+**Próxima ação:** Onda 8 — **T-13** (sheet de marcar/desmarcar comprado; dep
+T-12) **em andamento** ∥ **T-18** (corretiva autorizada pelo usuário: corrida de
+duplicidade no `POST /items` + nit do README de contratos) **em andamento**.
+Depois **T-14** → **T-16** → **T-17**.
 
 ## Artefatos
 
@@ -37,18 +37,17 @@ andamento**. Depois **T-13** → **T-14** (sequenciais) → **T-16** → **T-17*
 
 ## Execução
 
-- Tarefa em andamento: **T-12** (sheet de item; `angular-dev`) ∥ **T-18**
-  (corretiva de backend autorizada pelo usuário; `backend-dev`) — arquivos
-  disjuntos (`apps/web` × `apps/shopping-list-service` + `libs/contracts`)
-- Tarefas concluídas: T-01 … T-11, T-15 (faltam T-12, T-13, T-14, T-16, T-17 +
-  a corretiva T-18)
+- Tarefa em andamento: **T-13** (sheet de marcar/desmarcar; `angular-dev`) ∥
+  **T-18** (corretiva de backend; `backend-dev`) — arquivos disjuntos
+- Tarefas concluídas: T-01 … T-12, T-15 (faltam T-13, T-14, T-16, T-17 + a
+  corretiva T-18)
 - Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres
-  real** (T-15 — suíte `shopping-list-service` com 156 testes, 14 arquivos);
-  camada de dados da PWA (T-10) e **tela Lista** (T-11 — suíte `web` com 112
-  testes, 16 arquivos); E2E de auth sem regressão (`npx nx e2e web-e2e`, 6 verdes)
-- ACs com evidência executável até aqui: AC-01–AC-13, AC-17–AC-22, AC-24, AC-25
-  (unit/integração); AC-14/AC-15/AC-16/AC-23/AC-26 dependem de T-12/T-13/T-14, e a
-  prova **Playwright** da matriz (AC-01–AC-26 na UI) fica em T-17
+  real** (T-15 — 156 testes, 14 arquivos); camada de dados (T-10), tela Lista
+  (T-11) e sheet de item (T-12) da PWA — suíte `web` com **128 testes**, 17
+  arquivos; E2E de auth sem regressão (`npx nx e2e web-e2e`, 6 verdes)
+- ACs com evidência executável até aqui: AC-01–AC-13, AC-17–AC-22, AC-24–AC-26
+  (unit/integração); **AC-14/AC-15/AC-16** dependem de T-13; a prova
+  **Playwright** da matriz (AC-01–AC-26 na UI) fica em T-17
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
@@ -81,7 +80,26 @@ andamento**. Depois **T-13** → **T-14** (sequenciais) → **T-16** → **T-17*
   **aditiva** em `create-shopping-list-item.use-case.ts`/`shopping-list-result.ts`
   (`created?: boolean`), implementada e com testes verdes.
 
-## Últimos handoffs (Onda 6)
+## Últimos handoffs
+
+### T-12 — sheet de item adicionar/editar + duplicidade (`angular-dev`)
+
+- Estado: concluída
+- Arquivos alterados:
+  `apps/web/src/app/features/shopping-list/item-form-sheet.{ts,html,scss,spec.ts}`
+  (novo, 13 testes); `shopping-list-page.{ts,html,spec.ts}` (wiring: estados do
+  form, `onOpenActions(item)`, `onFormSaved`, effect `mutationError` → toast)
+- ACs cobertos: AC-04, AC-05, AC-06, AC-07, AC-08, AC-10, AC-23, AC-25, AC-26
+- Testes executados: `npx nx test web` (**128 verdes**, 17 arquivos); `npx nx lint
+  web` e `npx nx build web` verdes; `npx nx e2e web-e2e` (6 verdes)
+- Decisões registradas: unidade via `[selected]` por `<option>` +
+  `ngAfterViewInit` forçando `selectedIndex = -1` no estado "sem unidade" (o
+  binding de `<select>` roda antes do `@for` criar as opções); a pergunta de soma
+  empilha como 2º `app-bottom-sheet [closeOnBackdrop]="false"` sobre o form aberto
+  (AC-07 exige o form visível); edição envia os opcionais com `null = limpar`
+- Observações: o *host* de toasts é T-14 (aqui só se chama o service);
+  `onOpenActions(item)` abre o form de edição como *seam* até o sheet de ações (T-14)
+- Commit: `145ef02`
 
 ### T-15 — auditoria de testes do backend (`test-engineer`)
 
