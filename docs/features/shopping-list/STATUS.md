@@ -4,10 +4,9 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-13
-**Próxima ação:** Onda 4 — T-09 (shell autenticado) concluída; **T-06** (borda
-HTTP) em andamento. Ao fechar T-06: **T-10** (camada de dados da PWA; dep T-02) ∥
-**T-15** (auditoria de testes do backend; dep T-06), depois **T-11** (tela Lista) e
-a cadeia sequencial T-12 → T-13 → T-14, seguidas de T-16 e T-17.
+**Próxima ação:** Onda 5 — delegar **T-10** (camada de dados da PWA; dep T-02) ∥
+**T-15** (auditoria de testes do backend; dep T-06), projetos disjuntos. Depois
+**T-11** (tela Lista) → T-12 → T-13 → T-14 (sequenciais) → T-16 → T-17.
 
 ## Artefatos
 
@@ -37,11 +36,11 @@ a cadeia sequencial T-12 → T-13 → T-14, seguidas de T-16 e T-17.
 
 ## Execução
 
-- Tarefa em andamento: T-06 (borda HTTP)
-- Tarefas concluídas: T-01, T-02, T-03, T-04, T-05, T-07, T-08, T-09
-- Critérios comprovados: nenhum AC fechado ainda (a prova integrada/final é T-06,
-  T-15 e T-17); T-03/T-04/T-05 entregam as regras do domínio, a persistência e os
-  casos de uso
+- Tarefa em andamento: nenhuma (T-10 ∥ T-15 a delegar na Onda 5)
+- Tarefas concluídas: T-01, T-02, T-03, T-04, T-05, T-06, T-07, T-08, T-09
+- Critérios comprovados: backend completo em código (T-01–T-07) com 144 testes na
+  suíte do serviço; a prova integrada com Postgres (AC-09/AC-21/AC-24) e a de UI
+  (AC-01–AC-26) ainda dependem de T-15/T-16/T-17
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
@@ -51,35 +50,33 @@ a cadeia sequencial T-12 → T-13 → T-14, seguidas de T-16 e T-17.
   2026-10-13); a implementação pode começar pela Onda 1.
 - **Encaminhamento (não bloqueio):** o contrato do **evento de conclusão de compra**
   (previsto na ADR 0001) fica para a **feature de histórico** — fora desta rodada.
-- **Nota de escopo (autorizada):** para T-06 honrar o contrato **201 (criado) / 200
+- **Nota de escopo (resolvida):** para T-06 honrar o contrato **201 (criado) / 200
   (soma aplicada)** do `POST /items`, o orquestrador autorizou uma alteração
   **aditiva** em `create-shopping-list-item.use-case.ts`/`shopping-list-result.ts`
-  (expor a distinção criar×somar), mantendo os testes verdes. Entra na avaliação de
-  T-06 no `Último handoff` quando a tarefa fechar.
+  (`created?: boolean`), agora implementada e com testes verdes (ver `Último handoff`).
 
 ## Último handoff
 
-- Agente: `angular-dev` (T-09, mais recente)
-- Tarefa: T-09 — shell autenticado (`apps/web/src/app/layout/**`)
+- Agente: `backend-dev` (T-06, mais recente)
+- Tarefa: T-06 — borda HTTP (`apps/shopping-list-service/src/api/http/shopping-list/**`,
+  `app/configure-app.ts`, `app/app.module.ts`, `main.ts`)
 - Estado: concluída
-- Arquivos alterados: `layout/shell-chrome/*` (`ShellChromeService` + modelo +
-  barrel), `layout/bottom-nav/*` (3 abas, `<nav>` semântico), `layout/
-  authenticated-shell/*` (app bar com título/ações por rota + "Sair" + bottom nav);
-  **mais** `core/auth/auth.guard.spec.ts` (asserção obsoleta corrigida)
-- ACs cobertos: AC-01 (shell + navegação), AC-25 (título/ações por rota, "Sair"
-  sempre presente, alvos ≥44px, tokens)
-- Testes executados: `npx nx test web` (65 verdes, 12 arquivos); `npx nx lint web`
-  (All files pass); `npx nx build web` (sucesso); `npx nx e2e web-e2e` (6 verdes —
-  regressão de auth preservada)
-- Decisões registradas: `ShellChromeService.contribute(chrome, destroyRef)` com
-  auto-reset no destroy da rota (evita título preso); ação de ícone via
-  `NgComponentOutlet` (`Type<unknown>`); bottom nav com `<nav>` semântico; reserva
-  de espaço do conteúdo via `.content-with-bottom-nav`/`--bottom-nav-height`
-  (**T-11 não deve duplicar**)
-- **Nota de escopo (autorizada):** ampliação mínima aprovada para usar `<nav>`
-  semântico e corrigir a asserção obsoleta de `auth.guard.spec.ts` (que afirmava
-  ausência de nav no shell autenticado) — em vez de manter o workaround. Sem impacto
-  em T-11 (`BottomNav` consumido por `app-bottom-nav`)
-- Commits: `1da53e9` (T-09)
-- Pendências: nenhuma. Consumidores: T-11 (título/ações por rota)
-- Próximo passo recomendado: T-10 (dep T-02) ∥ T-15 (dep T-06), após T-06 fechar
+- Arquivos alterados: controller (8 rotas), módulo (useFactory), mensagens, erros
+  canônicos, parse defensivo, mapper domínio→DTO, spec de integração; `configure-app.ts`
+  (prefixo `api`, CORS, parser JSON próprio); `app.module.ts`; `main.ts`; **mais**
+  mudança aditiva autorizada em `create-shopping-list-item.use-case.ts` +
+  `shopping-list-result.ts` (`created?: boolean` → 201/200)
+- ACs cobertos: AC-02, AC-04–AC-13, AC-19–AC-24 (AC-09/AC-21/AC-24 com banco real ficam
+  em T-15)
+- Testes executados: `npx nx test shopping-list-service` (144 verdes, 13 arquivos);
+  `npx nx lint` e `npx nx build` verdes
+- Decisões registradas: 201/200 na criação via `@Res` + `created` (aditivo autorizado);
+  `restore`/`checkout` com `@HttpCode(200)`; **JSON malformado** normalizado para o
+  envelope canônico — `MALFORMED_JSON_MESSAGE = 'Corpo da requisição inválido'`
+  (paridade estrita com o auth-service; mensagem nova em relação à lista do PLAN)
+- Observações (não-AC, registradas): corpo malformado **sem** token responde 400
+  canônico (o parse precede o `JwtAuthGuard`) — mesmo comportamento do auth-service;
+  doc de `libs/contracts/README.md` poderia citar a mensagem nova (follow-up opcional)
+- Commits: `bce7aec` (T-06)
+- Pendências: nenhuma bloqueante. **Backend completo** (T-01–T-07)
+- Próximo passo recomendado: Onda 5 — T-10 (dep T-02) ∥ T-15 (dep T-06)
