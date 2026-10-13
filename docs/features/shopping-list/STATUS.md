@@ -4,10 +4,10 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-13
-**Próxima ação:** Onda 3 — delegar **T-04** (persistência Drizzle + índice único
-parcial + port/adaptador; dep T-03) ∥ **T-08** (primitivas de UI,
-`apps/web/src/app/ui`), comitando por `T-*` após cada tarefa com testes verdes.
-(Ondas 1–2 concluídas: T-01, T-02, T-03, T-07.)
+**Próxima ação:** Onda 3 em curso — **T-04** (persistência) concluída; **T-08**
+(primitivas de UI, `apps/web/src/app/ui`) em andamento. Em seguida, Onda 4 —
+**T-05** (casos de uso; dep T-03/T-04) ∥ **T-09** (shell autenticado; dep T-08),
+comitando por `T-*` após cada tarefa com testes verdes.
 
 ## Artefatos
 
@@ -37,10 +37,10 @@ parcial + port/adaptador; dep T-03) ∥ **T-08** (primitivas de UI,
 
 ## Execução
 
-- Tarefa em andamento: nenhuma (T-04 ∥ T-08 a delegar na Onda 3)
-- Tarefas concluídas: T-01, T-02, T-03, T-07
+- Tarefa em andamento: T-08 (primitivas de UI, `apps/web/src/app/ui/**`)
+- Tarefas concluídas: T-01, T-02, T-03, T-04, T-07
 - Critérios comprovados: nenhum AC fechado ainda (T-01/T-02/T-03/T-07 são
-  arquitetura/base/domínio; habilitam AC-05–AC-21)
+  arquitetura/base/domínio; T-04 fecha o suporte de persistência de AC-09/AC-11/AC-24)
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
@@ -53,28 +53,28 @@ parcial + port/adaptador; dep T-03) ∥ **T-08** (primitivas de UI,
 
 ## Último handoff
 
-- Agente: `backend-dev` (T-03, mais recente)
-- Tarefa: T-03 — domínio puro (`apps/shopping-list-service/src/domain/**`)
+- Agente: `backend-dev` (T-04, mais recente)
+- Tarefa: T-04 — persistência Drizzle (`apps/shopping-list-service`)
 - Estado: concluída
-- Arquivos alterados: `domain/item-name.ts`, `domain/item-unit.ts`,
-  `domain/item-validation.ts`, `domain/shopping-list-item.ts` (novos),
-  `domain/index.ts` (barrel) e 3 specs; **mais** `tsconfig.app.json` e
-  `tsconfig.spec.json` do serviço (referência de projeto a `libs/contracts`)
-- ACs cobertos: AC-05, AC-06, AC-07, AC-08/CD-13, AC-09 (predicado de unicidade),
-  AC-11 (removedAt), AC-12 (comprado segue na lista), AC-16, AC-18, AC-20, AC-21
-- Testes executados: `npx nx test shopping-list-service` (48 verdes; 39 de
-  domínio); `npx nx build shopping-list-service` (sucesso);
-  `npx nx lint shopping-list-service` (sucesso); `npx nx sync:check` (up to date)
-- Decisões registradas: nenhuma nova de produto/contrato — T-03 consome o contrato
-  de T-02 (`ITEM_UNITS`/`ItemUnit`) sem duplicar a lista; erros de validação são
-  códigos de domínio; a tradução PT/HTTP fica na borda (T-06); CD-13 exposta via
-  união discriminada de `applyItemChanges`
-- **Nota de escopo (correção autorizada):** T-03 teve o escopo **ampliado** para os
-  dois `tsconfig` do serviço — o import de `@lista/contracts` no domínio exige a
-  referência de projeto em `tsconfig.app.json`/`tsconfig.spec.json` (sincronização
-  do Nx; mesma convenção do `auth-service`), sem a qual `nx build`/`nx sync:check`
-  falhavam. Config de workspace, sem código de produto novo
-- Commits: `6b97a1e` (T-03)
-- Pendências: nenhuma. Consumidores do domínio: T-04 (adapter), T-05 (casos de uso),
-  T-06 (borda HTTP)
-- Próximo passo recomendado: Onda 3 — T-04 (dep T-03) ∥ T-08 (`apps/web/src/app/ui`)
+- Arquivos alterados: `infrastructure/persistence/drizzle/schema/index.ts`
+  (tabela `shopping_list_items` + índice único parcial), `client.ts`
+  (`ShoppingListDb`), `repository/{item-row.mapper.ts,shopping-list.repository.ts}`
+  + spec do mapper, `shopping-list-repository.module.ts`, barrels;
+  `application/ports/shopping-list-repository.port.ts` (+ `index.ts`);
+  `project.json` (targets `db:generate`/`db:migrate`); migração
+  `0000_superb_red_shift.sql` + `meta/`
+- ACs cobertos: AC-09 (índice único parcial provado no banco), AC-11 (suporte a
+  `removed_at`/restore via `findById`/`update`), AC-24 (persistência real)
+- Testes executados: `npx nx test shopping-list-service` (54 verdes, 6 arquivos);
+  `npx nx lint shopping-list-service` e `npx nx build shopping-list-service`
+  verdes; `db:generate` → SQL com
+  `CREATE UNIQUE INDEX ... ON shopping_list_items (name_normalized) WHERE removed_at is null`;
+  `db:migrate` aplicado no banco `shopping_list` (Docker local) — duplicata
+  barrada por índice e nome liberado após `removed_at` (verificado em transação)
+- Decisões registradas: sem ADR nova; `numeric` em `mode: 'number'`; port só de
+  persistência (sem regra de negócio — normalização/colisão/soma/ordenação/
+  conclusão seguem no domínio de T-03); `findById` inclui removidos p/ Desfazer
+- Commits: `9316850` (T-04)
+- Pendências: nenhuma bloqueante. Consumidores: T-05 (casos de uso com repositório
+  fake), T-06 (borda HTTP)
+- Próximo passo recomendado: Onda 4 — T-05 (dep T-03/T-04) ∥ T-09 (dep T-08)
