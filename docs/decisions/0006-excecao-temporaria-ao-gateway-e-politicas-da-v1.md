@@ -31,6 +31,13 @@ nas variáveis de ambiente e rate limit em memória na v1 (RN13).
 - **Escopo da exceção:** somente a operação de login (e os endpoints futuros do
   auth-service), e somente **enquanto o gateway não existir**. Qualquer outra
   chamada direta da PWA a um microserviço exige nova decisão registrada.
+  > **Atualização (2026-10-13):** a exceção **deixou de ser exclusiva do
+  > auth-service**. A [ADR 0009](0009-excecao-temporaria-ao-gateway-shopping-list-service.md)
+  > registrou a segunda exceção temporária — a PWA chamando o
+  > `shopping-list-service` em `http://localhost:3000` (feature "Lista de compras
+  > ativa", decisão CD-01). A regra "qualquer outra chamada direta exige nova
+  > decisão registrada" **permanece**; o restante desta ADR (sessão v1, prefixo
+  > por serviço, rate limit) segue válido.
 - Para viabilizar essa chamada direta local, o auth-service expõe CORS com a
   origem da PWA (`http://localhost:4200`, default `AUTH_CORS_ORIGINS`) e métodos
   `POST`/`OPTIONS`.
@@ -101,7 +108,10 @@ nas variáveis de ambiente e rate limit em memória na v1 (RN13).
 
 - A regra "o gateway é a única API chamada pela PWA" (ADR 0001) passa a ter
   exceção nominal e limitada ao auth-service, com escopo e critérios de saída
-  explícitos nesta ADR.
+  explícitos nesta ADR — **ampliada em 2026-10-13 pela
+  [ADR 0009](0009-excecao-temporaria-ao-gateway-shopping-list-service.md)**, que
+  registra a segunda exceção temporária (shopping-list-service) nos mesmos termos
+  (escopo, CORS local, critérios de saída e dono da migração).
 - A PWA depende, na v1, de uma base URL local (`http://localhost:3001`) e do CORS
   do auth-service; ambos são eliminados na migração para o gateway (critérios de
   aceite na seção 3).
