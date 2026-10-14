@@ -1,22 +1,22 @@
 # Estado da feature — Lista de compras
 
-**Fase atual:** **Rodada 2 — Implementação** (T-20 → T-21 → T-22 → T-23). A
-**Rodada 1** (lista ativa) está **validada** (26/26 ACs pelo `feature-validator`) —
-histórico preservado abaixo.
-**Gate atual:** **spec da Rodada 2 aprovada** (`Aprovado pelo usuário em
-2026-10-14` na `SPEC.md`; RN-21/AC-27/CD-14/CD-15; nenhuma decisão aberta — D-02
-resolvida) e **plano da Rodada 2 aprovado** (`Aprovado pelo usuário em 2026-10-14`
-no `PLAN.md`; T-20…T-23, matriz AC ↔ E2E com o AC-27). **Gate de Implementação da
-Rodada 2 aberto** — nenhuma T iniciada. Rodada 1: gates de Implementação e Validação
-fechados (não reabertos por si; serão revalidados apenas nos ACs afetados pela
-Rodada 2 — AC-27 e os cross-referenciados AC-04/AC-10/AC-13/AC-15/AC-25).
+**Fase atual:** **Rodada 2 — Implementação** (T-20 concluída; próximas
+T-21 → T-22 → T-23). A **Rodada 1** (lista ativa) está **validada** (26/26 ACs pelo
+`feature-validator`) — histórico preservado abaixo.
+**Gate atual:** **spec e plano da Rodada 2 aprovados** (`Aprovado pelo usuário em
+2026-10-14` em `SPEC.md` e `PLAN.md`). **Gate de Implementação da Rodada 2 aberto:**
+T-20 (helper `shared/money`) **concluída** com suíte `web` verde; faltam T-21/T-22
+(wiring dos dois sheets) e T-23 (Playwright do AC-27). Rodada 1: gates de
+Implementação e Validação fechados (não reabertos por si; serão revalidados apenas
+nos ACs afetados pela Rodada 2 — AC-27 e os cross-referenciados
+AC-04/AC-10/AC-13/AC-15/AC-25).
 **Última atualização:** 2026-10-14
-**Próxima ação:** delegar a **T-20** (`angular-dev`) — helper puro de máscara de
-centavos em `apps/web/src/app/shared/money/**` (`digitsFromInput`,
-`formatBrlFromDigits`, `numberFromDigits`, `digitsFromNumber`, helpers de
-quantidade absorvidos) + specs. Na sequência (estritamente sequencial, sem
-paralelismo): **T-21** (`item-form-sheet`), **T-22** (`purchase-sheet`), **T-23**
-(Playwright do AC-27). Depois: auditoria de testes e revalidação dos ACs afetados
+**Próxima ação:** delegar a **T-21** (`angular-dev`) — ligar a máscara ao **preço
+planejado** do `item-form-sheet` (estado = dígitos, DOM imperativo, caret no fim,
+`inputmode="numeric"`, payload por `numberFromDigits`, prefill pela máscara; vazio ⇒
+`null`, AC-04) e atualizar `item-form-sheet.spec.ts` + as asserções de item em
+`shopping-list-page.spec.ts`. Depois: **T-22** (`purchase-sheet`), **T-23**
+(Playwright do AC-27), auditoria de testes e revalidação dos ACs afetados
 (`feature-validator`). Push/PR seguem **adiados** até a Rodada 2 fechar. Nenhum AC
 ou T da Rodada 1 reaberto.
 
@@ -73,8 +73,9 @@ ou T da Rodada 1 reaberto.
 
 ## Execução
 
-- **Rodada 2:** tarefa em andamento: **nenhuma** (gate de Implementação da Rodada 2
-  aberto); tarefas da Rodada 2 (T-20…T-23) **não iniciadas**
+- **Rodada 2:** tarefa em andamento: **nenhuma**; **T-20 concluída** (helper puro
+  `apps/web/src/app/shared/money/money.ts` + `money.spec.ts`, 14 testes; suíte `web`
+  verde com **191 testes / 21 arquivos**); pendentes T-21, T-22, T-23
 - Tarefa em andamento: **nenhuma**
 - Tarefas concluídas (Rodada 1): T-01 … T-19 (todas)
 - Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres real**
@@ -177,6 +178,43 @@ ou T da Rodada 1 reaberto.
   nenhuma T desta feature os tocou.
 
 ## Últimos handoffs
+
+### T-20 — helper de máscara de centavos em BRL (`angular-dev`)
+
+- Tarefa: **T-20**
+- Estado: **concluída**
+- Arquivos alterados (novos): `apps/web/src/app/shared/money/money.ts` e
+  `apps/web/src/app/shared/money/money.spec.ts` (+14 testes). **Nenhum outro
+  arquivo tocado** (`git status --porcelain` → apenas a pasta nova); os sheets
+  seguem com T-21/T-22.
+- ACs cobertos: **AC-27** (base técnica — as regras da máscara; o wiring dos dois
+  campos é T-21/T-22 e a jornada Playwright é T-23)
+- Testes executados (comando + resultado reais):
+  - `npx nx test web` → **191 passed / 21 arquivos** (antes: 177/20; `Cache: 0/1
+    hit` ⇒ execução real). **Nenhuma regressão.**
+  - `npx nx test web --include=app/shared/money/money.spec.ts` → **14 passed / 1
+    arquivo** (o helper isolado).
+  - `npx nx lint web` → **`All files pass linting`** (0 erros/warnings; sem `any`).
+  - extra (checklist de T-19): `npx nx typecheck web` → verde.
+- Decisões registradas: (1) `parseOptionalDecimal` (item) e `parseDecimal`
+  (compra) eram **idênticos** ⇒ o módulo exporta **um** `parseDecimal` +
+  `formatDecimal` ("uma única verdade" do plano); T-21 troca a chamada local pelo
+  import (mesma semântica: vírgula ou ponto, `''` ⇒ `null`, NaN bloqueia).
+  (2) `formatBrlFromDigits` recebe a string de **dígitos** (produzida por
+  `digitsFromInput` na borda) e formata por `padStart(3, '0')` + corte dos dois
+  últimos dígitos — cobre `''/3/30/3015/123456` sem separador de milhar (CD-15) e
+  trata `'0'` como valor (`R$ 0,00`), não ausência. (3) `numberFromDigits` =
+  `Number(digits) / 100` (`'3015' → 30.15`; `'' → null`) — a divisão arredonda
+  para o mesmo double do literal, logo é determinística. (4) `digitsFromNumber`
+  usa `Math.round(value * 100)` para o prefill não herdar o erro de ponto
+  flutuante (`9.9 * 100 === 990.0000000000001`); sem limite artificial de dígitos
+  (CD-15).
+- Pendências: nenhuma bloqueante. Nota para T-21/T-22: o import é de
+  `../shared/money/money` (a pasta `shared/` não tinha barrel; só estes dois
+  arquivos foram criados, dentro do glob permitido).
+- Próximo passo recomendado: delegar **T-21** (`angular-dev`) — ligar a máscara ao
+  **preço planejado** do `item-form-sheet` (estado = dígitos, DOM imperativo,
+  `inputmode="numeric"`, payload por `numberFromDigits`, prefill pela máscara).
 
 ### Gate do PLANO da Rodada 2 — aprovado e fechado (`tech-planner`)
 
