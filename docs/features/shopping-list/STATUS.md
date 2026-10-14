@@ -4,8 +4,8 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-14
-**Próxima ação:** Onda 9 — **T-14** (ações do item + excluir/Desfazer + concluir
-compra; dep T-13) — sozinha. Depois **T-16** → **T-17**.
+**Próxima ação:** Onda 10 — **T-16** (auditoria/completude dos testes unitários da
+PWA; dep T-14) — sozinha. Depois **T-17** (Playwright) → `feature-validator`.
 
 ## Artefatos
 
@@ -35,17 +35,15 @@ compra; dep T-13) — sozinha. Depois **T-16** → **T-17**.
 
 ## Execução
 
-- Tarefa em andamento: **T-14** (ações do item + excluir/Desfazer + concluir
-  compra; `angular-dev`)
-- Tarefas concluídas: T-01 … T-13, T-15, T-18 (faltam T-14, T-16, T-17)
+- Tarefa em andamento: **T-16** (auditoria unit da PWA; `test-engineer`)
+- Tarefas concluídas: T-01 … T-15, T-18 (faltam T-16, T-17)
 - Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres real**
   (T-15) + **corrida de duplicidade corrigida** (T-18) — suíte
-  `shopping-list-service` com **162 testes**, 14 arquivos; PWA (T-10–T-13) — suíte
-  `web` com **147 testes**, 18 arquivos; E2E de auth sem regressão
-  (`npx nx e2e web-e2e`, 6 verdes)
-- ACs com evidência executável até aqui: AC-01–AC-20, AC-22–AC-26 (unit/integração);
-  **AC-21** (parte de UI) e as metades de exclusão/ações dependem de T-14; a prova
-  **Playwright** da matriz (AC-01–AC-26 na UI) fica em T-17
+  `shopping-list-service` com **162 testes**, 14 arquivos; PWA completa em código
+  (T-10–T-14) — suíte `web` com **173 testes**, 20 arquivos; E2E de auth sem
+  regressão (`npx playwright test --config apps/web-e2e/playwright.config.mts`, 6 verdes)
+- ACs com evidência executável até aqui: AC-01–AC-26 com unit/integração (a matriz
+  **Playwright** completa da UI é T-17)
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
@@ -75,6 +73,10 @@ compra; dep T-13) — sozinha. Depois **T-16** → **T-17**.
 - **Pré-requisito de teste (novo):** a suíte `shopping-list-service` agora **exige
   Docker no ar + `db:migrate`** (a integração de T-15 usa PostgreSQL real):
   `npm run docker:up` + `npx nx run shopping-list-service:db:migrate`.
+- **Porta do E2E:** `npx nx e2e web-e2e` (comando de evidência de T-17) falha se um
+  `serve` já ocupar a 4200/3001 (o alvo implícito `web:serve:development` não sobe).
+  Com um `ms-all` no ar, rodar `npx playwright test --config
+  apps/web-e2e/playwright.config.mts`. Para o gate de T-17, garantir as portas livres.
 - **Nit de doc (concluído em T-18, `3d20cd8`):** `libs/contracts/README.md` passou a
   citar a mensagem canônica `Corpo da requisição inválido` (JSON malformado).
 - **Nota de escopo (resolvida):** para T-06 honrar o contrato **201 (criado) / 200
@@ -83,6 +85,31 @@ compra; dep T-13) — sozinha. Depois **T-16** → **T-17**.
   (`created?: boolean`), implementada e com testes verdes.
 
 ## Últimos handoffs
+
+### T-14 — ações do item, exclusão com Desfazer e conclusão (`angular-dev`)
+
+- Estado: concluída
+- Arquivos alterados: `item-actions-sheet.{ts,html,scss,spec.ts}` (novo),
+  `checkout-sheet.{ts,html,scss,spec.ts}` (novo), `shopping-list-page.{ts,html,spec.ts}`
+  (wiring)
+- ACs cobertos: AC-11, AC-17, AC-18, AC-19, AC-20, AC-21 (UI), AC-23, AC-25, AC-26
+- Testes executados: `npx nx test web` (**173 verdes**, 20 arquivos); `npx nx lint
+  web` e `npx nx build web` verdes; `npx playwright test --config
+  apps/web-e2e/playwright.config.mts` (6 verdes)
+- Decisões registradas: `requestSheet('item-actions' | 'checkout')` como entrada
+  única (app bar → checkout; linha → item-actions com o item); o sheet de ações não
+  muta estado (emite `togglePurchased`/`edit`/`remove`/`closed`, consumidos por
+  `consumeActionsItem()` — uma ação por abertura) e "Marcar" **reusa o
+  `PurchaseSheet`** de T-13; excluir é imediato + toast `'Item excluído'` com ação
+  `'Desfazer'` → `store.undoRemove()` (sem timers na tela); `removing: Set<string>`
+  espelha `unmarking`; `<app-toast-host />` montado no fim do template (fixed +
+  `--z-toast`) — fecha a pendência de T-12/T-13; `[closeOnBackdrop]="false"` no
+  checkout
+- Observações: **`npx nx e2e web-e2e` exige as portas 4200/3001 livres** — com um
+  `ms-all` no ar o alvo `web:serve:development` não sobe e o Nx sai 1 (o Playwright
+  em si passa); usar `npx playwright test --config apps/web-e2e/playwright.config.mts`
+  enquanto o stack estiver no ar
+- Commit: `07e8b27`
 
 ### T-13 — sheet de marcar/desmarcar comprado (`angular-dev`)
 
