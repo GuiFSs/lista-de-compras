@@ -3,11 +3,10 @@
 **Fase atual:** Implementação
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
-**Última atualização:** 2026-10-13
+**Última atualização:** 2026-10-14
 **Próxima ação:** Onda 8 — **T-13** (sheet de marcar/desmarcar comprado; dep
-T-12) **em andamento** ∥ **T-18** (corretiva autorizada pelo usuário: corrida de
-duplicidade no `POST /items` + nit do README de contratos) **em andamento**.
-Depois **T-14** → **T-16** → **T-17**.
+T-12) **em andamento**. **T-18** (corretiva da corrida de duplicidade + nit do
+README) **concluída** em `3d20cd8`. Depois **T-14** → **T-16** → **T-17**.
 
 ## Artefatos
 
@@ -37,14 +36,13 @@ Depois **T-14** → **T-16** → **T-17**.
 
 ## Execução
 
-- Tarefa em andamento: **T-13** (sheet de marcar/desmarcar; `angular-dev`) ∥
-  **T-18** (corretiva de backend; `backend-dev`) — arquivos disjuntos
-- Tarefas concluídas: T-01 … T-12, T-15 (faltam T-13, T-14, T-16, T-17 + a
-  corretiva T-18)
-- Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres
-  real** (T-15 — 156 testes, 14 arquivos); camada de dados (T-10), tela Lista
-  (T-11) e sheet de item (T-12) da PWA — suíte `web` com **128 testes**, 17
-  arquivos; E2E de auth sem regressão (`npx nx e2e web-e2e`, 6 verdes)
+- Tarefa em andamento: **T-13** (sheet de marcar/desmarcar; `angular-dev`)
+- Tarefas concluídas: T-01 … T-12, T-15, **T-18** (faltam T-13, T-14, T-16, T-17)
+- Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres real**
+  (T-15) + **corrida de duplicidade corrigida** (T-18) — suíte
+  `shopping-list-service` com **162 testes**, 14 arquivos; camada de dados (T-10),
+  tela Lista (T-11) e sheet de item (T-12) da PWA — suíte `web` com **128 testes**,
+  17 arquivos; E2E de auth sem regressão (`npx nx e2e web-e2e`, 6 verdes)
 - ACs com evidência executável até aqui: AC-01–AC-13, AC-17–AC-22, AC-24–AC-26
   (unit/integração); **AC-14/AC-15/AC-16** dependem de T-13; a prova
   **Playwright** da matriz (AC-01–AC-26 na UI) fica em T-17
@@ -53,34 +51,69 @@ Depois **T-14** → **T-16** → **T-17**.
 
 ## Pendências e bloqueios
 
-- **Nenhum bloqueio** para T-12 (Onda 7). O gate do plano segue fechado.
+- **Nenhum bloqueio.** O gate do plano segue fechado e a corretiva T-18 está
+  concluída.
 - **Sync do workspace (resolvido):** T-10 passou `apps/web` a importar
   `@lista/contracts` sem registrar a *project reference*, deixando o workspace fora
   de sync (`nx sync:check`/`nx build` (workspace)/`nx e2e` falhavam antes de
   executar). O orquestrador rodou `nx sync` e commitou o ajuste de
   `apps/web/tsconfig.app.json` em `f5a68a4` (`npx nx sync:check` verde). **Gate de
   UI (T-17) desbloqueado.**
-- **Decisão resolvida pelo usuário (2026-10-13):** em POSTs **concorrentes** com o
-  mesmo nome, o `CreateShoppingListItemUseCase` faz *read-then-write* (TOCTOU) e o
-  erro do índice único subia como **500 em vez de 409**. O usuário autorizou a
-  correção — **T-18** (backend, em andamento): tratar a violação `23505` de forma
-  *bounded* (reler e reaplicar a decisão de duplicidade; soma quando
-  `duplicateResolution: 'sum-planned-quantity'`, senão **409** canônico), sem 500 e
-  sem duplicata. A spec é silente sobre a corrida; a correção só alinha a corrida à
-  regra de duplicidade **já documentada** (nenhum AC novo).
+- **Decisão do usuário (2026-10-13) — resolvida em T-18:** em POSTs
+  **concorrentes** com o mesmo nome, o `CreateShoppingListItemUseCase` fazia
+  *read-then-write* (TOCTOU) e o erro do índice único subia como **500 em vez de
+  409**. Corrigido (`3d20cd8`): a violação `23505` entra pelo **port** como
+  `ActiveItemNameConflictError` (traduzida no adaptador Drizzle) e o caso de uso
+  **relê uma vez** reaplicando a decisão de duplicidade — soma quando
+  `duplicateResolution: 'sum-planned-quantity'`, senão **409** canônico
+  (`duplicateOf`); degrada para 409 (nunca 500). Erro alheio ao índice continua
+  propagando. A spec era silente sobre a corrida; a correção só alinha a corrida à
+  regra de duplicidade **já documentada** (nenhum AC novo, sem migração e sem
+  contrato HTTP novo).
 - **Encaminhamento (não bloqueio):** o contrato do **evento de conclusão de compra**
   (previsto na ADR 0001) fica para a **feature de histórico** — fora desta rodada.
 - **Pré-requisito de teste (novo):** a suíte `shopping-list-service` agora **exige
   Docker no ar + `db:migrate`** (a integração de T-15 usa PostgreSQL real):
   `npm run docker:up` + `npx nx run shopping-list-service:db:migrate`.
-- **Nit de doc (aprovado em 2026-10-13, em T-18):** `libs/contracts/README.md`
-  passa a citar a mensagem canônica `Corpo da requisição inválido` (JSON malformado).
+- **Nit de doc (concluído em T-18, `3d20cd8`):** `libs/contracts/README.md` passou a
+  citar a mensagem canônica `Corpo da requisição inválido` (JSON malformado).
 - **Nota de escopo (resolvida):** para T-06 honrar o contrato **201 (criado) / 200
   (soma aplicada)** do `POST /items`, o orquestrador autorizou uma alteração
   **aditiva** em `create-shopping-list-item.use-case.ts`/`shopping-list-result.ts`
   (`created?: boolean`), implementada e com testes verdes.
 
 ## Últimos handoffs
+
+### T-18 — corrida de duplicidade na criação (`backend-dev`)
+
+- Estado: concluída
+- Arquivos alterados:
+  `apps/shopping-list-service/src/application/ports/shopping-list-repository.port.ts`
+  (novo `ActiveItemNameConflictError` — o erro entra **pelo port**; `@throws` em
+  `insert`); `.../infrastructure/persistence/drizzle/repository/shopping-list.repository.ts`
+  (`insert` traduz `23505` → erro do port via `isUniqueViolation`, percorrendo a
+  cadeia `cause`);
+  `.../application/use-cases/create-shopping-list-item.use-case.ts`
+  (`recoverFromConcurrentCreate`: relê **uma vez** e reusa `resolveExisting`);
+  `.../create-shopping-list-item.use-case.spec.ts` (+3 testes: leitura vencida,
+  colisão, erro alheio **não** engolido);
+  `.../src/integration/shopping-list-postgres.spec.ts` (+3 testes em Postgres real
+  com `StaleReadShoppingListRepository`, que força a leitura vencida e conta as
+  colisões no índice); `libs/contracts/README.md` (nit)
+- ACs cobertos: robustez sob concorrência de AC-09/RN-04/CD-02 (sem AC novo);
+  sequencial preservado (201 `created: true` / 200 soma) e PATCH/CD-13 inalterado
+- Testes executados: `npx nx test shopping-list-service` (**162 verdes**, 14
+  arquivos; pré-requisito `npm run docker:up` + `db:migrate`; banco com 0 linhas ao
+  final); `npx nx lint shopping-list-service` e `npx nx build shopping-list-service`
+  verdes
+- Decisões registradas: violação de unicidade entra pelo **port** (casos de uso não
+  conhecem Postgres — ADR 0001); recuperação **bounded** (uma releitura; degrada
+  para 409 canônico — nunca 500); `isUniqueViolation` casa só por `code === '23505'`
+  (seguro: a tabela só tem esse índice único além da PK uuid); a prova de concorrência
+  ficou na spec de **integração** (dois arquivos com `truncate` cruzado na mesma
+  tabela se atropelariam no Vitest paralelo); **sem migração** e **sem contrato HTTP
+  novo**
+- Commit: `3d20cd8`
 
 ### T-12 — sheet de item adicionar/editar + duplicidade (`angular-dev`)
 
