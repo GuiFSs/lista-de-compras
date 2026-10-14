@@ -1,0 +1,19 @@
+<!-- Sheet de confirmação (guia §4 "Formulário de app"/§5): resumo curto em
+     linhas e decisão explícita no terço inferior — sem campos de mercado/data
+     nesta rodada (RN-16/AC-21). Só tokens. -->
+<app-bottom-sheet heading="Concluir compra" [closeOnBackdrop]="false" (closed)="cancel()">
+  <div class="checkout">
+    <div class="checkout__summary">
+      <p class="checkout__lead">{{ lead() }}</p>
+      <p class="checkout__line">{{ leavingText() }}</p>
+      <p class="checkout__line">{{ remainingText() }}</p>
+    </div>
+
+    <div class="checkout__actions">
+      <button type="button" class="btn-secondary" (click)="cancel()">Cancelar</button>
+      <button type="button" class="btn-primary" [disabled]="saving()" (click)="confirm()">
+        {{ saving() ? 'Concluindo…' : 'Concluir compra' }}
+      </button>
+    </div>
+  </div>
+</app-bottom-sheet>

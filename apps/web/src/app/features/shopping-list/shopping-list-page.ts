@@ -1,7 +1,9 @@
 import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import type { ShoppingListItem } from '@lista/contracts';
 import { DEFAULT_SHELL_TITLE, ShellChromeService } from '../../layout/shell-chrome';
-import { CartIcon, ToastService } from '../../ui';
+import { CartIcon, ToastHost, ToastService } from '../../ui';
+import { CheckoutSheet } from './checkout-sheet';
+import { ItemActionsSheet } from './item-actions-sheet';
 import { ItemFormSheet, type ItemFormMode } from './item-form-sheet';
 import { ItemRow } from './item-row';
 import { PurchaseSheet, type PurchaseDraft } from './purchase-sheet';
@@ -10,7 +12,7 @@ import { ShoppingListStore } from './state';
 /** Skeleton na forma do conteúdo: linhas, nunca spinner centralizado (AC-02). */
 const SKELETON_ROWS: readonly number[] = [0, 1, 2, 3];
 
-/** Fluxos ainda ligados ao sheet de ações/conclusão (T-14). */
+/** Sheets que abrem por cima da lista: ações do item (T-14) e conclusão (T-14). */
 type SheetFlow = 'item-actions' | 'checkout';
 
 /**
@@ -20,7 +22,14 @@ type SheetFlow = 'item-actions' | 'checkout';
  */
 @Component({
   selector: 'app-shopping-list-page',
-  imports: [ItemRow, ItemFormSheet, PurchaseSheet],
+  imports: [
+    ItemRow,
+    ItemFormSheet,
+    PurchaseSheet,
+    ItemActionsSheet,
+    CheckoutSheet,
+    ToastHost,
+  ],
   templateUrl: './shopping-list-page.html',
   styleUrl: './shopping-list-page.scss',
 })
@@ -42,6 +51,12 @@ export class ShoppingListPage {
   /** Item com o sheet de compra aberto; `null` = fechado (T-13). */
   protected readonly purchaseItem = signal<ShoppingListItem | null>(null);
 
+  /** Item com o sheet de ações aberto; `null` = fechado (T-14). */
+  protected readonly actionsItem = signal<ShoppingListItem | null>(null);
+
+  /** Sheet de conclusão da compra aberto (T-14). */
+  protected readonly checkoutOpen = signal(false);
+
   /**
    * Valores digitados por item, preservados após desmarcar (RN-12/CD-04): o
    * serviço limpa os dados da compra ao desmarcar, então a tela guarda o que a
@@ -51,6 +66,9 @@ export class ShoppingListPage {
 
   /** Desmarcações em andamento — evita toasts repetidos em toques duplos (AC-26). */
   private readonly unmarking = new Set<string>();
+
+  /** Exclusões em andamento — o toque duplo compartilha uma só "Desfazer". */
+  private readonly removing = new Set<string>();
 
   protected readonly purchaseDraft = computed<PurchaseDraft | null>(() => {
     const item = this.purchaseItem();
@@ -123,10 +141,39 @@ export class ShoppingListPage {
   }
 
   protected onOpenActions(item: ShoppingListItem): void {
-    // O sheet de ações (Marcar/Editar/Excluir) é T-14; até lá a linha abre o
-    // formulário de edição, que já é o destino da ação "Editar" — inclusive
-    // para item comprado (AC-17).
-    this.openForm('edit', item);
+    // As ações secundárias saem da linha (guia §5) e ficam neste sheet; elas não
+    // mudam estado — cada uma escolhe o próximo fluxo.
+    this.requestSheet('item-actions', item);
+  }
+
+  protected onActionsClosed(): void {
+    this.actionsItem.set(null);
+  }
+
+  /** Marcar reusa o sheet de compra (T-13); comprado, a ação desmarca (AC-17). */
+  protected onActionsToggle(): void {
+    const item = this.consumeActionsItem();
+    if (item !== null) this.onTogglePurchased(item);
+  }
+
+  protected onActionsEdit(): void {
+    const item = this.consumeActionsItem();
+    if (item !== null) this.openForm('edit', item);
+  }
+
+  protected onActionsDelete(): void {
+    const item = this.consumeActionsItem();
+    if (item !== null) void this.remove(item);
+  }
+
+  protected onCheckoutClosed(): void {
+    // Cancelar o resumo não muda nada: nada é enviado ao serviço (AC-19).
+    this.checkoutOpen.set(false);
+  }
+
+  protected onCheckoutConfirmed(): void {
+    this.checkoutOpen.set(false);
+    this.toasts.show('Compra concluída');
   }
 
   protected onFormClosed(): void {
@@ -177,10 +224,45 @@ export class ShoppingListPage {
   }
 
   /**
-   * Seam dos sheets restantes: T-14 liga as ações do item e a conclusão. Nenhum
-   * fluxo altera a lista por conta própria — mudança de estado é só do store.
+   * Excluir (AC-11/CD-07): a linha sai na hora e o toast oferece "Desfazer"
+   * dentro da janela de ≈4s do store. Se a chamada falhar, nada é inventado na
+   * tela: o erro fica no toast persistente e o store relê o serviço quando a
+   * exclusão pode ter sido aplicada sem resposta (AC-23).
    */
-  private requestSheet(flow: SheetFlow): void {
-    void flow;
+  private async remove(item: ShoppingListItem): Promise<void> {
+    if (this.removing.has(item.id)) return;
+
+    this.removing.add(item.id);
+    try {
+      const outcome = await this.store.removeItem(item.id);
+      if (outcome.kind !== 'ok') return;
+      this.toasts.show('Item excluído', {
+        label: 'Desfazer',
+        // Restaurar é do serviço (RN-08): devolve o item com os mesmos dados.
+        run: () => void this.store.undoRemove(),
+      });
+    } finally {
+      this.removing.delete(item.id);
+    }
+  }
+
+  /** Fecha o sheet de ações devolvendo o item — uma ação por abertura. */
+  private consumeActionsItem(): ShoppingListItem | null {
+    const item = this.actionsItem();
+    this.actionsItem.set(null);
+    return item;
+  }
+
+  /**
+   * Entrada única dos sheets da tela: a ação da app bar abre a conclusão e a
+   * linha abre as ações do item. Nenhum fluxo altera a lista por conta própria —
+   * mudança de estado é só do store.
+   */
+  private requestSheet(flow: SheetFlow, item: ShoppingListItem | null = null): void {
+    if (flow === 'checkout') {
+      this.checkoutOpen.set(true);
+      return;
+    }
+    if (item !== null) this.actionsItem.set(item);
   }
 }

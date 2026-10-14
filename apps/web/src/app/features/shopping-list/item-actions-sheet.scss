@@ -1,0 +1,68 @@
+// Sheet de ações (guia §4 "Formulário de app"/§5): contexto do item e uma ação
+// por linha, alvo ≥44px, no alcance do polegar. Só tokens.
+.actions-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+// Nome do item como contexto do sheet — não é rótulo de campo nem metadado.
+.actions-sheet__item {
+  font-size: var(--font-size-body);
+  color: var(--color-ink-secondary);
+  overflow-wrap: anywhere;
+}
+
+.actions-sheet__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.actions-sheet__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-full);
+  touch-action: manipulation;
+  transition:
+    background-color var(--motion-fast),
+    transform var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.actions-sheet__action:active {
+  background-color: var(--color-ripple);
+}
+
+// Marcar como comprado é a ação de destaque do sheet (uma primary por sheet).
+.actions-sheet__action--primary {
+  color: var(--color-on-primary);
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.actions-sheet__action--primary:active {
+  background-color: var(--color-primary-active);
+  transform: scale(0.97);
+}
+
+// Desmarcar e Excluir são ações destrutivas na linguagem do guia (§5).
+.actions-sheet__action--danger {
+  color: var(--color-danger);
+  background-color: var(--color-danger-soft);
+  border-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actions-sheet__action {
+    transition: none;
+  }
+}

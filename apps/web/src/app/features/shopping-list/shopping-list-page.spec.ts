@@ -55,6 +55,12 @@ class StoreStub {
   readonly saving = signal(false);
   readonly mutationError = signal<string | null>(null);
   readonly clearMutationError = vi.fn(() => this.mutationError.set(null));
+  readonly removeItem = vi.fn((id: string): Promise<MutationOutcome> => {
+    void id;
+    return Promise.resolve({ kind: 'ok' });
+  });
+  readonly undoRemove = vi.fn((): Promise<MutationOutcome> => Promise.resolve({ kind: 'ok' }));
+  readonly checkout = vi.fn((): Promise<MutationOutcome> => Promise.resolve({ kind: 'ok' }));
   readonly createItem = vi.fn((request: CreateShoppingListItemRequest): Promise<CreateItemOutcome> => {
     void request;
     return Promise.resolve({ kind: 'created' });
@@ -100,6 +106,14 @@ describe('ShoppingListPage', () => {
 
   function root(fixture: ComponentFixture<ShoppingListPage>): HTMLElement {
     return fixture.nativeElement as HTMLElement;
+  }
+
+  /** Botão pelo rótulo visível — os sheets têm ações com texto (T-14). */
+  function buttonByText(element: HTMLElement, text: string): HTMLButtonElement {
+    const buttons = Array.from(element.querySelectorAll('button')) as HTMLButtonElement[];
+    const button = buttons.find((candidate) => candidate.textContent?.trim() === text);
+    if (!button) throw new Error(`Botão não encontrado: ${text}`);
+    return button;
   }
 
   it('busca a lista ao entrar e mostra o skeleton na primeira carga (AC-02)', () => {
@@ -381,13 +395,20 @@ describe('ShoppingListPage', () => {
     await flush();
   });
 
-  it('item comprado continua editável: as ações abrem o formulário preenchido (AC-17)', () => {
+  it('item comprado continua editável: o sheet de ações leva ao formulário preenchido (AC-17)', () => {
     store.status.set('loaded');
     store.items.set([PURCHASED]);
     const fixture = mount();
     const element = root(fixture);
 
     (element.querySelector('.item-row__actions') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.bottom-sheet__title')?.textContent?.trim()).toBe(
+      'Ações do item',
+    );
+
+    buttonByText(element, 'Editar').click();
     fixture.detectChanges();
 
     expect(element.querySelector('.bottom-sheet__title')?.textContent?.trim()).toBe('Editar item');
@@ -425,7 +446,7 @@ describe('ShoppingListPage', () => {
     expect(element.querySelector('.item-form')).toBeNull();
   });
 
-  it('a ação da linha abre o formulário de edição já preenchido (AC-10)', () => {
+  it('a ação da linha abre o sheet de ações e Editar preenche o formulário (AC-10)', () => {
     store.status.set('loaded');
     store.items.set([
       item({ id: 'a', name: 'Arroz', plannedQuantity: 2, unit: 'kg', plannedPrice: 12.5 }),
@@ -434,6 +455,10 @@ describe('ShoppingListPage', () => {
     const element = root(fixture);
 
     (element.querySelector('.item-row__actions') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(element.querySelector('.actions-sheet')).not.toBeNull();
+
+    buttonByText(element, 'Editar').click();
     fixture.detectChanges();
 
     expect(element.querySelector('.bottom-sheet__title')?.textContent?.trim()).toBe('Editar item');
@@ -454,5 +479,238 @@ describe('ShoppingListPage', () => {
 
     expect(error).toHaveBeenCalledWith('Falha de rede. Verifique a conexão e tente novamente.');
     expect(store.clearMutationError).toHaveBeenCalled();
+  });
+
+  it('a ação da linha abre o sheet de ações sem tocar na lista (T-14)', () => {
+    store.status.set('loaded');
+    store.items.set([item({ name: 'Café' })]);
+    const fixture = mount();
+    const element = root(fixture);
+
+    (element.querySelector('.item-row__actions') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.actions-sheet')).not.toBeNull();
+    expect(buttonByText(element, 'Marcar como comprado')).toBeDefined();
+    expect(buttonByText(element, 'Excluir')).toBeDefined();
+    expect(store.removeItem).not.toHaveBeenCalled();
+
+    (element.querySelector('.bottom-sheet__close') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.actions-sheet')).toBeNull();
+  });
+
+  it('a ação marcar do sheet de ações reusa o sheet de compra (AC-12)', () => {
+    store.status.set('loaded');
+    store.items.set([item({ id: 'a', name: 'Arroz', plannedQuantity: 2, unit: 'kg' })]);
+    const fixture = mount();
+    const element = root(fixture);
+
+    (element.querySelector('.item-row__actions') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    buttonByText(element, 'Marcar como comprado').click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.actions-sheet')).toBeNull();
+    expect((element.querySelector('#purchase-quantity') as HTMLInputElement).value).toBe('2');
+  });
+
+  it('excluir sai na hora e o toast oferece "Desfazer" (AC-11)', async () => {
+    store.status.set('loaded');
+    store.items.set([item({ id: 'a', name: 'Café' })]);
+    store.removeItem.mockImplementation(async (id: string): Promise<MutationOutcome> => {
+      store.items.set(store.items().filter((value) => value.id !== id));
+      return { kind: 'ok' };
+    });
+
+    const fixture = mount();
+    const element = root(fixture);
+
+    (element.querySelector('.item-row__actions') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    buttonByText(element, 'Excluir').click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(store.removeItem).toHaveBeenCalledWith('a');
+    expect(element.querySelectorAll('.item-row__name')).toHaveLength(0);
+    expect(element.querySelector('.toast')?.textContent).toContain('Item excluído');
+    expect(element.querySelector('.toast__action')?.textContent?.trim()).toBe('Desfazer');
+  });
+
+  it('"Desfazer" restaura o item com os mesmos dados, inclusive comprado (AC-11)', async () => {
+    store.status.set('loaded');
+    store.items.set([PURCHASED]);
+    store.removeItem.mockImplementation(async (id: string): Promise<MutationOutcome> => {
+      store.items.set(store.items().filter((value) => value.id !== id));
+      return { kind: 'ok' };
+    });
+    store.undoRemove.mockImplementation(async (): Promise<MutationOutcome> => {
+      store.items.set([PURCHASED]);
+      return { kind: 'ok' };
+    });
+
+    const fixture = mount();
+    const element = root(fixture);
+
+    (element.querySelector('.item-row__actions') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    buttonByText(element, 'Excluir').click();
+    await flush();
+    fixture.detectChanges();
+    expect(element.querySelector('.item-row__name')).toBeNull();
+
+    // O toque no toast passa pelo host montado na tela (T-14).
+    (element.querySelector('.toast__action') as HTMLButtonElement).click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(store.undoRemove).toHaveBeenCalledTimes(1);
+    expect(element.querySelector('.item-row__name')?.textContent?.trim()).toBe('Arroz');
+    expect(element.querySelector('.item-row__name--purchased')).not.toBeNull();
+    expect(element.querySelector('.item-row__meta')?.textContent?.trim()).toBe(
+      '2 pacote · R$ 12,50',
+    );
+    expect(element.querySelector('.toast')).toBeNull();
+  });
+
+  it('sem desfazer, o item permanece excluído e nada é restaurado (AC-11)', async () => {
+    store.status.set('loaded');
+    store.items.set([item({ id: 'a', name: 'Café' })]);
+    store.removeItem.mockImplementation(async (id: string): Promise<MutationOutcome> => {
+      store.items.set(store.items().filter((value) => value.id !== id));
+      return { kind: 'ok' };
+    });
+
+    const fixture = mount();
+    const element = root(fixture);
+
+    (element.querySelector('.item-row__actions') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    buttonByText(element, 'Excluir').click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(store.undoRemove).not.toHaveBeenCalled();
+    expect(store.items()).toEqual([]);
+    expect(element.querySelector('.item-row')).toBeNull();
+  });
+
+  it('falha ao excluir não deixa fantasma: toast persistente e o item continua na lista (AC-23)', async () => {
+    const message = 'Falha de rede. Verifique a conexão e tente novamente.';
+    store.status.set('loaded');
+    store.items.set([item({ id: 'a', name: 'Café' })]);
+    store.removeItem.mockImplementation(async (): Promise<MutationOutcome> => {
+      store.mutationError.set(message);
+      return { kind: 'error', message };
+    });
+
+    const fixture = mount();
+    const element = root(fixture);
+    const show = vi.spyOn(TestBed.inject(ToastService), 'show');
+
+    (element.querySelector('.item-row__actions') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    buttonByText(element, 'Excluir').click();
+    await flush();
+    fixture.detectChanges();
+
+    // Nada de "Desfazer" para um item que nunca saiu; o erro fica até o descarte.
+    expect(show).not.toHaveBeenCalled();
+    expect(element.querySelector('.toast--error')?.textContent).toContain(message);
+    expect(element.querySelector('.item-row__name')?.textContent?.trim()).toBe('Café');
+  });
+
+  it('a app bar abre o resumo; confirmar remove só os comprados e confirma com toast (AC-19)', async () => {
+    store.status.set('loaded');
+    store.items.set([PURCHASED, item({ id: 'p', name: 'Café' })]);
+    store.checkout.mockImplementation(async (): Promise<MutationOutcome> => {
+      store.items.set(store.items().filter((value) => value.purchased === null));
+      return { kind: 'ok' };
+    });
+
+    const fixture = mount();
+    const element = root(fixture);
+    const show = vi.spyOn(TestBed.inject(ToastService), 'show');
+
+    chrome.actions()[0].run();
+    fixture.detectChanges();
+
+    const lines = Array.from(element.querySelectorAll('.checkout__line')).map((node) =>
+      node.textContent?.trim(),
+    );
+    expect(lines).toEqual(['1 item comprado sai da lista.', '1 item permanece na lista.']);
+
+    buttonByText(element, 'Concluir compra').click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(store.checkout).toHaveBeenCalledTimes(1);
+    expect(show).toHaveBeenCalledWith('Compra concluída');
+    expect(element.querySelector('.checkout')).toBeNull();
+
+    const names = Array.from(element.querySelectorAll('.item-row__name')).map((node) =>
+      node.textContent?.trim(),
+    );
+    expect(names).toEqual(['Café']);
+  });
+
+  it('cancelar o resumo não muda nada (AC-19)', () => {
+    store.status.set('loaded');
+    store.items.set([PURCHASED, item({ id: 'p', name: 'Café' })]);
+    const fixture = mount();
+    const element = root(fixture);
+
+    chrome.actions()[0].run();
+    fixture.detectChanges();
+    buttonByText(element, 'Cancelar').click();
+    fixture.detectChanges();
+
+    expect(store.checkout).not.toHaveBeenCalled();
+    expect(element.querySelector('.checkout')).toBeNull();
+    expect(element.querySelectorAll('.item-row__name')).toHaveLength(2);
+  });
+
+  it('concluir sem itens comprados mantém a lista exatamente como estava (AC-20)', async () => {
+    store.status.set('loaded');
+    const before = [item({ id: 'p1', name: 'Café' }), item({ id: 'p2', name: 'Arroz' })];
+    store.items.set(before);
+
+    const fixture = mount();
+    const element = root(fixture);
+
+    chrome.actions()[0].run();
+    fixture.detectChanges();
+
+    const lines = Array.from(element.querySelectorAll('.checkout__line')).map((node) =>
+      node.textContent?.trim(),
+    );
+    expect(lines).toEqual(['Nenhum item sai da lista.', '2 itens permanecem na lista.']);
+
+    buttonByText(element, 'Concluir compra').click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(store.checkout).toHaveBeenCalledTimes(1);
+    expect(store.items()).toEqual(before);
+    expect(element.querySelectorAll('.item-row__name')).toHaveLength(2);
+  });
+
+  it('o resumo da conclusão não pede mercado nem data (AC-21)', () => {
+    store.status.set('loaded');
+    store.items.set([PURCHASED, item({ id: 'p', name: 'Café' })]);
+    const fixture = mount();
+    const element = root(fixture);
+
+    chrome.actions()[0].run();
+    fixture.detectChanges();
+
+    const sheet = element.querySelector('.checkout') as HTMLElement;
+    const text = sheet.textContent?.toLowerCase() ?? '';
+
+    expect(sheet.querySelectorAll('input, select, textarea')).toHaveLength(0);
+    expect(text).not.toContain('mercado');
+    expect(text).not.toContain('data');
   });
 });
