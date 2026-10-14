@@ -5,7 +5,10 @@
 // não deste adaptador.
 import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
-import { ShoppingListRepository } from '../../../../application/ports/shopping-list-repository.port';
+import {
+  ActiveItemNameConflictError,
+  ShoppingListRepository,
+} from '../../../../application/ports/shopping-list-repository.port';
 import type { ShoppingListItem } from '../../../../domain/shopping-list-item';
 import type { ShoppingListDb } from '../client';
 import { DRIZZLE } from '../drizzle.provider';
@@ -53,7 +56,16 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
   }
 
   async insert(item: ShoppingListItem): Promise<void> {
-    await this.db.insert(shoppingListItems).values(toRowValues(item));
+    try {
+      await this.db.insert(shoppingListItems).values(toRowValues(item));
+    } catch (error) {
+      // A tabela só tem este índice único além da PK (uuid aleatório); traduzir
+      // `23505` para o erro de domínio evita vazar o driver para a aplicação.
+      if (isUniqueViolation(error)) {
+        throw new ActiveItemNameConflictError();
+      }
+      throw error;
+    }
   }
 
   async update(item: ShoppingListItem): Promise<void> {
@@ -71,4 +83,22 @@ export class DrizzleShoppingListRepository implements ShoppingListRepository {
       .delete(shoppingListItems)
       .where(inArray(shoppingListItems.id, [...ids]));
   }
+}
+
+/**
+ * Postgres sinaliza violação de índice único com `code: '23505'`, mas o Drizzle
+ * embrulha o erro do driver e guarda o original em `cause` — por isso a
+ * checagem percorre a cadeia em vez de olhar só o topo.
+ */
+function isUniqueViolation(error: unknown): boolean {
+  const seen = new Set<unknown>();
+  let current: unknown = error;
+  while (typeof current === 'object' && current !== null && !seen.has(current)) {
+    seen.add(current);
+    if ('code' in current && current.code === '23505') {
+      return true;
+    }
+    current = 'cause' in current ? current.cause : undefined;
+  }
+  return false;
 }

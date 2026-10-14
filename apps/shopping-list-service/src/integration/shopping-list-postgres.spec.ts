@@ -29,9 +29,15 @@ import type {
 import { AppModule } from '../app/app.module';
 import { SHOPPING_LIST_ROUTE, configureApp } from '../app/configure-app';
 import { CheckoutShoppingListUseCase } from '../application';
+import {
+  ActiveItemNameConflictError,
+  ShoppingListRepository,
+} from '../application/ports/shopping-list-repository.port';
+import type { ShoppingListItem as DomainShoppingListItem } from '../domain/shopping-list-item';
 import * as messagingScaffold from '../infrastructure/messaging';
 import type { ShoppingListDb } from '../infrastructure/persistence/drizzle/client';
 import { DRIZZLE } from '../infrastructure/persistence/drizzle/drizzle.provider';
+import { DrizzleShoppingListRepository } from '../infrastructure/persistence/drizzle/repository/shopping-list.repository';
 import { shoppingListItems } from '../infrastructure/persistence/drizzle/schema';
 import { signTestJwt } from '../test-fixtures/jwt-test-utils';
 
@@ -95,13 +101,23 @@ async function countRows(db: ShoppingListDb, activeOnly: boolean): Promise<numbe
 /** Insere uma linha direto pelo schema Drizzle, fora da aplicação. */
 async function insertRow(
   db: ShoppingListDb,
-  row: { name: string; nameNormalized: string; removedAt?: Date },
-): Promise<void> {
-  await db.insert(shoppingListItems).values({
-    name: row.name,
-    nameNormalized: row.nameNormalized,
-    removedAt: row.removedAt ?? null,
-  });
+  row: {
+    name: string;
+    nameNormalized: string;
+    removedAt?: Date;
+    plannedQuantity?: number;
+  },
+): Promise<string> {
+  const inserted = await db
+    .insert(shoppingListItems)
+    .values({
+      name: row.name,
+      nameNormalized: row.nameNormalized,
+      plannedQuantity: row.plannedQuantity ?? null,
+      removedAt: row.removedAt ?? null,
+    })
+    .returning({ id: shoppingListItems.id });
+  return inserted[0].id;
 }
 
 /** Tabelas do schema `public` — prova que o banco não ganhou tabela nova (AC-21). */
@@ -128,6 +144,73 @@ function isUniqueViolation(error: unknown): boolean {
     current = 'cause' in current ? current.cause : undefined;
   }
   return false;
+}
+
+/**
+ * Decora o adaptador Drizzle armando uma leitura "vencida" do nome (TOCTOU) da
+ * corrida de T-18: a busca inicial não vê o item concorrente e o insert real
+ * esbarra no índice único, como acontece entre dois POSTs simultâneos.
+ */
+class StaleReadShoppingListRepository extends ShoppingListRepository {
+  private staleReads = 0;
+  private conflicts = 0;
+
+  constructor(private readonly inner: DrizzleShoppingListRepository) {
+    super();
+  }
+
+  /** Estado neutro entre casos. */
+  reset(): void {
+    this.staleReads = 0;
+    this.conflicts = 0;
+  }
+
+  /** As próximas `count` buscas de nome ignoram o item já gravado. */
+  armStaleReads(count = 1): void {
+    this.staleReads = count;
+  }
+
+  /** Quantas vezes o insert real colidiu no índice único (prova a corrida). */
+  get uniqueConflicts(): number {
+    return this.conflicts;
+  }
+
+  override findActive(): Promise<DomainShoppingListItem[]> {
+    return this.inner.findActive();
+  }
+
+  override findById(id: string): Promise<DomainShoppingListItem | null> {
+    return this.inner.findById(id);
+  }
+
+  override async findActiveByNameNormalized(
+    nameNormalized: string,
+  ): Promise<DomainShoppingListItem | null> {
+    if (this.staleReads > 0) {
+      this.staleReads -= 1;
+      return null;
+    }
+    return this.inner.findActiveByNameNormalized(nameNormalized);
+  }
+
+  override async insert(item: DomainShoppingListItem): Promise<void> {
+    try {
+      await this.inner.insert(item);
+    } catch (error) {
+      if (error instanceof ActiveItemNameConflictError) {
+        this.conflicts += 1;
+      }
+      throw error;
+    }
+  }
+
+  override update(item: DomainShoppingListItem): Promise<void> {
+    return this.inner.update(item);
+  }
+
+  override deleteByIds(ids: readonly string[]): Promise<void> {
+    return this.inner.deleteByIds(ids);
+  }
 }
 
 function findItem(
@@ -619,5 +702,131 @@ describe('Integração com Postgres real — lista ativa (T-15)', () => {
         message: AUTHORIZATION_MESSAGE,
       });
     });
+  });
+});
+
+describe('Corrida na criação com Postgres real (T-18)', () => {
+  let app: NestFastifyApplication;
+  let db: ShoppingListDb;
+  let token: string;
+  let repository: StaleReadShoppingListRepository;
+
+  const call = (
+    target: NestFastifyApplication,
+    method: HttpMethod,
+    url: string,
+    payload?: Record<string, unknown>,
+  ) =>
+    target.inject({
+      method,
+      url,
+      headers: {
+        authorization: `Bearer ${token}`,
+        ...(payload === undefined ? {} : { 'content-type': 'application/json' }),
+      },
+      ...(payload === undefined ? {} : { payload }),
+    });
+
+  beforeAll(async () => {
+    // Repositório real decorado: só a leitura inicial do nome é forçada a
+    // "não ver" o item concorrente, disparando o `23505` do índice único.
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(ShoppingListRepository)
+      .useFactory({
+        factory: (drizzle: ShoppingListDb) => {
+          repository = new StaleReadShoppingListRepository(
+            new DrizzleShoppingListRepository(drizzle),
+          );
+          return repository;
+        },
+        inject: [DRIZZLE],
+      })
+      .compile();
+
+    app = moduleRef.createNestApplication<NestFastifyApplication>(
+      new FastifyAdapter(),
+    );
+    await configureApp(app);
+    await app.init();
+    await app.getHttpAdapter().getInstance().ready();
+    db = dbOf(app);
+    token = await signTestJwt();
+  });
+
+  afterAll(async () => {
+    await truncate(db);
+    await closeApp(app);
+  });
+
+  beforeEach(async () => {
+    await truncate(db);
+    repository.reset();
+  });
+
+  it('sem resolução: corrida reconhecida → 409 canônico, sem 500 e sem duplicata', async () => {
+    const winnerId = await insertRow(db, {
+      name: 'Café',
+      nameNormalized: 'cafe',
+    });
+
+    repository.armStaleReads();
+    const res = await call(app, 'POST', ITEMS_ROUTE, {
+      name: 'cafe',
+      plannedQuantity: 2,
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json<DuplicateItemErrorResponse>()).toEqual({
+      statusCode: 409,
+      message: DUPLICATE_MESSAGE,
+      error: 'duplicate-item-name',
+      duplicateOf: { id: winnerId, name: 'Café' },
+    });
+    // Prova que a corrida ocorreu: o insert real colidiu no índice único.
+    expect(repository.uniqueConflicts).toBe(1);
+    expect(await countRows(db, true)).toBe(1);
+  });
+
+  it('com sum-planned-quantity: soma uma única vez → 200 e um único item', async () => {
+    const winnerId = await insertRow(db, {
+      name: 'Café',
+      nameNormalized: 'cafe',
+      plannedQuantity: 3,
+    });
+
+    repository.armStaleReads();
+    const res = await call(app, 'POST', ITEMS_ROUTE, {
+      name: ' CAFE ',
+      plannedQuantity: 2,
+      duplicateResolution: 'sum-planned-quantity',
+    });
+
+    expect(res.statusCode).toBe(200);
+    const items = res.json<ShoppingListResponse>().items;
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      id: winnerId,
+      name: 'Café',
+      plannedQuantity: 5,
+    });
+    // Soma aplicada exatamente uma vez, a partir da releitura pós-colisão.
+    expect(repository.uniqueConflicts).toBe(1);
+    expect(await countRows(db, true)).toBe(1);
+  });
+
+  it('dois POSTs concorrentes com o mesmo nome: nenhum 500, uma linha, sem duplicata', async () => {
+    const [first, second] = await Promise.all([
+      call(app, 'POST', ITEMS_ROUTE, { name: 'Café', plannedQuantity: 1 }),
+      call(app, 'POST', ITEMS_ROUTE, { name: 'cafe', plannedQuantity: 1 }),
+    ]);
+
+    // Um POST vence; o outro é recusado como duplicata. Nunca 500, nunca duas linhas.
+    for (const res of [first, second]) {
+      expect(res.statusCode).not.toBe(500);
+    }
+    expect([first.statusCode, second.statusCode].sort((a, b) => a - b)).toEqual([
+      201, 409,
+    ]);
+    expect(await countRows(db, true)).toBe(1);
   });
 });

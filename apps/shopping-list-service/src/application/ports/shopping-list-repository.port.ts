@@ -5,6 +5,18 @@
 // serve de token de injeção do Nest (ADR 0001).
 import type { ShoppingListItem } from '../../domain/shopping-list-item';
 
+/**
+ * Já existe item ativo com o nome normalizado informado. O adaptador traduz a
+ * violação do índice único parcial do banco para este erro; o caso de uso o
+ * trata na criação concorrente sem conhecer o driver (ADR 0001).
+ */
+export class ActiveItemNameConflictError extends Error {
+  constructor() {
+    super('Já existe um item ativo com este nome');
+    this.name = 'ActiveItemNameConflictError';
+  }
+}
+
 export abstract class ShoppingListRepository {
   /** Itens ativos (`removed_at` nulo) em ordem determinística de criação. */
   abstract findActive(): Promise<ShoppingListItem[]>;
@@ -24,7 +36,10 @@ export abstract class ShoppingListRepository {
     nameNormalized: string,
   ): Promise<ShoppingListItem | null>;
 
-  /** Insere um item já montado pelo domínio. */
+  /**
+   * Insere um item já montado pelo domínio.
+   * @throws {ActiveItemNameConflictError} quando já existe item ativo com o mesmo nome.
+   */
   abstract insert(item: ShoppingListItem): Promise<void>;
 
   /**

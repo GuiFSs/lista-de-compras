@@ -140,6 +140,10 @@ Mesmo envelope da feature de auth:
 | 409 | Nome já existente (duplicidade) — ver abaixo | `Já existe um item com esse nome` |
 | 500 | Erro interno não previsto | `Erro interno` |
 
+- Corpo **não interpretável como JSON** responde 400 com a mensagem genérica
+  `Corpo da requisição inválido` (mesmo padrão do auth-service) — nunca a
+  mensagem técnica em inglês do parser do Fastify.
+
 ### 409 de duplicidade — `DuplicateItemErrorResponse`
 
 Além do envelope canônico, o 409 de duplicidade traz `error:
