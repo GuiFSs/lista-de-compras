@@ -1,16 +1,21 @@
 # Estado da feature — Lista de compras
 
-**Fase atual:** Validação — **aprovada** (26/26 ACs pelo `feature-validator`)
-**Gate atual:** `SPEC.md` e `PLAN.md` **aprovados** (`Aprovado pelo usuário em
-2026-10-13`); **gate de Implementação e testes fechado** (T-01…T-19 concluídas,
-suítes verdes, corrida Playwright registrada); **gate de Validação fechado**
-(`VALIDATION.md` com evidência por AC e checklists de design/documentação)
+**Fase atual:** **Rodada 2 — Spec** (ajuste de formatação de preço em BRL pedido
+pelo usuário em 2026-10-14). A **Rodada 1** (lista ativa) está **validada**
+(26/26 ACs pelo `feature-validator`) — histórico preservado abaixo.
+**Gate atual:** Rodada 2 com **spec em revisão** — o `SPEC.md` ainda **não** tem a
+nova frase canônica para as mudanças de preço, portanto o gate da spec da Rodada 2
+está **aberto**. Rodada 1: `SPEC.md`/`PLAN.md` aprovados (2026-10-13) e gates de
+Implementação e Validação fechados (não reabertos por si; serão revalidados apenas
+nos ACs afetados pela Rodada 2).
 **Última atualização:** 2026-10-14
-**Próxima ação:** **decisão do usuário** — push da branch e abertura de PR
-(a skill `git-workflow` exige aprovação explícita e separada para push e para
-PR; o merge é uma terceira aprovação). Antes disso, decidir o que fazer com os
-3 `.opencode/agents/*.md` modificados (pré-existentes, fora desta feature).
-Nenhum AC ou T reaberto.
+**Próxima ação:** delegar ao `product-spec` a **alteração da `SPEC.md`** para a
+**máscara de centavos em BRL nos dois campos de preço** — decisão do usuário em
+2026-10-14: "Preço (R$)" do item (planejado) e "Preço por unidade (R$)" da compra;
+digitar `3` → `R$ 0,03`, `3015` → `R$ 30,15`. Depois: aprovação canônica da spec,
+`tech-planner` (plano + tarefa Playwright), implementação (`angular-dev`), testes
+(`test-engineer`) e revalidação dos ACs afetados (`feature-validator`).
+Push/PR seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T reaberto ainda.
 
 ## Artefatos
 
@@ -29,6 +34,23 @@ Nenhum AC ou T reaberto.
 - Validação: `docs/features/shopping-list/VALIDATION.md` — **aprovada em
   2026-10-14** pelo `feature-validator` (**26/26 ACs aprovados**, 0 reprovados);
   evidência por AC com Playwright nos ACs observáveis na UI e integração no AC-09
+
+## Escopo da Rodada 2 (confirmado com o usuário em 2026-10-14)
+
+- **Ajuste pedido:** os campos de **preço** passam a **formatar automaticamente em
+  BRL (R$)** enquanto a pessoa digita, com **máscara de centavos**: cada dígito
+  entra pela direita e é tratado como centavos (`3` → `R$ 0,03`; `30` → `R$ 0,30`;
+  `3015` → `R$ 30,15`).
+- **Campos alcançados (decisão do usuário):** os **dois** — "Preço (R$)" do sheet
+  de adicionar/editar item (`item-form-sheet`) e "Preço por unidade (R$)" do sheet
+  de marcar como comprado (`purchase-sheet`).
+- **Fora do ajuste:** o campo de **quantidade** continua com digitação livre de
+  decimal (vírgula ou ponto); o **contrato HTTP** não muda (o payload segue número
+  JSON); o **backend não é tocado**.
+- **Superfície de UI:** **sim** (ADR 0008) ⇒ exige matriz AC ↔ E2E e jornada
+  Playwright nova/atualizada para o AC novo.
+- **Rastreabilidade:** a decisão vira `CD-14` na `SPEC.md` e refina `RN-06`/`CD-08`
+  para os **campos de preço** (a quantidade permanece como está).
 
 ## Escopo desta rodada (confirmado com o usuário)
 
@@ -137,10 +159,11 @@ Nenhum AC ou T reaberto.
   3. **`docs/lessons/`:** promover os aprendizados de T-18 (erro de unicidade pelo
      port, recuperação *bounded*) e T-19 (`typecheck` valida *project references*;
      `build`/`test` não) se forem considerados transferíveis.
-- **Higiene antes do PR:** os 3 arquivos `.opencode/agents/*.md` aparecem
-  modificados (**pré-existentes, fora desta feature** — alteram `bash: deny` →
-  `bash: ask`). Decidir se entram em algum commit, viram commit próprio ou ficam de
-  fora; **nenhuma** T desta feature os tocou.
+- **Higiene antes do PR (resolvida):** os 3 arquivos `.opencode/agents/*.md`
+  (`architecture-review`, `product-spec`, `tech-planner` — `bash: deny` → `bash: ask`)
+  foram commitados em `b292cba` (`chore(agents): permite bash sob confirmacao nos
+  agentes de spec/plano/review`) como mudança pré-existente e **fora** desta feature;
+  nenhuma T desta feature os tocou.
 
 ## Últimos handoffs
 
