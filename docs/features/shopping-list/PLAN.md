@@ -1,9 +1,9 @@
 # Plano técnico — Lista de compras ativa
 
-**Status:** Aprovado (Rodada 1 — 2026-10-13) · **Rodada 2:** aguardando aprovação do usuário (ver a seção final)
+**Status:** Aprovado (Rodada 1 — 2026-10-13 · Rodada 2 — 2026-10-14)
 **Spec:** `docs/features/shopping-list/SPEC.md`
 **Última atualização:** 2026-10-14 (a Rodada 1 abaixo fica **intacta**; a Rodada 2 é a seção final)
-**Aprovação do usuário:** Aprovado pelo usuário em 2026-10-13 (Rodada 1) · Rodada 2: **pendente** (gate na seção "Gate do plano da Rodada 2")
+**Aprovação do usuário:** Aprovado pelo usuário em 2026-10-13 (Rodada 1) · Aprovado pelo usuário em 2026-10-14 (Rodada 2)
 
 ## Contexto
 
@@ -792,12 +792,11 @@ eles provam **não muda**, apenas passa a exercitar o campo mascarado.)
       arquivo/linha), com a T dona de cada ajuste.
 - [x] Não há decisão de comportamento, contrato ou arquitetura em aberto: a spec
       da Rodada 2 está aprovada (RN-21/AC-27/CD-14/CD-15; D-02 resolvida).
-- [ ] **Aprovação do usuário da Rodada 2** — pendente. O gate **só fecha** com a
-      frase canônica abaixo registrada pelo responsável **após** a aprovação (não
-      escrita por conta própria nesta fase):
+- [x] **Aprovação do usuário da Rodada 2** — aprovada em 2026-10-14 (confirmação no
+      chat desta sessão); gate **fechado** com a frase canônica abaixo:
 
 ```text
-Aprovado pelo usuário em AAAA-MM-DD
+Aprovado pelo usuário em 2026-10-14
 ```
 
 ### O que o usuário precisa aprovar (Rodada 2)

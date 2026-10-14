@@ -1,22 +1,22 @@
 # Estado da feature — Lista de compras
 
-**Fase atual:** **Rodada 2 — Plano** (ajuste de formatação de preço em BRL pedido
-pelo usuário em 2026-10-14). A **Rodada 1** (lista ativa) está **validada**
-(26/26 ACs pelo `feature-validator`) — histórico preservado abaixo.
+**Fase atual:** **Rodada 2 — Implementação** (T-20 → T-21 → T-22 → T-23). A
+**Rodada 1** (lista ativa) está **validada** (26/26 ACs pelo `feature-validator`) —
+histórico preservado abaixo.
 **Gate atual:** **spec da Rodada 2 aprovada** (`Aprovado pelo usuário em
 2026-10-14` na `SPEC.md`; RN-21/AC-27/CD-14/CD-15; nenhuma decisão aberta — D-02
-resolvida). **Plano da Rodada 2 escrito** (`PLAN.md` › "Rodada 2 — máscara de
-centavos em BRL nos dois campos de preço", T-20…T-23, matriz AC ↔ E2E com o
-AC-27) — **gate do plano da Rodada 2 aberto**: aguardando a **frase canônica**
-`Aprovado pelo usuário em YYYY-MM-DD` (o `tech-planner` **não** a registrou).
-Rodada 1: `SPEC.md`/`PLAN.md` aprovados (2026-10-13) e gates de Implementação e
-Validação fechados (não reabertos por si; serão revalidados apenas nos ACs
-afetados pela Rodada 2 — AC-27 e os cross-referenciados AC-04/AC-10/AC-13/AC-15/AC-25).
+resolvida) e **plano da Rodada 2 aprovado** (`Aprovado pelo usuário em 2026-10-14`
+no `PLAN.md`; T-20…T-23, matriz AC ↔ E2E com o AC-27). **Gate de Implementação da
+Rodada 2 aberto** — nenhuma T iniciada. Rodada 1: gates de Implementação e Validação
+fechados (não reabertos por si; serão revalidados apenas nos ACs afetados pela
+Rodada 2 — AC-27 e os cross-referenciados AC-04/AC-10/AC-13/AC-15/AC-25).
 **Última atualização:** 2026-10-14
-**Próxima ação:** o **usuário aprovar o plano da Rodada 2** (o orquestrador
-registra a frase canônica no bloco "Gate do plano da Rodada 2" do `PLAN.md`).
-Depois: implementação na ordem **T-20 → T-21 → T-22 → T-23** (`angular-dev` nas
-T-20/T-21/T-22, `test-engineer` na T-23), testes e revalidação dos ACs afetados
+**Próxima ação:** delegar a **T-20** (`angular-dev`) — helper puro de máscara de
+centavos em `apps/web/src/app/shared/money/**` (`digitsFromInput`,
+`formatBrlFromDigits`, `numberFromDigits`, `digitsFromNumber`, helpers de
+quantidade absorvidos) + specs. Na sequência (estritamente sequencial, sem
+paralelismo): **T-21** (`item-form-sheet`), **T-22** (`purchase-sheet`), **T-23**
+(Playwright do AC-27). Depois: auditoria de testes e revalidação dos ACs afetados
 (`feature-validator`). Push/PR seguem **adiados** até a Rodada 2 fechar. Nenhum AC
 ou T da Rodada 1 reaberto.
 
@@ -73,8 +73,10 @@ ou T da Rodada 1 reaberto.
 
 ## Execução
 
+- **Rodada 2:** tarefa em andamento: **nenhuma** (gate de Implementação da Rodada 2
+  aberto); tarefas da Rodada 2 (T-20…T-23) **não iniciadas**
 - Tarefa em andamento: **nenhuma**
-- Tarefas concluídas: T-01 … T-19 (todas)
+- Tarefas concluídas (Rodada 1): T-01 … T-19 (todas)
 - Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres real**
   (T-15) + **corrida de duplicidade corrigida** (T-18) — suíte
   `shopping-list-service` com **162 testes**, 14 arquivos; PWA completa em código e
@@ -176,13 +178,35 @@ ou T da Rodada 1 reaberto.
 
 ## Últimos handoffs
 
+### Gate do PLANO da Rodada 2 — aprovado e fechado (`tech-planner`)
+
+- Tarefa: **fechamento do gate do plano da Rodada 2** (não é uma `T-*`)
+- Estado: **concluída** — **gate do plano da Rodada 2 FECHADO**
+- Arquivos alterados: `docs/features/shopping-list/PLAN.md` (cabeçalho com as duas
+  rodadas: `Status:` e `Aprovação do usuário: ... Aprovado pelo usuário em
+  2026-10-14 (Rodada 2)`; item de aprovação do "Gate do plano da Rodada 2" marcado
+  `[x]` com a frase canônica). **Rodada 1 intacta.**
+- ACs cobertos: nenhum (fechamento de gate); o plano cobre **AC-27** + cross-refs.
+- Testes executados: `git diff --stat` → 1 arquivo (`PLAN.md`); nenhuma suíte se
+  aplica (mudança documental).
+- Decisões registradas: nenhuma nova.
+- Aprovação do usuário: **Aprovado pelo usuário em 2026-10-14** (registrada
+  literalmente na `PLAN.md`).
+- Pendências: nenhuma bloqueante; nota menor (não bloqueante): o item 6 da lista
+  "O que o usuário precisa aprovar (Rodada 2)" no `PLAN.md` mantém o texto genérico
+  do processo com placeholder `YYYY-MM-DD` (não é o gate).
+- Próximo passo recomendado: delegar **T-20** (`angular-dev`) e seguir a cadeia
+  **sequencial** T-20 → T-21 → T-22 → T-23, comitando a cada T concluída com testes
+  verdes.
+
 ### Plano da Rodada 2 — máscara de centavos em BRL (`tech-planner`)
 
 - Tarefa: **PLAN da Rodada 2** (não é uma `T-*`; seção final do `PLAN.md` da
   própria feature `shopping-list` — **nenhuma** feature nova foi criada)
 - Estado: **concluída** (artefato escrito) — **gate do plano da Rodada 2
   aberto**: aguardando a aprovação do usuário (frase canônica **não** registrada
-  por conta própria)
+  por conta própria) — **superado:** o plano foi aprovado e o gate fechado em
+  2026-10-14 (ver o handoff acima)
 - Arquivos alterados: `docs/features/shopping-list/PLAN.md` (nova seção
   "Rodada 2 — máscara de centavos em BRL nos dois campos de preço (2026-10-14)":
   contexto/abordagem, `Superfície de UI: sim`, contratos/dados inalterados,
