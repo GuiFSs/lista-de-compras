@@ -4,9 +4,8 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-14
-**Próxima ação:** Onda 8 — **T-13** (sheet de marcar/desmarcar comprado; dep
-T-12) **em andamento**. **T-18** (corretiva da corrida de duplicidade + nit do
-README) **concluída** em `3d20cd8`. Depois **T-14** → **T-16** → **T-17**.
+**Próxima ação:** Onda 9 — **T-14** (ações do item + excluir/Desfazer + concluir
+compra; dep T-13) — sozinha. Depois **T-16** → **T-17**.
 
 ## Artefatos
 
@@ -36,15 +35,16 @@ README) **concluída** em `3d20cd8`. Depois **T-14** → **T-16** → **T-17**.
 
 ## Execução
 
-- Tarefa em andamento: **T-13** (sheet de marcar/desmarcar; `angular-dev`)
-- Tarefas concluídas: T-01 … T-12, T-15, **T-18** (faltam T-13, T-14, T-16, T-17)
+- Tarefa em andamento: **T-14** (ações do item + excluir/Desfazer + concluir
+  compra; `angular-dev`)
+- Tarefas concluídas: T-01 … T-13, T-15, T-18 (faltam T-14, T-16, T-17)
 - Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres real**
   (T-15) + **corrida de duplicidade corrigida** (T-18) — suíte
-  `shopping-list-service` com **162 testes**, 14 arquivos; camada de dados (T-10),
-  tela Lista (T-11) e sheet de item (T-12) da PWA — suíte `web` com **128 testes**,
-  17 arquivos; E2E de auth sem regressão (`npx nx e2e web-e2e`, 6 verdes)
-- ACs com evidência executável até aqui: AC-01–AC-13, AC-17–AC-22, AC-24–AC-26
-  (unit/integração); **AC-14/AC-15/AC-16** dependem de T-13; a prova
+  `shopping-list-service` com **162 testes**, 14 arquivos; PWA (T-10–T-13) — suíte
+  `web` com **147 testes**, 18 arquivos; E2E de auth sem regressão
+  (`npx nx e2e web-e2e`, 6 verdes)
+- ACs com evidência executável até aqui: AC-01–AC-20, AC-22–AC-26 (unit/integração);
+  **AC-21** (parte de UI) e as metades de exclusão/ações dependem de T-14; a prova
   **Playwright** da matriz (AC-01–AC-26 na UI) fica em T-17
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
@@ -83,6 +83,29 @@ README) **concluída** em `3d20cd8`. Depois **T-14** → **T-16** → **T-17**.
   (`created?: boolean`), implementada e com testes verdes.
 
 ## Últimos handoffs
+
+### T-13 — sheet de marcar/desmarcar comprado (`angular-dev`)
+
+- Estado: concluída
+- Arquivos alterados:
+  `apps/web/src/app/features/shopping-list/purchase-sheet.{ts,html,scss,spec.ts}`
+  (novo, 14 testes); `shopping-list-page.{ts,html,spec.ts}` (wiring: `purchaseItem`,
+  `purchaseDrafts`, `unmarking`, `onTogglePurchased`/`onPurchaseClosed`/`onPurchased`,
+  `unmark`)
+- ACs cobertos: AC-12, AC-13, AC-14, AC-15, AC-16, AC-17 (edição), AC-23, AC-26
+  (e AC-06 — unidade em `select` de 7 opções)
+- Testes executados: `npx nx test web` (**147 verdes**, 18 arquivos); `npx nx lint
+  web` e `npx nx build web` verdes; `npx nx e2e web-e2e` (6 verdes)
+- Decisões registradas: o sheet recebe um `draft: PurchaseDraft | null` — a página o
+  monta de `item.purchased` no desmarcar (valores digitados devolvidos pelo serviço),
+  atendendo RN-12/CD-04 sem `output` extra; aviso de divergência = 2º
+  `app-bottom-sheet [closeOnBackdrop]="false"` empilhado; estado de abertura por
+  signal `purchaseItem` + mapa `purchaseDrafts` em memória (recarregar volta ao
+  prefill); `unmarking: Set<string>` deduplica toast em toque duplo; números via
+  `formatDecimal`/`parseDecimal` (RN-06)
+- Observações: o *host* de toasts e o sheet de ações/conclusão são T-14 (aqui o
+  `requestSheet('item-actions' | 'checkout')` fica como *seam*)
+- Commit: `0e1f2d2`
 
 ### T-18 — corrida de duplicidade na criação (`backend-dev`)
 
