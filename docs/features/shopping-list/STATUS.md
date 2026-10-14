@@ -4,8 +4,10 @@
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
 `Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
 **Última atualização:** 2026-10-14
-**Próxima ação:** Onda 10 — **T-16** (auditoria/completude dos testes unitários da
-PWA; dep T-14) — sozinha. Depois **T-17** (Playwright) → `feature-validator`.
+**Próxima ação:** Onda 11 — **T-17** (jornadas Playwright em `apps/web-e2e`;
+dep T-14/T-16) — sozinha. É o **gate de ADR 0008**; o `feature-validator` **não**
+deve ser delegado antes de T-17 fechar (superfície de UI = sim e o handoff do
+`test-engineer` precisa registrar a corrida Playwright).
 
 ## Artefatos
 
@@ -35,15 +37,15 @@ PWA; dep T-14) — sozinha. Depois **T-17** (Playwright) → `feature-validator`
 
 ## Execução
 
-- Tarefa em andamento: **T-16** (auditoria unit da PWA; `test-engineer`)
-- Tarefas concluídas: T-01 … T-15, T-18 (faltam T-16, T-17)
+- Tarefa em andamento: **T-17** (jornadas Playwright; `test-engineer`)
+- Tarefas concluídas: T-01 … T-16, T-18 (falta T-17)
 - Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres real**
   (T-15) + **corrida de duplicidade corrigida** (T-18) — suíte
-  `shopping-list-service` com **162 testes**, 14 arquivos; PWA completa em código
-  (T-10–T-14) — suíte `web` com **173 testes**, 20 arquivos; E2E de auth sem
-  regressão (`npx playwright test --config apps/web-e2e/playwright.config.mts`, 6 verdes)
-- ACs com evidência executável até aqui: AC-01–AC-26 com unit/integração (a matriz
-  **Playwright** completa da UI é T-17)
+  `shopping-list-service` com **162 testes**, 14 arquivos; PWA completa em código e
+  com **mapa AC → teste** (T-10–T-14, T-16) — suíte `web` com **177 testes**, 20
+  arquivos; E2E de auth sem regressão (6 verdes)
+- ACs com evidência unit/integração: AC-01–AC-26 (mapa em T-16); falta a **matriz
+  Playwright** da UI (T-17) para fechar o gate de evidência de UI
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
@@ -85,6 +87,30 @@ PWA; dep T-14) — sozinha. Depois **T-17** (Playwright) → `feature-validator`
   (`created?: boolean`), implementada e com testes verdes.
 
 ## Últimos handoffs
+
+### T-16 — auditoria/completude dos testes unitários da PWA (`test-engineer`)
+
+- Estado: concluída
+- Arquivos alterados (só specs):
+  `.../features/shopping-list/state/shopping-list-store.spec.ts` (+75 — describe
+  "o navegador não guarda o estado da lista (AC-24/RN-19)" com 2 testes);
+  `.../features/shopping-list/shopping-list-page.spec.ts` (+74 — "salvar a edição
+  atualiza a linha e confirma com toast (AC-10)" e "concluir com tudo comprado cai
+  no estado vazio (AC-03)"). **Nenhum arquivo de produção alterado.**
+- ACs cobertos (unit): AC-01–AC-08, AC-10–AC-20, AC-22, AC-23, AC-25, AC-26 (+ AC-21
+  e AC-24 como cobertura extra); **mapa AC → teste completo no handoff da sessão**
+  (não reproduzido aqui). AC-09 é backend-only (integração).
+- Testes executados: `npx nx test web` → **177 verdes**, 20 arquivos (cache 0/1 hit ⇒
+  execução real; reforçado com `--skip-nx-cache`); `npx nx lint web` verde
+- Decisões registradas: falseabilidade provada por mutação temporária em produção
+  (teste de AC-24 falhou) e **revertida** (diff de produção vazio) — os testes novos
+  são guardas reais; convenção de AC-25 em jsdom mantida (valor **declarado** do
+  token, não `44px`); deliberadamente **não** duplicado o duplo-toque em "Excluir"
+  (o single-flight do store já cobre)
+- Observações: **E2E não executado** — as jornadas `apps/web-e2e/src/shopping-list/**`
+  ainda não existem (entregável de T-17); a auditoria registra explicitamente que o
+  gate de UI de ADR 0008 **não** está satisfeito até T-17
+- Commit: `7011c4c`
 
 ### T-14 — ações do item, exclusão com Desfazer e conclusão (`angular-dev`)
 
