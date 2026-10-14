@@ -3,27 +3,33 @@
 **Fase atual:** **Rodada 2 — Spec** (ajuste de formatação de preço em BRL pedido
 pelo usuário em 2026-10-14). A **Rodada 1** (lista ativa) está **validada**
 (26/26 ACs pelo `feature-validator`) — histórico preservado abaixo.
-**Gate atual:** Rodada 2 com **spec em revisão** — o `SPEC.md` ainda **não** tem a
-nova frase canônica para as mudanças de preço, portanto o gate da spec da Rodada 2
-está **aberto**. Rodada 1: `SPEC.md`/`PLAN.md` aprovados (2026-10-13) e gates de
-Implementação e Validação fechados (não reabertos por si; serão revalidados apenas
-nos ACs afetados pela Rodada 2).
+**Gate atual:** Rodada 2 com **spec em rascunho** — a `SPEC.md` já contém RN-21,
+AC-27 e CD-14, mas **não** tem a frase canônica da Rodada 2, portanto o gate da
+spec da Rodada 2 está **aberto** (aguardando aprovação do usuário). Rodada 1:
+`SPEC.md`/`PLAN.md` aprovados (2026-10-13) e gates de Implementação e Validação
+fechados (não reabertos por si; serão revalidados apenas nos ACs afetados pela
+Rodada 2).
 **Última atualização:** 2026-10-14
-**Próxima ação:** delegar ao `product-spec` a **alteração da `SPEC.md`** para a
-**máscara de centavos em BRL nos dois campos de preço** — decisão do usuário em
-2026-10-14: "Preço (R$)" do item (planejado) e "Preço por unidade (R$)" da compra;
-digitar `3` → `R$ 0,03`, `3015` → `R$ 30,15`. Depois: aprovação canônica da spec,
-`tech-planner` (plano + tarefa Playwright), implementação (`angular-dev`), testes
-(`test-engineer`) e revalidação dos ACs afetados (`feature-validator`).
-Push/PR seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T reaberto ainda.
+**Próxima ação:** **usuário revisar e aprovar (ou pedir ajuste) o conteúdo da
+Rodada 2 na `SPEC.md`** — RN-21 (máscara de centavos em BRL nos dois campos de
+preço), AC-27 e CD-14; ao aprovar, o orquestrador registra
+`Aprovado pelo usuário em AAAA-MM-DD` no bloco **"Gate da Rodada 2"** da `SPEC.md`
+e só então delega o `tech-planner` (plano da Rodada 2 com tarefa Playwright do
+AC-27). Depois: implementação (`angular-dev`), testes (`test-engineer`) e
+revalidação dos ACs afetados (`feature-validator`). Push/PR seguem **adiados**
+até a Rodada 2 fechar. Nenhum AC ou T reaberto ainda.
 
 ## Artefatos
 
-- Spec: `docs/features/shopping-list/SPEC.md` — **aprovada em 2026-10-13** (26 ACs;
-  CD-01–CD-13; nenhuma decisão aberta)
-- Plano: `docs/features/shopping-list/PLAN.md` — **aprovado em 2026-10-13**
+- Spec: `docs/features/shopping-list/SPEC.md` — **Rodada 1 aprovada em 2026-10-13**
+  (26 ACs; CD-01–CD-13; nenhuma decisão aberta) + **Rodada 2 em rascunho**
+  (**AC-27**/RN-21/CD-14 — máscara de centavos em BRL nos dois campos de preço;
+  **27 ACs**, CD-01–CD-14, **D-02 aberta e não bloqueante**; aprovação da Rodada 2
+  **pendente**)
+- Plano: `docs/features/shopping-list/PLAN.md` — **Rodada 1 aprovada em 2026-10-13**
   (17 tarefas `T-01…T-17`, matriz AC ↔ E2E com 26 ACs, `Superfície de UI: sim`,
-  contrato HTTP completo, `Eventos: nenhum`; status `Aprovado`)
+  contrato HTTP completo, `Eventos: nenhum`; status `Aprovado`); **plano da
+  Rodada 2 ainda não existe** (fase seguinte)
 - ADR: `docs/decisions/0009-excecao-temporaria-ao-gateway-shopping-list-service.md`
   — registrada (exceção temporária à ADR 0001 para o `shopping-list-service`);
   ADR 0006 §1 e Consequências com nota apontando para a 0009
@@ -166,6 +172,82 @@ Push/PR seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T reaberto ainda
   nenhuma T desta feature os tocou.
 
 ## Últimos handoffs
+
+### SPEC da Rodada 2 — máscara de centavos em BRL (`product-spec`)
+
+- Tarefa: **SPEC da Rodada 2** (não é uma `T-*`; alteração da `SPEC.md` da própria
+  feature `shopping-list` — **nenhuma** feature nova foi criada)
+- Estado: **concluída** (artefato escrito) — **gate da spec da Rodada 2 aberto**:
+  aguardando aprovação do usuário (frase canônica **não** registrada por conta
+  própria)
+- Arquivos alterados: `docs/features/shopping-list/SPEC.md` (nova seção "Rodada 2
+  — formatação de preço em BRL (2026-10-14)"; **RN-06** ajustada; **RN-21** nova;
+  **AC-27** novo; cross-referência em AC-04/AC-10/AC-15/AC-25; nota em "Design e
+  UX", em "Estados relevantes" (erro de campo) e em "Contratos afetados" (o
+  contrato **não** muda); **CD-14** nova + nota em **CD-08**; **D-02** nova (não
+  bloqueante); nova seção "Gate da Rodada 2") e **este bloco de handoff** em
+  `docs/features/shopping-list/STATUS.md` (+ campos de fase/gate/próxima ação do
+  topo). **Nenhum outro arquivo foi tocado.**
+- ACs cobertos: **AC-27** (novo, exclusivo da Rodada 2). Os ACs da Rodada 1 **não**
+  mudaram de prova — AC-04/AC-10/AC-15/AC-25 receberam apenas cross-referência.
+- Testes executados: **não aplicável** (fase de spec; nenhum código de produto
+  tocado). A evidência desta fase é a revisão da `SPEC.md`; o cenário Playwright do
+  AC-27 é tarefa obrigatória do `PLAN.md` da Rodada 2 (ADR 0008), ainda não
+  criado.
+- Decisões registradas: **CD-14** (máscara de centavos em BRL nos dois campos de
+  preço), regra **RN-21** e critério **AC-27**; **D-02** aberta e **não
+  bloqueante**; **nenhuma ADR nova** — a máscara é formatação de entrada da PWA,
+  sem mudança de contrato, dados, ownership ou integração (não é decisão
+  arquitetural).
+- Pendências:
+  1. **Aprovação do usuário** da Rodada 2 (lista exata abaixo). Sem ela o gate da
+     spec **não** fecha e o plano **não** começa.
+  2. **D-02 (não bloqueante, aberta):** detalhes de exibição não cobertos pelos
+     exemplos confirmados — separador de milhar ≥ `R$ 1.000,00`; aparência do
+     campo sem dígitos; comportamento ao apagar/colar e limite de dígitos.
+  3. **Inconsistência no `## Artefatos` deste STATUS:** **corrigida pelo
+     orquestrador** (a linha da Spec passou a **27 ACs**, **CD-01–CD-14**, **D-02
+     não bloqueante aberta** e "Rodada 2 em rascunho / aprovação pendente"; o plano
+     da Rodada 2 marcado como inexistente).
+- Próximo passo recomendado: o usuário aprovar a Rodada 2 (o orquestrador registra
+  a frase canônica no bloco **"Gate da Rodada 2"** da `SPEC.md`), atualizar
+  `## Artefatos` e só então delegar o `tech-planner` para o plano da Rodada 2
+  (máscara nos dois sheets + tarefa Playwright do AC-27).
+
+**O que o usuário deve aprovar (Rodada 2) — em detalhe:**
+
+1. **RN-21 — máscara de centavos em BRL nos dois campos de preço:** "Preço (R$)"
+   do sheet de adicionar/editar item (preço **planejado**) e "Preço por unidade
+   (R$)" do sheet de marcar como comprado; digitação **só de dígitos**, entrando
+   pela direita e interpretados como **centavos** (`3` → `R$ 0,03`; `30` →
+   `R$ 0,30`; `3015` → `R$ 30,15`); exibição em BRL (`R$ 30,15`); o valor
+   **enviado ao serviço é o número** (`30.15`) ⇒ **contrato HTTP inalterado** e
+   **backend não tocado**.
+2. **Campo sem dígitos = sem valor** (`null`, **não** `0`): o preço planejado
+   continua **opcional** no item (AC-04) e o preço por unidade continua
+   **obrigatório** na compra, começando **vazio** (RN-13/AC-13/AC-15).
+3. **Prefill na máscara:** editar um item com preço planejado `12,50` mostra
+   `R$ 12,50`; valores preservados por um **desmarcar** reaparecem na máscara
+   (RN-12).
+4. **Fora do ajuste (não reaberto):** a **quantidade** mantém digitação livre de
+   decimal (vírgula ou ponto) e a exibição da linha da lista (`item-row`, que já
+   mostra `R$ 30,15`) permanece; **nenhum** AC da Rodada 1 muda de prova.
+5. **AC-27** como critério verificável (cobre os dois campos, exibição, valor
+   enviado e a preservação de AC-04/AC-13/AC-15) e **CD-14** como decisão
+   confirmada em 2026-10-14.
+6. **D-02 (não bloqueante)** — confirmar ou corrigir: (a) separador de milhar em
+   valores ≥ `R$ 1.000,00`; (b) aparência do campo **sem nenhum dígito**;
+   (c) comportamento ao **apagar/colar** e eventual limite de dígitos.
+
+**Texto exato da frase canônica a registrar quando aprovado** (em `SPEC.md` ›
+"Gate da Rodada 2", substituindo `AAAA-MM-DD` pela data da aprovação):
+
+```text
+Aprovado pelo usuário em AAAA-MM-DD
+```
+
+(a frase `Aprovado pelo usuário em 2026-10-13` continua valendo **somente** para a
+Rodada 1 e **não** deve ser alterada)
 
 ### VALIDAÇÃO — feature aprovada (`feature-validator`)
 

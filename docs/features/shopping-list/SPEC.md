@@ -1,8 +1,8 @@
 # Especificação — Lista de compras ativa
 
-**Status:** Aprovada
-**Última atualização:** 2026-10-13
-**Aprovação do usuário:** Aprovado pelo usuário em 2026-10-13
+**Status:** Aprovada (Rodada 1 — 2026-10-13) · **Rodada 2 em rascunho, aguardando aprovação**
+**Última atualização:** 2026-10-14
+**Aprovação do usuário:** Aprovado pelo usuário em 2026-10-13 (Rodada 1) — **Rodada 2: pendente**
 
 > **Ajuste pós-aprovação (2026-10-13, mesma sessão de aprovação):** por decisão
 > explícita do usuário (**CD-13**), **RN-04** e **AC-08** foram ajustados para
@@ -10,6 +10,39 @@
 > da **criação** (pergunta se quer somar — CD-02). A frase canônica de
 > aprovação permanece válida; não houve reabertura pós-validação (a validação
 > ainda não começou).
+
+## Rodada 2 — formatação de preço em BRL (2026-10-14)
+
+**Status da Rodada 2:** Rascunho — aguardando aprovação
+**Aprovação da Rodada 2:** pendente (a frase canônica será registrada em
+"Gate da Rodada 2" quando o usuário aprovar o ajuste abaixo)
+
+> **Ajuste de comportamento de UI pedido pelo usuário em 2026-10-14** (Rodada 2
+> desta mesma feature; a **Rodada 1** — objetivo, fluxo, RN-01…RN-20,
+> AC-01…AC-26 e a aprovação de 2026-10-13 — permanece válida e **não** é
+> reaberta). O que muda: os **dois campos de preço** passam a formatar
+> automaticamente em **BRL (R$)** enquanto a pessoa digita, com **máscara de
+> centavos** (dígitos entram pela direita): digitar `3` → `R$ 0,03`; `30` →
+> `R$ 0,30`; `3015` → `R$ 30,15`.
+>
+> - **Campos alcançados (decisão do usuário em 2026-10-14):** "Preço (R$)" do
+>   sheet de adicionar/editar item (`item-form-sheet` — preço **planejado**) e
+>   "Preço por unidade (R$)" do sheet de marcar como comprado (`purchase-sheet`).
+> - **Fora do ajuste:** a **quantidade** continua com digitação livre de decimal
+>   (vírgula ou ponto, RN-06); o **contrato HTTP não muda** (o payload segue
+>   **número** JSON); o **backend não é tocado**; a **exibição da linha da lista**
+>   (`item-row`, que já mostra `R$ 30,15`) permanece como está.
+> - **Rastreabilidade:** decisão **CD-14**; regra **RN-21**; critério **AC-27**;
+>   ajustes de texto em RN-06/CD-08, em AC-04/AC-10/AC-15/AC-25 e em
+>   "Design e UX".
+> - **Arquitetura:** **nenhuma** alteração de contrato, dados, ownership ou
+>   integração entre serviços ⇒ **nenhuma ADR nova** é necessária (a máscara é
+>   formatação de entrada na PWA; o serviço continua recebendo número).
+> - **Superfície de UI:** **sim** (ADR 0008) ⇒ o `PLAN.md` da Rodada 2 precisa de
+>   cenário Playwright para o **AC-27** — tratado na fase de plano, não aqui.
+> - **Aprovação:** o gate da spec da Rodada 2 **só fecha** com a frase canônica
+>   em "Gate da Rodada 2"; o que o usuário deve aprovar está listado no bloco de
+>   handoff em `docs/features/shopping-list/STATUS.md`.
 
 ## Objetivo
 
@@ -159,9 +192,13 @@ e a comparação são features futuras e **não** fazem parte desta rodada
   `unidade`, `kg`, `g`, `L`, `ml`, `pacote`, `caixa` — sem digitação livre, tanto
   no item quanto ao marcar como comprado (escopo inicial, ADR 0002).
 - **RN-06** — Valores numéricos: a **quantidade** (planejada e efetivamente
-  comprada) deve ser **maior que zero** quando informada; **preço planejado e
-  preço por unidade não podem ser negativos**; valores decimais são aceitos com
-  vírgula ou ponto (decisão do usuário em 2026-10-13).
+  comprada) deve ser **maior que zero** quando informada e aceita **digitação
+  livre de decimal com vírgula ou ponto**; **preço planejado e preço por unidade
+  não podem ser negativos** — regra **defensiva** mantida no serviço/UI, que
+  **na Rodada 2 fica inalcançável pela digitação**: nos campos de preço a
+  digitação passa a ser pela **máscara de centavos em BRL** (**RN-21**, CD-14 —
+  só dígitos, sem vírgula, ponto, sinal ou letras). (Decisão do usuário em
+  2026-10-13, ajustada na Rodada 2 em 2026-10-14.)
 - **RN-07** — Todo item ainda presente na lista ativa pode ser **editado ou
   excluído**, inclusive depois de marcado como comprado (escopo inicial,
   ADR 0002).
@@ -212,6 +249,30 @@ e a comparação são features futuras e **não** fazem parte desta rodada
   nav com as três abas** (`Lista`, `Histórico`, `Menor preço`), com **Lista
   ativa** e **Histórico/Menor preço visíveis porém desabilitadas** com indicação
   "em breve", sem rota (decisão do usuário em 2026-10-13).
+- **RN-21** — **Máscara de centavos em BRL nos dois campos de preço** (Rodada 2,
+  decisão do usuário em 2026-10-14 — **CD-14**): no **preço planejado** ("Preço
+  (R$)" do sheet de adicionar/editar item) e no **preço por unidade** ("Preço por
+  unidade (R$)" do sheet de marcar como comprado):
+  - a digitação aceita **apenas dígitos** (sem vírgula, ponto, sinal ou letras);
+  - cada dígito entra **pela direita** e é interpretado como **centavos**:
+    digitar `3` → `R$ 0,03`; `30` → `R$ 0,30`; `3015` → `R$ 30,15`;
+  - a **exibição** é o valor em BRL, com o prefixo `R$ ` e **duas casas decimais
+    separadas por vírgula** (`R$ 0,00`, `R$ 0,03`, `R$ 30,15`), no campo e na
+    linha da lista (`item-row`, que já exibe assim);
+  - o **valor enviado ao serviço** é o **número** correspondente, **sem** prefixo
+    ou vírgula (digitar `3015` envia `30.15` no payload): o **contrato HTTP não
+    muda** (preço continua número JSON) e o **backend não é tocado**;
+  - **sem nenhum dígito** o campo **não tem valor** — é ausência (`null`), **não**
+    `0`: no item o preço planejado continua **opcional** (RN-03, AC-04) e na
+    compra o preço por unidade continua **obrigatório** (RN-09, AC-13);
+  - o **prefill** aplica a mesma máscara: abrir a edição de um item com preço
+    planejado `12,50` (número `12.5`) mostra `R$ 12,50`; no sheet de marcar, o
+    preço por unidade **começa vazio** (**RN-13 mantida**) e, quando existem
+    valores preservados pelo desmarcar (RN-12), reaparece na máscara
+    (`12.5` → `R$ 12,50`);
+  - vale **apenas para os campos de preço**: a **quantidade** mantém a digitação
+    livre de decimal (vírgula ou ponto, RN-06) e segue **maior que zero** quando
+    informada.
 
 ## Estados relevantes
 
@@ -228,7 +289,7 @@ e a comparação são features futuras e **não** fazem parte desta rodada
   concluir (toast de erro que **permanece até o descarte**, com o que foi
   digitado preservado e nova tentativa possível, → AC-23); erro de validação de
   campo (borda `--color-danger` + mensagem ligada por `aria-describedby` +
-  `aria-invalid`, → AC-05, AC-13); **conflito de nome na edição** (mensagem
+  `aria-invalid`, → AC-05, AC-13, AC-27); **conflito de nome na edição** (mensagem
   visível no formulário "Já existe um item com esse nome", sem aplicar a edição,
   → AC-08).
 - **Sucesso** — lista renderizada (pendentes → comprados) e confirmações por
@@ -284,7 +345,12 @@ e a comparação são features futuras e **não** fazem parte desta rodada
     acessível "obrigatório", foco `--color-primary-text` + `--shadow-1`, erro
     `--color-danger` + `aria-describedby`/`aria-invalid`.
   - **Unidade**: `<select>`/sheet com as sete opções do RN-05 — nunca campo de
-    texto livre; **preço** formatado em R$ (moeda única, ADR 0002).
+    texto livre; **preço** formatado em R$ (moeda única, ADR 0002). **Rodada 2
+    (2026-10-14, CD-14):** nos **dois** campos de preço — "Preço (R$)" do item
+    (planejado) e "Preço por unidade (R$)" da compra — a digitação usa a
+    **máscara de centavos em BRL** (RN-21/AC-27): só dígitos, entrando pela
+    direita, com exibição `R$ 0,03` … `R$ 30,15`; o **campo de quantidade** não
+    muda (digitação livre de decimal).
   - Empty state e skeleton conforme §5; paleta sticker apenas decorativa (nunca
     em CTA ou estrutura).
 - **Comportamento mobile**: uma coluna sempre; `md+` centraliza em
@@ -310,7 +376,8 @@ e a comparação são features futuras e **não** fazem parte desta rodada
 - [ ] **AC-04:** Adicionando um item informando **apenas o nome** e salvando, o
   item aparece na lista como pendente com os campos opcionais
   (quantidade/unidade/preço planejado) vazios; a ausência deles não impede a
-  criação.
+  criação. (Rodada 2: o preço planejado **vazio** permanece **sem valor** — a
+  máscara de AC-27 só cria valor a partir do primeiro dígito.)
 - [ ] **AC-05:** Tentando salvar um item **sem nome** (ou só com espaços), a tela
   exibe erro visível no campo, nenhum item é criado e nenhuma requisição de
   criação é enviada.
@@ -341,7 +408,9 @@ e a comparação são features futuras e **não** fazem parte desta rodada
   criar o segundo item.
 - [ ] **AC-10:** Editando nome, quantidade planejada, unidade e/ou preço
   planejado de um item pendente e salvando, a linha da lista passa a exibir os
-  novos valores.
+  novos valores. (Rodada 2: o **preço planejado** é digitado pela máscara de
+  centavos de AC-27 — exibido em R$ e enviado ao serviço como **número** — e a
+  linha continua exibindo o formato `R$ 30,15`.)
 - [ ] **AC-11:** Excluindo um item, a linha sai da lista imediatamente e um toast
   oferece **"Desfazer"**; acionando "Desfazer" antes do descarte automático, o
   item volta à lista com os mesmos dados (nome, quantidade, unidade, preço
@@ -361,7 +430,10 @@ e a comparação são features futuras e **não** fazem parte desta rodada
 - [ ] **AC-15:** Abrindo o formulário de marcar como comprado de um item com
   quantidade e unidade planejadas, a quantidade comprada vem **pré-preenchida**
   com a quantidade planejada, a unidade com a unidade planejada e o **preço por
-  unidade começa vazio**.
+  unidade começa vazio**. (Rodada 2: o preço por unidade **continua começando
+  vazio** — RN-13 preservada — e, ao ser digitado, segue a máscara de AC-27;
+  quando há valores preservados por um desmarcar, o preço reaparece na máscara —
+  RN-12.)
 - [ ] **AC-16:** Desmarcando um item comprado antes de concluir, ele volta ao
   estado pendente e, reabrindo o formulário de marcar na mesma sessão da tela,
   os valores digitados (quantidade comprada, unidade, preço por unidade)
@@ -398,10 +470,29 @@ e a comparação são features futuras e **não** fazem parte desta rodada
   implementados (AC-02, AC-03, AC-22/AC-23, AC-04/AC-12), alvos de toque
   ≥44px, layout utilizável em viewport de 360px e no desktop (coluna única
   centralizada em `--container-max`), tema claro e escuro funcionais e
-  `:focus-visible` visível.
+  `:focus-visible` visível. (Rodada 2: o campo de preço com a máscara de AC-27
+  mantém rótulo, mensagem de erro, `aria-invalid`/`aria-describedby` e foco pelos
+  mesmos tokens — nada hardcoded.)
 - [ ] **AC-26:** Durante o envio de qualquer formulário, o botão mostra rótulo de
   progresso (`Salvando…`) e fica desabilitado; toques repetidos não geram uma
   segunda requisição (verificável na aba de rede do navegador).
+- [ ] **AC-27** (Rodada 2 — CD-14/RN-21): nos **dois campos de preço** — "Preço
+  (R$)" do sheet de adicionar/editar item (planejado) e "Preço por unidade (R$)"
+  do sheet de marcar como comprado — a digitação aceita **apenas dígitos** e o
+  valor é interpretado como **centavos entrando pela direita**, exibido em BRL:
+  digitar `3` mostra `R$ 0,03`; `30` mostra `R$ 0,30`; `3015` mostra `R$ 30,15`.
+  O valor **enviado ao serviço é o número** correspondente — digitar `3015` envia
+  `30.15` no payload (sem `R$`, sem vírgula), sem mudança de contrato HTTP.
+  Abrindo a **edição** de um item com preço planejado `12,50`, o campo mostra
+  `R$ 12,50`. Sem nenhum dígito o campo **não tem valor** (não é `0`): no item o
+  preço planejado permanece **opcional** (salvar só com o nome cria o item —
+  AC-04) e na compra o preço por unidade permanece **obrigatório** (confirmar sem
+  ele mostra erro no campo e **não** envia requisição de marcação — AC-13). A
+  digitação não aceita vírgula, ponto nem sinal — logo **não é possível digitar
+  preço negativo** (a regra defensiva "preços ≥ 0" de RN-06/CD-08 permanece, sem
+  caminho de entrada pela UI). A **quantidade** não é afetada e continua com
+  digitação livre de decimal. (Verificável por interação nos dois sheets e pela
+  requisição enviada.)
 
 ## Contratos afetados
 
@@ -419,6 +510,11 @@ e a comparação são features futuras e **não** fazem parte desta rodada
   o banco lógico do serviço da ADR 0004). Operações de produto necessárias para
   cumprir esta spec (caminhos, verbos, payloads, status e envelope de erro ficam
   para o `PLAN.md`, em nível técnico):
+  - **Rodada 2 (2026-10-14) — o contrato não muda:** a máscara de centavos
+    (RN-21/AC-27) é **formatação de entrada da PWA**; o preço continua viajando
+    como **número JSON** (ex.: digitar `3015` envia `30.15` em `plannedPrice` /
+    `unitPrice`). Nenhuma rota, campo, status ou evento é afetado e o backend não
+    é tocado.
   - **obter a lista ativa** (itens com nome, quantidade/unidade/preço planejados
     e estado pendente/comprado + dados da compra quando houver) — AC-02, AC-24;
   - **criar item** (nome obrigatório; quantidade planejada, unidade e preço
@@ -453,7 +549,7 @@ e a comparação são features futuras e **não** fazem parte desta rodada
   definidos, são candidatos a `libs/contracts` (como já ocorre com o contrato de
   login), compartilhados entre PWA e serviço sem compartilhar dados.
 
-## Decisões confirmadas com o usuário (2026-10-13)
+## Decisões confirmadas com o usuário (Rodada 1: 2026-10-13 · Rodada 2: 2026-10-14)
 
 Registradas para rastreabilidade; **não** são decisões em aberto.
 
@@ -466,24 +562,35 @@ Registradas para rastreabilidade; **não** são decisões em aberto.
 | CD-05 | Bottom nav com as **três abas**; Histórico e Menor preço desabilitadas com "em breve" e sem rota. |
 | CD-06 | Concluir **não grava nada** nesta rodada (sem mercado/data, sem registro, sem evento). |
 | CD-07 | Exclusão é **imediata com Desfazer** por toast (sem sheet de confirmação). |
-| CD-08 | Validação numérica: quantidade **> 0** quando informada; preços **≥ 0**; decimais com vírgula ou ponto. |
+| CD-08 | Validação numérica: quantidade **> 0** quando informada; preços **≥ 0**; decimais com vírgula ou ponto. **Nota da Rodada 2 (2026-10-14, CD-14):** nos **campos de preço** a digitação passa a ser pela **máscara de centavos em BRL** (só dígitos — RN-21), permanecendo a regra defensiva "preços ≥ 0" (inalcançável pela UI); a **quantidade** mantém a digitação livre com vírgula ou ponto. |
 | CD-09 | Concluir mostra **resumo** (quantos saem / quantos permanecem) antes de remover. |
 | CD-10 | Formulário de marcar pré-preenche **quantidade e unidade** planejadas; preço por unidade começa vazio. |
 | CD-11 | Escopo da rodada: somente a lista ativa; histórico, menor preço e comparação ficam para feature(s) futura(s) (STATUS.md, 2026-10-13). |
 | CD-12 | **Unicidade do nome ignora acentos/diacríticos** além de maiúsculas/minúsculas (`café` e `cafe` são o mesmo item); sinônimos continuam distintos (`cebola branca` ≠ `cebola`) — resolve a antiga D-01. |
 | CD-13 | **Nome já existente na edição ≠ na criação**: editar o nome para um nome já existente em outro item **não aplica** a edição (item permanece como estava) e **não soma** nada, com o conflito visível no formulário; a criação mantém a pergunta de somar quantidade (CD-02). Referência canônica desta decisão: **CD-13** (RN-04, AC-08). |
+| CD-14 | **Máscara de centavos em BRL nos dois campos de preço** (Rodada 2, 2026-10-14): "Preço (R$)" do sheet de adicionar/editar item (planejado) e "Preço por unidade (R$)" do sheet de marcar como comprado passam a formatar automaticamente em **R$** enquanto a pessoa digita, com **máscara de centavos** — só dígitos, entrando pela direita (`3` → `R$ 0,03`; `30` → `R$ 0,30`; `3015` → `R$ 30,15`). O serviço recebe o **número** (`30.15`): **contrato HTTP inalterado** e **backend não tocado**. A **quantidade** continua com digitação livre de decimal; a exibição da linha da lista permanece. Refina CD-08/RN-06 para os campos de preço; regra **RN-21**, critério **AC-27**. |
 
 ## Decisões em aberto
 
-**Nenhuma.** A única decisão aberta (D-01, não bloqueante) foi **resolvida pelo
-usuário em 2026-10-13** e virou a decisão confirmada **CD-12** (unicidade do
-nome ignorando acentos/diacríticos), já refletida em RN-02, RN-04 e nos
-AC-07/AC-08/AC-09.
+**Rodada 1: nenhuma.** A única decisão aberta (D-01, não bloqueante) foi
+**resolvida pelo usuário em 2026-10-13** e virou a decisão confirmada **CD-12**
+(unicidade do nome ignorando acentos/diacríticos), já refletida em RN-02, RN-04 e
+nos AC-07/AC-08/AC-09.
 
-> Não há decisão aberta (bloqueante ou não) nesta spec: as 13 decisões de
+> Não há decisão aberta (bloqueante ou não) na Rodada 1: as 13 decisões de
 > produto e arquitetura foram confirmadas com o usuário em 2026-10-13.
 
-## Gate da spec
+**Rodada 2:**
+
+| ID | Questão | Tipo | Responsável | Estado |
+| --- | --- | --- | --- | --- |
+| D-02 | Detalhes de exibição da máscara de centavos **não cobertos pelos exemplos confirmados** (nenhum deles decide): (a) uso de **separador de milhar** em valores ≥ `R$ 1.000,00` (`R$ 1.234,56` × `R$ 1234,56`); (b) aparência do campo **sem nenhum dígito** (campo vazio × `R$ 0,00` como texto de apoio); (c) comportamento ao **apagar** (remove o último dígito) e ao **colar** texto, e eventual **limite de dígitos** aceitos. | não bloqueante (não altera contrato, dados nem arquitetura — `AC-27` é satisfeito pelos exemplos confirmados) | usuário | aberta |
+
+> Uma decisão **bloqueante** aberta impediria a aprovação. D-02 é **não
+> bloqueante** e está listada explicitamente no handoff do `STATUS.md` para o
+> usuário confirmar (ou corrigir) junto da aprovação da Rodada 2.
+
+## Gate da spec (Rodada 1 — 2026-10-13)
 
 - [x] Objetivo, fluxo, regras e fora de escopo estão claros.
 - [x] Critérios `AC-*` são verificáveis e não prescrevem implementação.
@@ -492,3 +599,27 @@ AC-07/AC-08/AC-09.
 - [x] Não há decisão bloqueante aberta (e, no estado final, nenhuma decisão
       aberta — D-01 resolvida em CD-12).
 - [x] Artefato contém a frase canônica `Aprovado pelo usuário em 2026-10-13`.
+
+## Gate da Rodada 2 (2026-10-14)
+
+> Esta seção vale **somente** para o ajuste da Rodada 2 (máscara de centavos em
+> BRL nos dois campos de preço — CD-14/RN-21/AC-27). A Rodada 1 permanece
+> aprovada e **não** é reaberta.
+
+- [x] O ajuste está delimitado: dois campos de preço, formato, o que **não** muda
+      (quantidade, contrato HTTP, backend, exibição da linha) e quem é a pessoa
+      usuária (RN-21, AC-27).
+- [x] O critério novo (**AC-27**) é verificável, cobre os **dois campos**, o
+      formato exibido, os exemplos confirmados (`3` → `R$ 0,03`; `3015` →
+      `R$ 30,15`), o **valor enviado ao serviço** (`30.15`, número) e a
+      preservação de AC-04/AC-13/AC-15.
+- [x] Contratos afetados conferidos: **nenhuma mudança** de contrato HTTP, evento,
+      dados ou ownership ⇒ **nenhuma ADR nova** necessária.
+- [x] `Superfície de UI: sim` (ADR 0008) registrada; o cenário Playwright do
+      AC-27 fica como tarefa do `PLAN.md` da Rodada 2 (fase seguinte).
+- [x] Não há decisão **bloqueante** aberta (D-02, não bloqueante, está registrada
+      com as perguntas pendentes de confirmação do usuário).
+- [ ] **Aprovação da Rodada 2:** aguardando a frase canônica — **pendente**.
+      Quando o usuário aprovar, registrar aqui:
+      `Aprovado pelo usuário em AAAA-MM-DD` (frase canônica da Rodada 2; a frase
+      de 2026-10-13 acima continua valendo apenas para a Rodada 1).
