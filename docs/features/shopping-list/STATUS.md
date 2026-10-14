@@ -1,31 +1,30 @@
 # Estado da feature — Lista de compras
 
-**Fase atual:** **Rodada 2 — Spec** (ajuste de formatação de preço em BRL pedido
+**Fase atual:** **Rodada 2 — Plano** (ajuste de formatação de preço em BRL pedido
 pelo usuário em 2026-10-14). A **Rodada 1** (lista ativa) está **validada**
 (26/26 ACs pelo `feature-validator`) — histórico preservado abaixo.
-**Gate atual:** Rodada 2 com **spec em rascunho** — a `SPEC.md` já contém RN-21,
-AC-27 e CD-14, mas **não** tem a frase canônica da Rodada 2, portanto o gate da
-spec da Rodada 2 está **aberto** (aguardando aprovação do usuário). Rodada 1:
-`SPEC.md`/`PLAN.md` aprovados (2026-10-13) e gates de Implementação e Validação
-fechados (não reabertos por si; serão revalidados apenas nos ACs afetados pela
-Rodada 2).
+**Gate atual:** **spec da Rodada 2 aprovada** (`Aprovado pelo usuário em
+2026-10-14` na `SPEC.md`; RN-21/AC-27/CD-14/CD-15; nenhuma decisão aberta — D-02
+resolvida). **Gate do plano da Rodada 2 aberto** — o `PLAN.md` da Rodada 2 ainda
+não existe. Rodada 1: `SPEC.md`/`PLAN.md` aprovados (2026-10-13) e gates de
+Implementação e Validação fechados (não reabertos por si; serão revalidados apenas
+nos ACs afetados pela Rodada 2 — AC-27 e os cross-referenciados AC-04/AC-10/AC-15/AC-25).
 **Última atualização:** 2026-10-14
-**Próxima ação:** **usuário revisar e aprovar (ou pedir ajuste) o conteúdo da
-Rodada 2 na `SPEC.md`** — RN-21 (máscara de centavos em BRL nos dois campos de
-preço), AC-27 e CD-14; ao aprovar, o orquestrador registra
-`Aprovado pelo usuário em AAAA-MM-DD` no bloco **"Gate da Rodada 2"** da `SPEC.md`
-e só então delega o `tech-planner` (plano da Rodada 2 com tarefa Playwright do
-AC-27). Depois: implementação (`angular-dev`), testes (`test-engineer`) e
-revalidação dos ACs afetados (`feature-validator`). Push/PR seguem **adiados**
-até a Rodada 2 fechar. Nenhum AC ou T reaberto ainda.
+**Próxima ação:** delegar ao `tech-planner` o **plano da Rodada 2** — `PLAN.md`
+com tarefa(s) para a **máscara de centavos em BRL nos dois campos de preço**
+(preferir tarefa pequena: ex. util/formatador de máscara + wiring em
+`item-form-sheet`/`purchase-sheet`), **matriz AC ↔ E2E com o AC-27** e uma **tarefa
+Playwright** (Superfície de UI: sim, ADR 0008), com comando `npx nx e2e web-e2e`.
+Depois: aprovação canônica do plano, implementação (`angular-dev`), testes
+(`test-engineer`) e revalidação dos ACs afetados (`feature-validator`). Push/PR
+seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T reaberto ainda.
 
 ## Artefatos
 
 - Spec: `docs/features/shopping-list/SPEC.md` — **Rodada 1 aprovada em 2026-10-13**
-  (26 ACs; CD-01–CD-13; nenhuma decisão aberta) + **Rodada 2 em rascunho**
-  (**AC-27**/RN-21/CD-14 — máscara de centavos em BRL nos dois campos de preço;
-  **27 ACs**, CD-01–CD-14, **D-02 aberta e não bloqueante**; aprovação da Rodada 2
-  **pendente**)
+  (26 ACs; CD-01–CD-13) + **Rodada 2 aprovada em 2026-10-14** (**AC-27**/RN-21/
+  CD-14/CD-15 — máscara de centavos em BRL nos dois campos de preço; **27 ACs**,
+  CD-01–CD-15; **D-02 resolvida**; nenhuma decisão aberta)
 - Plano: `docs/features/shopping-list/PLAN.md` — **Rodada 1 aprovada em 2026-10-13**
   (17 tarefas `T-01…T-17`, matriz AC ↔ E2E com 26 ACs, `Superfície de UI: sim`,
   contrato HTTP completo, `Eventos: nenhum`; status `Aprovado`); **plano da
@@ -173,13 +172,35 @@ até a Rodada 2 fechar. Nenhum AC ou T reaberto ainda.
 
 ## Últimos handoffs
 
+### Gate da SPEC da Rodada 2 — aprovado e fechado (`product-spec`)
+
+- Tarefa: **fechamento do gate da spec da Rodada 2** (não é uma `T-*`)
+- Estado: **concluída** — **gate da spec da Rodada 2 FECHADO**
+- Arquivos alterados: `docs/features/shopping-list/SPEC.md` (frase canônica da
+  Rodada 2 registrada no "Gate da Rodada 2"; `Status da Rodada 2: Aprovada`;
+  `Aprovação da Rodada 2: Aprovado pelo usuário em 2026-10-14`; cabeçalho com as
+  duas rodadas; **CD-15** nova resolvendo **D-02**; RN-21/AC-27 refinados com os
+  detalhes de exibição confirmados). **Rodada 1 intacta.**
+- ACs cobertos: **AC-27** (refinamento sem mudar o que ele prova); AC-04/AC-10/
+  AC-15/AC-25 preservados.
+- Decisões registradas: **CD-15** (sem separador de milhar; campo vazio sem
+  `R$ 0,00`; apagar remove o último dígito, colar mantém só dígitos, sem limite
+  artificial); **D-02 resolvida**. Nenhuma ADR nova.
+- Aprovação do usuário: **Aprovado pelo usuário em 2026-10-14** (registrada
+  literalmente na `SPEC.md`); decisões de D-02 confirmadas ("usar esses padrões").
+- Pendências: nenhuma decisão aberta na spec da Rodada 2.
+- Próximo passo recomendado: orquestrador atualiza o `STATUS.md` (feito: fase →
+  Plano) e delega o **`tech-planner`** para o plano da Rodada 2 (tarefa Playwright
+  do AC-27).
+
 ### SPEC da Rodada 2 — máscara de centavos em BRL (`product-spec`)
 
 - Tarefa: **SPEC da Rodada 2** (não é uma `T-*`; alteração da `SPEC.md` da própria
   feature `shopping-list` — **nenhuma** feature nova foi criada)
 - Estado: **concluída** (artefato escrito) — **gate da spec da Rodada 2 aberto**:
   aguardando aprovação do usuário (frase canônica **não** registrada por conta
-  própria)
+  própria) — **superado:** a spec foi aprovada e o gate fechado em 2026-10-14
+  (ver o handoff acima)
 - Arquivos alterados: `docs/features/shopping-list/SPEC.md` (nova seção "Rodada 2
   — formatação de preço em BRL (2026-10-14)"; **RN-06** ajustada; **RN-21** nova;
   **AC-27** novo; cross-referência em AC-04/AC-10/AC-15/AC-25; nota em "Design e

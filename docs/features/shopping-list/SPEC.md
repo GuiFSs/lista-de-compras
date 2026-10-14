@@ -1,8 +1,8 @@
 # Especificação — Lista de compras ativa
 
-**Status:** Aprovada (Rodada 1 — 2026-10-13) · **Rodada 2 em rascunho, aguardando aprovação**
+**Status:** Aprovada (Rodada 1 — 2026-10-13 · Rodada 2 — 2026-10-14)
 **Última atualização:** 2026-10-14
-**Aprovação do usuário:** Aprovado pelo usuário em 2026-10-13 (Rodada 1) — **Rodada 2: pendente**
+**Aprovação do usuário:** Aprovado pelo usuário em 2026-10-13 (Rodada 1) · Aprovado pelo usuário em 2026-10-14 (Rodada 2)
 
 > **Ajuste pós-aprovação (2026-10-13, mesma sessão de aprovação):** por decisão
 > explícita do usuário (**CD-13**), **RN-04** e **AC-08** foram ajustados para
@@ -13,9 +13,8 @@
 
 ## Rodada 2 — formatação de preço em BRL (2026-10-14)
 
-**Status da Rodada 2:** Rascunho — aguardando aprovação
-**Aprovação da Rodada 2:** pendente (a frase canônica será registrada em
-"Gate da Rodada 2" quando o usuário aprovar o ajuste abaixo)
+**Status da Rodada 2:** Aprovada
+**Aprovação da Rodada 2:** Aprovado pelo usuário em 2026-10-14
 
 > **Ajuste de comportamento de UI pedido pelo usuário em 2026-10-14** (Rodada 2
 > desta mesma feature; a **Rodada 1** — objetivo, fluxo, RN-01…RN-20,
@@ -40,9 +39,9 @@
 >   formatação de entrada na PWA; o serviço continua recebendo número).
 > - **Superfície de UI:** **sim** (ADR 0008) ⇒ o `PLAN.md` da Rodada 2 precisa de
 >   cenário Playwright para o **AC-27** — tratado na fase de plano, não aqui.
-> - **Aprovação:** o gate da spec da Rodada 2 **só fecha** com a frase canônica
->   em "Gate da Rodada 2"; o que o usuário deve aprovar está listado no bloco de
->   handoff em `docs/features/shopping-list/STATUS.md`.
+> - **Aprovação:** o gate da spec da Rodada 2 **fechou em 2026-10-14** com a frase
+>   canônica em "Gate da Rodada 2"; o bloco de handoff em
+>   `docs/features/shopping-list/STATUS.md` permanece como registro da rodada.
 
 ## Objetivo
 
@@ -257,14 +256,21 @@ e a comparação são features futuras e **não** fazem parte desta rodada
   - cada dígito entra **pela direita** e é interpretado como **centavos**:
     digitar `3` → `R$ 0,03`; `30` → `R$ 0,30`; `3015` → `R$ 30,15`;
   - a **exibição** é o valor em BRL, com o prefixo `R$ ` e **duas casas decimais
-    separadas por vírgula** (`R$ 0,00`, `R$ 0,03`, `R$ 30,15`), no campo e na
-    linha da lista (`item-row`, que já exibe assim);
+    separadas por vírgula** (`R$ 0,00`, `R$ 0,03`, `R$ 30,15`) e **sem separador
+    de milhar** (`R$ 1234,56`, nunca `R$ 1.234,56` — CD-15), no campo e na linha
+    da lista (`item-row`, que já exibe assim);
   - o **valor enviado ao serviço** é o **número** correspondente, **sem** prefixo
     ou vírgula (digitar `3015` envia `30.15` no payload): o **contrato HTTP não
     muda** (preço continua número JSON) e o **backend não é tocado**;
   - **sem nenhum dígito** o campo **não tem valor** — é ausência (`null`), **não**
-    `0`: no item o preço planejado continua **opcional** (RN-03, AC-04) e na
-    compra o preço por unidade continua **obrigatório** (RN-09, AC-13);
+    `0`, e o campo fica **vazio** (o rótulo "Preço (R$)" já identifica o campo;
+    não há texto de apoio `R$ 0,00` nesse estado — CD-15): no item o preço
+    planejado continua **opcional** (RN-03, AC-04) e na compra o preço por unidade
+    continua **obrigatório** (RN-09, AC-13);
+  - **apagar** remove o **último dígito** (ex.: `R$ 30,15` → `R$ 3,01`) e **colar**
+    mantém **apenas os dígitos** do texto colado, descartando o restante, com a
+    mesma interpretação da digitação; **não há limite artificial** de dígitos — o
+    limite prático é a **precisão aceita pelo serviço** (CD-15);
   - o **prefill** aplica a mesma máscara: abrir a edição de um item com preço
     planejado `12,50` (número `12.5`) mostra `R$ 12,50`; no sheet de marcar, o
     preço por unidade **começa vazio** (**RN-13 mantida**) e, quando existem
@@ -484,10 +490,15 @@ e a comparação são features futuras e **não** fazem parte desta rodada
   O valor **enviado ao serviço é o número** correspondente — digitar `3015` envia
   `30.15` no payload (sem `R$`, sem vírgula), sem mudança de contrato HTTP.
   Abrindo a **edição** de um item com preço planejado `12,50`, o campo mostra
-  `R$ 12,50`. Sem nenhum dígito o campo **não tem valor** (não é `0`): no item o
+  `R$ 12,50`. Sem nenhum dígito o campo **não tem valor** (não é `0`) e fica
+  **vazio**, sem texto de apoio `R$ 0,00` (CD-15): no item o
   preço planejado permanece **opcional** (salvar só com o nome cria o item —
   AC-04) e na compra o preço por unidade permanece **obrigatório** (confirmar sem
   ele mostra erro no campo e **não** envia requisição de marcação — AC-13). A
+  exibição **não usa separador de milhar** (valores ≥ mil aparecem como
+  `R$ 1234,56`); **apagar** remove o último dígito, **colar** mantém apenas os
+  dígitos do texto colado e **não há limite artificial** de dígitos — o limite
+  prático é a precisão do serviço (CD-15). A
   digitação não aceita vírgula, ponto nem sinal — logo **não é possível digitar
   preço negativo** (a regra defensiva "preços ≥ 0" de RN-06/CD-08 permanece, sem
   caminho de entrada pela UI). A **quantidade** não é afetada e continua com
@@ -569,6 +580,7 @@ Registradas para rastreabilidade; **não** são decisões em aberto.
 | CD-12 | **Unicidade do nome ignora acentos/diacríticos** além de maiúsculas/minúsculas (`café` e `cafe` são o mesmo item); sinônimos continuam distintos (`cebola branca` ≠ `cebola`) — resolve a antiga D-01. |
 | CD-13 | **Nome já existente na edição ≠ na criação**: editar o nome para um nome já existente em outro item **não aplica** a edição (item permanece como estava) e **não soma** nada, com o conflito visível no formulário; a criação mantém a pergunta de somar quantidade (CD-02). Referência canônica desta decisão: **CD-13** (RN-04, AC-08). |
 | CD-14 | **Máscara de centavos em BRL nos dois campos de preço** (Rodada 2, 2026-10-14): "Preço (R$)" do sheet de adicionar/editar item (planejado) e "Preço por unidade (R$)" do sheet de marcar como comprado passam a formatar automaticamente em **R$** enquanto a pessoa digita, com **máscara de centavos** — só dígitos, entrando pela direita (`3` → `R$ 0,03`; `30` → `R$ 0,30`; `3015` → `R$ 30,15`). O serviço recebe o **número** (`30.15`): **contrato HTTP inalterado** e **backend não tocado**. A **quantidade** continua com digitação livre de decimal; a exibição da linha da lista permanece. Refina CD-08/RN-06 para os campos de preço; regra **RN-21**, critério **AC-27**. |
+| CD-15 | **Detalhes de exibição da máscara de centavos** (Rodada 2, 2026-10-14) — resolve **D-02**, refinando RN-21/AC-27: (a) exibição **sem separador de milhar** (`R$ 1234,56`, nunca `R$ 1.234,56`); (b) campo **sem nenhum dígito** fica **vazio** — ausência de valor, **sem** `R$ 0,00` como texto de apoio (o rótulo "Preço (R$)" já identifica o campo); (c) **apagar** remove o **último dígito**, **colar** mantém **apenas os dígitos** do texto colado e **não há limite artificial** de dígitos (o limite prático é a precisão do serviço). Não altera contrato, dados nem arquitetura. |
 
 ## Decisões em aberto
 
@@ -584,11 +596,12 @@ nos AC-07/AC-08/AC-09.
 
 | ID | Questão | Tipo | Responsável | Estado |
 | --- | --- | --- | --- | --- |
-| D-02 | Detalhes de exibição da máscara de centavos **não cobertos pelos exemplos confirmados** (nenhum deles decide): (a) uso de **separador de milhar** em valores ≥ `R$ 1.000,00` (`R$ 1.234,56` × `R$ 1234,56`); (b) aparência do campo **sem nenhum dígito** (campo vazio × `R$ 0,00` como texto de apoio); (c) comportamento ao **apagar** (remove o último dígito) e ao **colar** texto, e eventual **limite de dígitos** aceitos. | não bloqueante (não altera contrato, dados nem arquitetura — `AC-27` é satisfeito pelos exemplos confirmados) | usuário | aberta |
+| D-02 | Detalhes de exibição da máscara de centavos **não cobertos pelos exemplos confirmados** (nenhum deles decide): (a) uso de **separador de milhar** em valores ≥ `R$ 1.000,00` (`R$ 1.234,56` × `R$ 1234,56`); (b) aparência do campo **sem nenhum dígito** (campo vazio × `R$ 0,00` como texto de apoio); (c) comportamento ao **apagar** (remove o último dígito) e ao **colar** texto, e eventual **limite de dígitos** aceitos. | não bloqueante (não altera contrato, dados nem arquitetura — `AC-27` é satisfeito pelos exemplos confirmados) | usuário | **resolvida pelo usuário em 2026-10-14 → CD-15** (a: sem separador de milhar; b: campo vazio, sem `R$ 0,00`; c: apagar remove o último dígito, colar mantém só dígitos, sem limite artificial) |
 
-> Uma decisão **bloqueante** aberta impediria a aprovação. D-02 é **não
-> bloqueante** e está listada explicitamente no handoff do `STATUS.md` para o
-> usuário confirmar (ou corrigir) junto da aprovação da Rodada 2.
+> **Rodada 2: nenhuma decisão aberta.** D-02 (não bloqueante) foi **resolvida pelo
+> usuário em 2026-10-14** e virou a decisão confirmada **CD-15**, já refletida em
+> RN-21 e AC-27. Uma decisão **bloqueante** aberta teria impedido a aprovação;
+> não há nenhuma.
 
 ## Gate da spec (Rodada 1 — 2026-10-13)
 
@@ -617,9 +630,13 @@ nos AC-07/AC-08/AC-09.
       dados ou ownership ⇒ **nenhuma ADR nova** necessária.
 - [x] `Superfície de UI: sim` (ADR 0008) registrada; o cenário Playwright do
       AC-27 fica como tarefa do `PLAN.md` da Rodada 2 (fase seguinte).
-- [x] Não há decisão **bloqueante** aberta (D-02, não bloqueante, está registrada
-      com as perguntas pendentes de confirmação do usuário).
-- [ ] **Aprovação da Rodada 2:** aguardando a frase canônica — **pendente**.
-      Quando o usuário aprovar, registrar aqui:
-      `Aprovado pelo usuário em AAAA-MM-DD` (frase canônica da Rodada 2; a frase
-      de 2026-10-13 acima continua valendo apenas para a Rodada 1).
+- [x] Não há decisão **bloqueante** aberta: D-02 (não bloqueante) foi
+      **resolvida pelo usuário em 2026-10-14** (CD-15) e não há outra decisão
+      aberta na Rodada 2.
+- [x] **Aprovação da Rodada 2:** aprovada — a frase canônica da Rodada 2 está
+      registrada literalmente abaixo (a frase de 2026-10-13 acima continua
+      valendo apenas para a Rodada 1):
+
+      ```text
+      Aprovado pelo usuário em 2026-10-14
+      ```
