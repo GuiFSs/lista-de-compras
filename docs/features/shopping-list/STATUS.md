@@ -5,19 +5,20 @@ pelo usuário em 2026-10-14). A **Rodada 1** (lista ativa) está **validada**
 (26/26 ACs pelo `feature-validator`) — histórico preservado abaixo.
 **Gate atual:** **spec da Rodada 2 aprovada** (`Aprovado pelo usuário em
 2026-10-14` na `SPEC.md`; RN-21/AC-27/CD-14/CD-15; nenhuma decisão aberta — D-02
-resolvida). **Gate do plano da Rodada 2 aberto** — o `PLAN.md` da Rodada 2 ainda
-não existe. Rodada 1: `SPEC.md`/`PLAN.md` aprovados (2026-10-13) e gates de
-Implementação e Validação fechados (não reabertos por si; serão revalidados apenas
-nos ACs afetados pela Rodada 2 — AC-27 e os cross-referenciados AC-04/AC-10/AC-15/AC-25).
+resolvida). **Plano da Rodada 2 escrito** (`PLAN.md` › "Rodada 2 — máscara de
+centavos em BRL nos dois campos de preço", T-20…T-23, matriz AC ↔ E2E com o
+AC-27) — **gate do plano da Rodada 2 aberto**: aguardando a **frase canônica**
+`Aprovado pelo usuário em YYYY-MM-DD` (o `tech-planner` **não** a registrou).
+Rodada 1: `SPEC.md`/`PLAN.md` aprovados (2026-10-13) e gates de Implementação e
+Validação fechados (não reabertos por si; serão revalidados apenas nos ACs
+afetados pela Rodada 2 — AC-27 e os cross-referenciados AC-04/AC-10/AC-13/AC-15/AC-25).
 **Última atualização:** 2026-10-14
-**Próxima ação:** delegar ao `tech-planner` o **plano da Rodada 2** — `PLAN.md`
-com tarefa(s) para a **máscara de centavos em BRL nos dois campos de preço**
-(preferir tarefa pequena: ex. util/formatador de máscara + wiring em
-`item-form-sheet`/`purchase-sheet`), **matriz AC ↔ E2E com o AC-27** e uma **tarefa
-Playwright** (Superfície de UI: sim, ADR 0008), com comando `npx nx e2e web-e2e`.
-Depois: aprovação canônica do plano, implementação (`angular-dev`), testes
-(`test-engineer`) e revalidação dos ACs afetados (`feature-validator`). Push/PR
-seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T reaberto ainda.
+**Próxima ação:** o **usuário aprovar o plano da Rodada 2** (o orquestrador
+registra a frase canônica no bloco "Gate do plano da Rodada 2" do `PLAN.md`).
+Depois: implementação na ordem **T-20 → T-21 → T-22 → T-23** (`angular-dev` nas
+T-20/T-21/T-22, `test-engineer` na T-23), testes e revalidação dos ACs afetados
+(`feature-validator`). Push/PR seguem **adiados** até a Rodada 2 fechar. Nenhum AC
+ou T da Rodada 1 reaberto.
 
 ## Artefatos
 
@@ -27,8 +28,11 @@ seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T reaberto ainda.
   CD-01–CD-15; **D-02 resolvida**; nenhuma decisão aberta)
 - Plano: `docs/features/shopping-list/PLAN.md` — **Rodada 1 aprovada em 2026-10-13**
   (17 tarefas `T-01…T-17`, matriz AC ↔ E2E com 26 ACs, `Superfície de UI: sim`,
-  contrato HTTP completo, `Eventos: nenhum`; status `Aprovado`); **plano da
-  Rodada 2 ainda não existe** (fase seguinte)
+  contrato HTTP completo, `Eventos: nenhum`; status `Aprovado`); **Rodada 2
+  escrita em 2026-10-14** (seção final: `Superfície de UI: sim`, matriz AC ↔ E2E
+  com **AC-27** + cross-refs, tarefas **T-20…T-23**, ordem sequencial sem
+  paralelismo, impacto nos testes existentes por arquivo/linha) — **gate do plano
+  da Rodada 2 aberto**, aguardando a frase canônica do usuário
 - ADR: `docs/decisions/0009-excecao-temporaria-ao-gateway-shopping-list-service.md`
   — registrada (exceção temporária à ADR 0001 para o `shopping-list-service`);
   ADR 0006 §1 e Consequências com nota apontando para a 0009
@@ -171,6 +175,50 @@ seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T reaberto ainda.
   nenhuma T desta feature os tocou.
 
 ## Últimos handoffs
+
+### Plano da Rodada 2 — máscara de centavos em BRL (`tech-planner`)
+
+- Tarefa: **PLAN da Rodada 2** (não é uma `T-*`; seção final do `PLAN.md` da
+  própria feature `shopping-list` — **nenhuma** feature nova foi criada)
+- Estado: **concluída** (artefato escrito) — **gate do plano da Rodada 2
+  aberto**: aguardando a aprovação do usuário (frase canônica **não** registrada
+  por conta própria)
+- Arquivos alterados: `docs/features/shopping-list/PLAN.md` (nova seção
+  "Rodada 2 — máscara de centavos em BRL nos dois campos de preço (2026-10-14)":
+  contexto/abordagem, `Superfície de UI: sim`, contratos/dados inalterados,
+  revisão arquitetural não obrigatória, estratégia de testes, **Matriz AC ↔ E2E
+  (Rodada 2)**, **impacto nos testes existentes por arquivo/linha**, **T-20…T-23**,
+  ordem/paralelismo, riscos/trade-offs, decisões, **Gate do plano da Rodada 2** com
+  a aprovação **em aberto** e a lista "O que o usuário precisa aprovar") + campos
+  de `**Status:**`/`**Aprovação do usuário:**` do topo (**Rodada 1 intacta**); e
+  `docs/features/shopping-list/STATUS.md` (fase/gate/próxima ação, `## Artefatos`
+  e **este bloco de handoff**). **Nenhum outro arquivo foi tocado.**
+- ACs cobertos: **AC-27** (novo, matriz + T-23 Playwright) e, como
+  cross-referência, AC-04/AC-10/AC-13/AC-15/AC-25 (a prova não muda; passam a
+  exercitar o campo mascarado)
+- Testes executados: **não aplicável** (fase de plano; nenhum código de produto
+  tocado). A evidência desta fase é a revisão do `PLAN.md`; a prova executável é
+  das tarefas (T-20…T-23).
+- Decisões registradas: helper puro em `apps/web/src/app/shared/money/` (não em
+  `libs/shared/util`/`libs/ui-web` — scaffolds sem target de teste — nem em
+  `libs/contracts`), absorvendo os helpers de quantidade hoje duplicados;
+  **estado = string de dígitos** com exibição/payload derivados; DOM sobrescrito
+  imperativamente + caret no fim; `inputmode="numeric"` só nos campos de preço;
+  **T-21/T-22 são sequenciais** (compartilham `shopping-list-page.spec.ts` — a
+  premissa de "arquivos disjuntos" foi **corrigida**); regra defensiva
+  "preço ≥ 0" **permanece** no código, agora inalcançável pela digitação (os dois
+  testes que digitavam `-1` são reescritos, item 4 da aprovação). **Nenhuma ADR
+  nova** e **revisão arquitetural não obrigatória** (single-service, backend
+  intocado, contrato inalterado).
+- Aprovação do usuário: **pendente** — o gate só fecha com a frase canônica no
+  bloco "Gate do plano da Rodada 2" do `PLAN.md`.
+- Pendências: (1) aprovação do usuário da Rodada 2 (lista de 6 itens no
+  `PLAN.md`); (2) recomendações **não bloqueantes** (não são tarefas): registrar
+  o padrão da máscara no `GUIA-DESIGN` §5 e reusar `formatBrlFromDigits` em
+  `item-row` quando ele for tocado.
+- Próximo passo recomendado: orquestrador apresenta a lista de aprovação ao
+  usuário; após aprovado, registra a frase canônica e delega a implementação na
+  ordem T-20 → T-21 → T-22 → T-23.
 
 ### Gate da SPEC da Rodada 2 — aprovado e fechado (`product-spec`)
 

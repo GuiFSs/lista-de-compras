@@ -1,9 +1,9 @@
 # Plano técnico — Lista de compras ativa
 
-**Status:** Aprovado
+**Status:** Aprovado (Rodada 1 — 2026-10-13) · **Rodada 2:** aguardando aprovação do usuário (ver a seção final)
 **Spec:** `docs/features/shopping-list/SPEC.md`
-**Última atualização:** 2026-10-13
-**Aprovação do usuário:** Aprovado pelo usuário em 2026-10-13
+**Última atualização:** 2026-10-14 (a Rodada 1 abaixo fica **intacta**; a Rodada 2 é a seção final)
+**Aprovação do usuário:** Aprovado pelo usuário em 2026-10-13 (Rodada 1) · Rodada 2: **pendente** (gate na seção "Gate do plano da Rodada 2")
 
 ## Contexto
 
@@ -562,3 +562,261 @@ Commits, `T-XX`) antes de delegar a próxima.
       CD-02/AC-07).
 - [x] Artefato contém a frase canônica `Aprovado pelo usuário em 2026-10-13`
       (registrada em `**Aprovação do usuário:**`; status `Aprovado`).
+
+## Rodada 2 — máscara de centavos em BRL nos dois campos de preço (2026-10-14)
+
+> **Escopo desta rodada (e só ele):** o ajuste de UI aprovado na spec em
+> 2026-10-14 — **máscara de centavos em BRL** nos **dois campos de preço**
+> ("Preço (R$)" do sheet de adicionar/editar item e "Preço por unidade (R$)" do
+> sheet de marcar como comprado). Rastreabilidade: **RN-21**, **AC-27**,
+> **CD-14**/**CD-15** (que resolveu **D-02**). **A Rodada 1 acima fica intacta** —
+> nenhum AC ou `T-*` dela é reaberto; a revalidação da Rodada 2 cobre **AC-27** e
+> os ACs apenas **cross-referenciados** (AC-04/AC-10/AC-13/AC-15/AC-25), cuja
+> prova não muda.
+
+### Contexto e abordagem
+
+- **A spec fechou o que muda comportamento; aqui se fecha o técnico.** A regra
+  (RN-21/AC-27/CD-14/CD-15) é: digitação **só de dígitos**; cada dígito entra
+  pela direita como **centavos**; exibição em BRL com duas casas e vírgula e
+  **sem separador de milhar**; o **payload é número** (contrato HTTP
+  inalterado); **sem dígitos = campo vazio = `null`** (não `0`); apagar remove o
+  último dígito; colar mantém só os dígitos; sem limite artificial.
+- **Estado de verdade = a string de dígitos.** O componente guarda os dígitos
+  (`''`, `'3'`, `'3015'`) e **deriva** a exibição e o número. Assim máscara,
+  prefill e payload usam a mesma fonte e não há duas contas divergentes (como
+  hoje ocorre com `parseDecimal`/`formatDecimal` duplicados nos dois sheets).
+- **Só os campos de preço mudam.** `item-form-sheet` (preço **planejado**,
+  opcional — AC-04) e `purchase-sheet` (preço **por unidade**, obrigatório e que
+  começa vazio — AC-13/AC-15). A **quantidade não muda** (digitação livre de
+  decimal, RN-06); `item-row` (exibição da linha) **já formata** `R$ 30,15` sem
+  separador de milhar — nenhuma mudança lá.
+- **Helper compartilhado novo:** `apps/web/src/app/shared/money/` (módulo +
+  specs). Justificativa já usada na Rodada 1: `libs/shared/util` e
+  `libs/ui-web` são **scaffolds sem target de teste** (Vitest) — regra testável
+  hospedada lá não roda por `npx nx test web`; `libs/contracts` é de contrato
+  HTTP (a máscara não é contrato); `apps/web/src/app/ui/` guarda primitivas
+  visuais. O helper é **puro** (sem framework) e passa a ser o único lugar das
+  funções de dinheiro, **absorvendo** também o `parseDecimal`/`formatDecimal` de
+  **quantidade** hoje duplicados nos dois sheets (uma única verdade).
+- **Sem `any`:** `unknown`/genéricos como no resto do app (lint
+  `@typescript-eslint/no-explicit-any: error`).
+
+### Superfície de UI
+
+- **Superfície de UI:** **sim**
+- **Justificativa:** a Rodada 2 altera **dois** componentes de `apps/web`
+  (`item-form-sheet`, `purchase-sheet`) e o resultado do AC-27 é **observável em
+  tela** (o que aparece no campo enquanto se digita e o que a linha mostra).
+  Pela **ADR 0008**, isso exige **matriz AC ↔ E2E** e **≥1 tarefa Playwright** em
+  `apps/web-e2e` com **comando + resultado** como evidência — ambas presentes
+  (matriz "AC ↔ E2E (Rodada 2)" e **T-23**).
+
+### Contratos, dados e ownership
+
+- **HTTP:** **nenhuma mudança** — o preço continua viajando como **número JSON**
+  (`30.15`), sem `R$` nem vírgula; nenhum DTO em `libs/contracts` é tocado
+  (AC-27/CD-14/RN-21 e a nota "o contrato não muda" em `SPEC.md` › Contratos
+  afetados).
+- **Eventos:** nenhum.
+- **Dados/ownership:** nenhuma tabela, migração ou dono muda; o backend
+  (`shopping-list-service`) **não é tocado**.
+- **ADR:** **nenhuma ADR nova** — a máscara é formatação de **entrada da PWA**,
+  sem contrato, dados, ownership ou integração novos (mesmo entendimento já
+  registrado no handoff da spec).
+
+### Revisão arquitetural
+
+- **Obrigatória: não.** Motivo declarado: single-service, **sem** contrato entre
+  serviços, **sem** evento, **sem** mudança de ownership e **sem** tocar o
+  backend. Não há ADR a revisar nesta rodada (a ADR 0009 é da Rodada 1).
+  `ARCHITECTURE-REVIEW.md`: não aplicável.
+
+### Estratégia de testes
+
+- **Unitários (`npx nx test web`):**
+  - **helper `money`** — regra da máscara de ponta a ponta (`'' → ''`,
+    `'3' → 'R$ 0,03'`, `'30' → 'R$ 0,30'`, `'3015' → 'R$ 30,15'`,
+    `'123456' → 'R$ 1234,56'` **sem** milhar), `digitsFromInput` (descarta `R$`,
+    vírgula, ponto, letra e sinal — inclusive ao colar), `numberFromDigits`
+    (`'3015' → 30.15`, `'' → null`), `digitsFromNumber` para prefill
+    (`12.5 → '1250'`, `9.9 → '990'`) e os helpers de quantidade absorvidos.
+  - **wiring** de `item-form-sheet` e `purchase-sheet`: digitação → exibição →
+    payload; vazio → `null` (item) / erro sem requisição (compra); prefill na
+    máscara; apagar/colar; `inputmode`.
+  - **`shopping-list-page`**: prefill ao abrir Editar e ao reabrir o sheet de
+    compra após desmarcar; exibição na linha.
+- **Regressão:** toda a suíte existente de `web` deve seguir verde **após** os
+  ajustes de asserção da tabela "Impacto nos testes existentes" (abaixo); o
+  comando de evidência é `npx nx test web` (a contagem sobe com os casos novos do
+  helper; a contagem exata é registrada no handoff de cada T).
+- **E2E Playwright (obrigatório — ADR 0008):** `npx nx e2e web-e2e` (ou filtro
+  `-- --grep "máscara"`) cobrindo AC-27 nos **dois** campos, com o payload
+  afirmado pelo *store* hermético (`shopping-list-fake-api.ts`) — **T-23**.
+
+### Matriz AC ↔ E2E (Rodada 2)
+
+| AC | Observável na UI? | Cenário Playwright (arquivo / título) | Evidência não-E2E |
+| --- | --- | --- | --- |
+| **AC-27** | sim | `apps/web-e2e/src/shopping-list/items.spec.ts` — "máscara de centavos em BRL no preço planejado: digitar `3`/`30`/`3015` mostra `R$ 0,03`/`R$ 0,30`/`R$ 30,15` e envia o número"; `apps/web-e2e/src/shopping-list/purchase.spec.ts` — "máscara de centavos em BRL no preço por unidade: digitar `3015` mostra `R$ 30,15` e envia `30.15`" | unit `apps/web/src/app/shared/money/money.spec.ts` + specs dos dois sheets |
+| AC-04 | sim | `apps/web-e2e/src/shopping-list/items.spec.ts` — "adiciona item só com o nome: aparece pendente com opcionais vazios" (preço **vazio** continua criando com `plannedPrice: null`) | unit `item-form-sheet.spec.ts` |
+| AC-10 | sim | `apps/web-e2e/src/shopping-list/items.spec.ts` — "editar planejados e salvar atualiza a linha" (abrir Editar mostra o preço **na máscara**) | unit `item-form-sheet.spec.ts` + `shopping-list-page.spec.ts` |
+| AC-13 | sim | `apps/web-e2e/src/shopping-list/purchase.spec.ts` — "sem um dos campos obrigatórios: erro no campo e nenhuma requisição de marcação" (preço vazio = obrigatório) | unit `purchase-sheet.spec.ts` |
+| AC-15 | sim | `apps/web-e2e/src/shopping-list/purchase.spec.ts` — "pré-preenche quantidade/unidade planejadas e deixa o preço por unidade vazio" | unit `purchase-sheet.spec.ts` |
+| AC-25 | sim | `apps/web-e2e/src/shopping-list/load.spec.ts` — "viewport 360px e desktop… `:focus-visible` visível" (foco e `aria` preservados no campo mascarado) | unit (convenção de token) |
+
+(AC-27 é o único AC **novo**; os demais entram como **cross-referência** — o que
+eles provam **não muda**, apenas passa a exercitar o campo mascarado.)
+
+### Impacto nos testes existentes (verificado no repositório)
+
+> Nada é removido por conveniência: as linhas abaixo são **asserções que mudam
+> de forma** porque o campo passa a exibir `R$ x,xx` e a interpretar dígitos como
+> centavos. Os casos de **preço negativo** ficam **inalcançáveis pela digitação**
+> (RN-21) — ver "Decisões" e o item 4 da aprovação.
+
+**Unitários (`apps/web/src/app/features/shopping-list/`) — tarefas T-21/T-22:**
+
+| Arquivo | Linha(s) | Hoje | Depois | Tarefa |
+| --- | --- | --- | --- | --- |
+| `item-form-sheet.spec.ts` | 319 | `#item-price` `.value` `'12,5'` | `'R$ 12,50'` (prefill na máscara) | T-21 |
+| `item-form-sheet.spec.ts` | 157-179 | `setPrice('-1')` espera erro "preço não pode ser negativo" | reescrever: `-` não é aceito (dígitos `''` ⇒ campo vazio); cobrir a máscara (dígitos → payload) e registrar que a regra defensiva é inalcançável pela UI | T-21 |
+| `item-form-sheet.spec.ts` | 202 | `setPrice('12,50')` → payload `12.5` | mantém `12.5` e **acrescenta** asserção de exibição `'R$ 12,50'` | T-21 |
+| `purchase-sheet.spec.ts` | 161 | `#purchase-price` `'9,9'` (draft) | `'R$ 9,90'` | T-22 |
+| `purchase-sheet.spec.ts` | 193-209 | `setPrice('-1')` espera erro negativo | reescrever (idem) | T-22 |
+| `purchase-sheet.spec.ts` | 240, 261, 289, 307 | `setPrice('10')` | agora significa `R$ 0,10`; usar o valor pretendido (ex.: `'1000'`) | T-22 |
+| `purchase-sheet.spec.ts` | 300, 351 | `.value` `'10'` / `'5'` | `'R$ 10,00'` / `'R$ 5,00'` | T-22 |
+| `purchase-sheet.spec.ts` | 216 | `setPrice('12,50')` → `12.5` | mantém; **acrescenta** exibição `'R$ 12,50'` | T-22 |
+| `shopping-list-page.spec.ts` | 280-291 | `price.value='10'` → payload `unitPrice: 10` | dígitos `'1000'` → payload `10` + exibição `'R$ 10,00'` | T-22 |
+| `shopping-list-page.spec.ts` | 319-333 | `price.value='10'` / `toBe('10')` | dígitos `'1000'` / `'R$ 10,00'` | T-22 |
+| `shopping-list-page.spec.ts` | 346-370 | prefill `unitPrice: 9.9` → `'9,9'` | `'R$ 9,90'` | T-22 |
+| `shopping-list-page.spec.ts` | 442-468 | prefill `plannedPrice: 12.5` → `'12,5'` | `'R$ 12,50'` | T-21 |
+
+**E2E (`apps/web-e2e/src/shopping-list/`) — tarefa T-23:**
+
+| Arquivo | Linha(s) | Hoje | Depois |
+| --- | --- | --- | --- |
+| `items.spec.ts` | 82 | `fill('12,50')` | digitar/`fill` **dígitos** (`'1250'`) → exibição `R$ 12,50`; a meta em l.88 (`R$ 12,50`) já confere |
+| `purchase.spec.ts` | 14, 43, 69, 88 | `fill('5,50')` / `'4,00'` / `'2,30'` | passar **dígitos** (`'550'`/`'400'`/`'230'`) — mesmas exibições nas metas |
+| `purchase.spec.ts` | 108, 140 | `toHaveValue('')` | **inalterado** (vazio continua vazio) |
+| `purchase.spec.ts` | 119, 132 | `fill('7,25')` / `toHaveValue('7,25')` | dígitos `'725'` / `toHaveValue('R$ 7,25')` |
+| `purchase.spec.ts` | 190, 195 | `fill('6,40')` / `toHaveValue('6,40')` | dígitos `'640'` / `toHaveValue('R$ 6,40')` |
+| `checkout.spec.ts` | 155, 162 | `fill('6,50')` | dígitos `'650'` — as metas l.158/184 (`R$ 6,50`) já conferem |
+
+### Tarefas
+
+| ID | ACs | Agente | Descrição | Arquivos permitidos | Depende de | Testes/comandos | Evidência esperada |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| T-20 | AC-27 (base técnica) | angular-dev | Criar o helper puro em `apps/web/src/app/shared/money/money.ts` (+ `money.spec.ts`): `digitsFromInput(raw)`, `formatBrlFromDigits(digits)`, `numberFromDigits(digits)`, `digitsFromNumber(value)` e os helpers de **quantidade** absorvidos dos dois sheets. Sem framework, sem `any`. **Não** tocar nos sheets (o wiring é T-21/T-22). | `apps/web/src/app/shared/money/**` | — | `npx nx test web` (filtro pelo arquivo) + `npx nx lint web` | specs do helper verdes: `''/3/30/3015/123456`, colar, prefill e `numberFromDigits('') = null` |
+| T-21 | AC-27, AC-04, AC-10 | angular-dev | Ligar a máscara ao **preço planejado** de `item-form-sheet` (ts/html): estado = dígitos; `onPriceInput` recomputa `digitsFromInput`, grava o valor no DOM **imperativamente** (o `[value]` não re-renderiza quando o signal não muda) e mantém o caret no fim; `(beforeinput)` trata apagar (1 backspace = 1 dígito); `inputmode="numeric"` no `#item-price`; payload por `numberFromDigits` (vazio ⇒ `null`, AC-04); prefill pela máscara. Atualizar `item-form-sheet.spec.ts` e as asserções de **item** em `shopping-list-page.spec.ts`. | `apps/web/src/app/features/shopping-list/item-form-sheet.{ts,html,spec.ts}`, `apps/web/src/app/features/shopping-list/shopping-list-page.spec.ts` | T-20 | `npx nx test web` + `npx nx lint web` | suíte `web` verde; máscara, payload, prefill e opcional-vazio provados |
+| T-22 | AC-27, AC-13, AC-15 | angular-dev | Ligar a máscara ao **preço por unidade** de `purchase-sheet` (ts/html), com o mesmo comportamento de T-21; o preço **começa vazio** (RN-13/AC-15) e vazio bloqueia com erro **sem** requisição (AC-13); o draft (RN-12) reaparece na máscara. Atualizar `purchase-sheet.spec.ts` e as asserções de **compra** em `shopping-list-page.spec.ts`. | `apps/web/src/app/features/shopping-list/purchase-sheet.{ts,html,spec.ts}`, `apps/web/src/app/features/shopping-list/shopping-list-page.spec.ts` | T-20 | `npx nx test web` + `npx nx lint web` | suíte `web` verde; máscara, prefill-draft e obrigatório-vazio provados |
+| T-23 | AC-27 (+ AC-04/AC-10/AC-13/AC-15/AC-25) | test-engineer | Jornada(ns) Playwright herméticas do AC-27 nos **dois** campos (digitar `3/30/3015`, exibir `R$ 0,03`/`R$ 0,30`/`R$ 30,15`, payload numérico no *fake api*), com apagar/colar, prefill na edição e preservação no desmarcar; ajustar os `fill`/`toHaveValue` da tabela de impacto. | `apps/web-e2e/**` | T-21, T-22 | `npx nx e2e web-e2e -- --grep "máscara"` e depois `npx nx e2e web-e2e` | corrida verde (filtro **e** completa) + matriz coberta |
+
+### Ordem e paralelismo
+
+- **Sequencial estrita: T-20 → T-21 → T-22 → T-23.** O limite de duas tarefas
+  simultâneas **não é usado** aqui.
+- **Correção da premissa:** T-21 e T-22 **não** têm arquivos disjuntos — **ambos**
+  editam `apps/web/src/app/features/shopping-list/shopping-list-page.spec.ts`
+  (T-21 nas asserções de **item**, ~l.449-517; T-22 nas de **compra**,
+  ~l.270-371). Como o arquivo é o mesmo, rodá-los em paralelo colidiria; por isso
+  são sequenciais, e T-23 depende de os dois terminarem (o E2E exercita as duas
+  telas).
+
+### Riscos e trade-offs
+
+- **Teclado do celular:** `inputmode="numeric"` (só nos campos de preço) abre o
+  teclado numérico, mas **não** garante ausência de vírgula/ponto/sinal em todos
+  os aparelhos — a máscara **descarta** qualquer não-dígito, então o
+  comportamento não depende do teclado. A **quantidade** mantém
+  `inputmode="decimal"` (RN-06).
+- **Caret/reformatação:** ao reescrever o valor formatado, o caret **volta para o
+  fim**; editar no meio não é suportado (trade-off aceito de uma máscara de
+  centavos, documentado). Se o `input` do framework não re-renderizar (signal
+  inalterado, ex.: digitar letra), o DOM precisa ser sobrescrito
+  **imperativamente** — senão o texto inválido “colaria” na tela.
+- **Apagar/formatting chars:** a fonte de verdade é a **string de dígitos**;
+  recomputar os dígitos a cada `input` já cobre backspace no fim (ex.:
+  `R$ 30,15` → apagar → `R$ 30,1` → dígitos `301` → `R$ 3,01`). O
+  `(beforeinput)` existe para o caso de o caractere apagado ser de **formatação**
+  (`R$`, espaço, vírgula), garantindo **1 backspace = 1 dígito** — evita a
+  estranheza de `R$ 0,03` exigir vários backspaces. Em navegadores sem
+  `beforeinput`, o *fallback* é a recomputação por `input` (aceitável, sem perda
+  de dado).
+- **Colar texto não numérico:** mantém apenas dígitos (ex.: `abc12,34` → `1234`
+  → `R$ 12,34`). Sem rejeição/erro — é a regra do CD-15.
+- **`aria-invalid`/`aria-describedby` preservados:** a estrutura de erro do campo
+  não muda; só os textos "número inválido"/"negativo" deixam de ter caminho pela
+  digitação (a regra defensiva **permanece** no código, agora inalcançável pela
+  UI — RN-21/AC-27). Em **compra**, o caminho "Informe o preço por unidade."
+  continua vivo e é o que AC-13 prova.
+- **Precisão:** sem limite artificial (CD-15); como o payload é `number`, o limite
+  prático é a precisão do serviço/`Number` — aceito, nada novo.
+
+### Decisões
+
+- **Nenhuma ADR nova** (formatação de entrada da PWA; sem contrato, dados ou
+  ownership). **Revisão arquitetural não obrigatória** (motivo acima).
+- **Helper em `apps/web/src/app/shared/money/`** (puro, testável por
+  `npx nx test web`); o módulo **absorve** os helpers de quantidade — uma única
+  verdade para dinheiro e decimal. Não vai para `libs/shared/util`/`libs/ui-web`
+  (scaffolds sem alvo de teste) nem para `libs/contracts` (contrato HTTP).
+- **Estado = dígitos**; exibição e payload derivados; DOM sobrescrito
+  imperativamente; caret no fim; `inputmode="numeric"` só no preço.
+- **Regra defensiva "preço ≥ 0" (RN-06/CD-08) permanece no código**, agora
+  **inalcançável pela digitação** (RN-21): os dois casos de teste que digitavam
+  `-1` são **reescritos** para a máscara — não removidos por conveniência, e sim
+  porque o caminho de entrada mudou pela spec *(item de aprovação — ver abaixo)*.
+- **Nada da Rodada 1 muda de prova;** a revalidação cobre AC-27 + os cross-refs.
+- **Recomendações não bloqueantes (não são tarefas):** registrar o padrão da
+  máscara no `GUIA-DESIGN` §5 (campos) e, quando `item-row` for tocado por outra
+  demanda, reusar `formatBrlFromDigits` no lugar do `formatPrice` local.
+
+### Gate do plano da Rodada 2
+
+- [x] Todas as tarefas referenciam ao menos um `AC-*` (T-20 é técnica e declara
+      por quê: cria a base que T-21/T-22 usam para cumprir AC-27).
+- [x] Tarefas pequenas, com escopo de um módulo/responsabilidade e comando de
+      teste declarado (`npx nx test web` / `npx nx e2e web-e2e`).
+- [x] `Superfície de UI: sim` declarada com justificativa (ADR 0008).
+- [x] Matriz AC ↔ E2E da Rodada 2 completa (AC-27 + cross-refs) e tarefa
+      Playwright (**T-23**) em `apps/web-e2e` com `npx nx e2e web-e2e` (ou filtro)
+      como evidência esperada.
+- [x] Dependências, arquivos permitidos, testes e evidências explícitos; ordem
+      sequencial declarada e a ausência de paralelismo **justificada** (mesmo
+      arquivo em T-21/T-22).
+- [x] Contratos e ownership **inalterados** (payload segue número; nenhum DTO,
+      migração ou backend tocado) — declarado.
+- [x] Revisão arquitetural avaliada: **não obrigatória**, com motivo declarado.
+- [x] Impacto nos testes existentes mapeado **a partir do código** (tabela com
+      arquivo/linha), com a T dona de cada ajuste.
+- [x] Não há decisão de comportamento, contrato ou arquitetura em aberto: a spec
+      da Rodada 2 está aprovada (RN-21/AC-27/CD-14/CD-15; D-02 resolvida).
+- [ ] **Aprovação do usuário da Rodada 2** — pendente. O gate **só fecha** com a
+      frase canônica abaixo registrada pelo responsável **após** a aprovação (não
+      escrita por conta própria nesta fase):
+
+```text
+Aprovado pelo usuário em AAAA-MM-DD
+```
+
+### O que o usuário precisa aprovar (Rodada 2)
+
+1. **Escopo e abordagem:** máscara de centavos em BRL nos **dois** campos de
+   preço, com a **string de dígitos** como estado de verdade; exibição `R$ x,xx`
+   (sem milhar); payload **número** (contrato inalterado); vazio = `null`.
+2. **Local do helper:** `apps/web/src/app/shared/money/` (puro, coberto por
+   `npx nx test web`), absorvendo também os helpers de **quantidade** — e a
+   justificativa de **não** usar `libs/shared/util`/`libs/ui-web` (sem alvo de
+   teste).
+3. **As 4 tarefas (T-20…T-23)** e a **ordem sequencial sem paralelismo**, com a
+   correção de que T-21/T-22 compartilham `shopping-list-page.spec.ts`.
+4. **Reescrita dos dois casos de teste que digitavam `-1`** (item e compra): a
+   regra defensiva "preço ≥ 0" **permanece** no código, mas fica **inalcançável
+   pela digitação**; os testes passam a provar a máscara (nenhum teste é
+   removido por conveniência).
+5. **Estratégia de testes e evidência:** matriz AC ↔ E2E da Rodada 2 + **T-23**
+   Playwright (`npx nx e2e web-e2e`, ou filtro `-- --grep "máscara"`).
+6. **A frase canônica** `Aprovado pelo usuário em YYYY-MM-DD` — registrada por
+   você/orquestrador **após** a aprovação; sem ela o gate da Rodada 2 segue
+   aberto.
