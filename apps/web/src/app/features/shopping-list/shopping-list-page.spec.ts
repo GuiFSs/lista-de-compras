@@ -468,6 +468,54 @@ describe('ShoppingListPage', () => {
     expect((element.querySelector('#item-price') as HTMLInputElement).value).toBe('12,5');
   });
 
+  it('salvar a edição atualiza a linha e confirma com toast (AC-10)', async () => {
+    store.status.set('loaded');
+    store.items.set([
+      item({ id: 'a', name: 'Arroz', plannedQuantity: 2, unit: 'kg', plannedPrice: 12.5 }),
+    ]);
+    store.updateItem.mockImplementation(
+      async (id: string, request: UpdateShoppingListItemRequest): Promise<UpdateItemOutcome> => {
+        store.items.set([
+          item({
+            id,
+            name: request.name ?? 'Arroz',
+            plannedQuantity: request.plannedQuantity ?? null,
+            unit: request.unit ?? null,
+            plannedPrice: request.plannedPrice ?? null,
+          }),
+        ]);
+        return { kind: 'updated' };
+      },
+    );
+
+    const fixture = mount();
+    const element = root(fixture);
+    const show = vi.spyOn(TestBed.inject(ToastService), 'show');
+
+    (element.querySelector('.item-row__actions') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    buttonByText(element, 'Editar').click();
+    fixture.detectChanges();
+
+    const name = element.querySelector('#item-name') as HTMLInputElement;
+    name.value = 'Arroz integral';
+    name.dispatchEvent(new Event('input'));
+    (element.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    await flush();
+    fixture.detectChanges();
+
+    expect(store.updateItem).toHaveBeenCalledWith('a', {
+      name: 'Arroz integral',
+      plannedQuantity: 2,
+      unit: 'kg',
+      plannedPrice: 12.5,
+    });
+    expect(show).toHaveBeenCalledWith('Item atualizado');
+    // Sucesso fecha o formulário e a linha passa a exibir os novos valores.
+    expect(element.querySelector('.item-form')).toBeNull();
+    expect(element.querySelector('.item-row__name')?.textContent?.trim()).toBe('Arroz integral');
+  });
+
   it('a falha de mutação do store vira um toast persistente e é consumida (AC-23)', async () => {
     store.status.set('loaded');
     const fixture = mount();
@@ -695,6 +743,32 @@ describe('ShoppingListPage', () => {
     expect(store.checkout).toHaveBeenCalledTimes(1);
     expect(store.items()).toEqual(before);
     expect(element.querySelectorAll('.item-row__name')).toHaveLength(2);
+  });
+
+  it('concluir com tudo comprado cai no estado vazio, nunca numa área em branco (AC-03)', async () => {
+    store.status.set('loaded');
+    store.items.set([PURCHASED]);
+    store.checkout.mockImplementation(async (): Promise<MutationOutcome> => {
+      store.items.set([]);
+      return { kind: 'ok' };
+    });
+
+    const fixture = mount();
+    const element = root(fixture);
+
+    chrome.actions()[0].run();
+    fixture.detectChanges();
+    buttonByText(element, 'Concluir compra').click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(store.items()).toEqual([]);
+    expect(element.querySelector('.list')).toBeNull();
+    expect(element.querySelector('.empty__title')?.textContent?.trim()).toBe(
+      'Sua lista está vazia',
+    );
+    // Mesma composição do vazio da primeira carga: uma única primary (AC-25).
+    expect(element.querySelectorAll('.btn-primary')).toHaveLength(1);
   });
 
   it('o resumo da conclusão não pede mercado nem data (AC-21)', () => {

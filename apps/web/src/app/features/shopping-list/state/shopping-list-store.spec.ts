@@ -37,6 +37,7 @@ describe('ShoppingListStore', () => {
 
   beforeEach(() => {
     TestBed.resetTestingModule();
+    window.localStorage.clear();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting()],
     });
@@ -416,6 +417,80 @@ describe('ShoppingListStore', () => {
       // A janela do primeiro item foi substituída e não gera restauração.
       http.expectNone(url('/items/a/restore'));
       expect(store.pendingUndo()).toBeNull();
+    });
+  });
+
+  describe('o navegador não guarda o estado da lista (AC-24/RN-19)', () => {
+    it('criar/editar/marcar/excluir não gravam nada em localStorage', async () => {
+      const load = store.load();
+      http.expectOne(BASE_URL).flush({ items: [item({ id: 'a', name: 'Café' })] });
+      await load;
+
+      const create = store.createItem({ name: 'Arroz' });
+      http
+        .expectOne(url('/items'))
+        .flush({ items: [item({ id: 'a', name: 'Café' }), item({ id: 'b', name: 'Arroz' })] });
+      await create;
+
+      const update = store.updateItem('b', { name: 'Arroz integral' });
+      http
+        .expectOne(url('/items/b'))
+        .flush({ items: [item({ id: 'a', name: 'Café' }), item({ id: 'b', name: 'Arroz integral' })] });
+      await update;
+
+      const mark = store.markItemPurchased('b', {
+        purchasedQuantity: 1,
+        unit: 'pacote',
+        unitPrice: 5,
+      });
+      http.expectOne(url('/items/b/purchase')).flush({
+        items: [
+          item({ id: 'a', name: 'Café' }),
+          item({ id: 'b', name: 'Arroz integral', purchased: PURCHASED }),
+        ],
+      });
+      await mark;
+
+      const remove = store.removeItem('a');
+      http
+        .expectOne(url('/items/a'))
+        .flush({ items: [item({ id: 'b', name: 'Arroz integral', purchased: PURCHASED })] });
+      await remove;
+
+      // O estado é do serviço (RN-19): o navegador não guarda cópia da lista.
+      expect(window.localStorage.length).toBe(0);
+    });
+
+    it('recarregar é um novo GET: instância nova não hidrata do navegador', async () => {
+      const load = store.load();
+      http
+        .expectOne(BASE_URL)
+        .flush({ items: [item({ id: 'a', name: 'Café', purchased: PURCHASED })] });
+      await load;
+      expect(store.items()).toHaveLength(1);
+
+      // "Recarregar a PWA" = injetor novo: nada sobrevive em memória e a lista
+      // só volta pelo GET no serviço (inclusive o item comprado).
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [provideHttpClient(), provideHttpClientTesting()],
+      });
+      const reloaded = TestBed.inject(ShoppingListStore);
+      const reloadedHttp = TestBed.inject(HttpTestingController);
+
+      expect(reloaded.status()).toBe('loading');
+      expect(reloaded.items()).toEqual([]);
+
+      const reload = reloaded.load();
+      reloadedHttp
+        .expectOne(BASE_URL)
+        .flush({ items: [item({ id: 'a', name: 'Café', purchased: PURCHASED })] });
+      await reload;
+
+      expect(reloaded.status()).toBe('loaded');
+      expect(reloaded.items().map((value) => value.id)).toEqual(['a']);
+      expect(reloaded.items()[0].purchased).toEqual(PURCHASED);
+      reloadedHttp.verify();
     });
   });
 });
