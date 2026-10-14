@@ -1,13 +1,15 @@
 # Estado da feature — Lista de compras
 
-**Fase atual:** Implementação
+**Fase atual:** Validação
 **Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
-`Aprovado pelo usuário em 2026-10-13` (gate do plano fechado)
+`Aprovado pelo usuário em 2026-10-13`; **gate de Implementação e testes fechado**
+(T-01…T-19 concluídas, suítes verdes, corrida Playwright registrada)
 **Última atualização:** 2026-10-14
-**Próxima ação:** Onda 11 — **T-17** (jornadas Playwright em `apps/web-e2e`;
-dep T-14/T-16) — sozinha. É o **gate de ADR 0008**; o `feature-validator` **não**
-deve ser delegado antes de T-17 fechar (superfície de UI = sim e o handoff do
-`test-engineer` precisa registrar a corrida Playwright).
+**Próxima ação:** delegar o `feature-validator` (fase de **Validação**). Todas as
+tarefas `T-01…T-19` estão concluídas, o **gate de UI da ADR 0008 está satisfeito**
+(corrida Playwright registrada pelo `test-engineer` e reconferida pelo
+orquestrador: `npx nx e2e web-e2e` → **32 verdes**, com as 6 jornadas de UI) e o
+mapa `AC → jornada/teste` está no handoff de T-17. Nenhum AC ou T reaberto.
 
 ## Artefatos
 
@@ -37,15 +39,19 @@ deve ser delegado antes de T-17 fechar (superfície de UI = sim e o handoff do
 
 ## Execução
 
-- Tarefa em andamento: **T-17** (jornadas Playwright; `test-engineer`)
-- Tarefas concluídas: T-01 … T-16, T-18 (falta T-17)
+- Tarefa em andamento: **nenhuma**
+- Tarefas concluídas: T-01 … T-19 (todas)
 - Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres real**
   (T-15) + **corrida de duplicidade corrigida** (T-18) — suíte
   `shopping-list-service` com **162 testes**, 14 arquivos; PWA completa em código e
   com **mapa AC → teste** (T-10–T-14, T-16) — suíte `web` com **177 testes**, 20
-  arquivos; E2E de auth sem regressão (6 verdes)
-- ACs com evidência unit/integração: AC-01–AC-26 (mapa em T-16); falta a **matriz
-  Playwright** da UI (T-17) para fechar o gate de evidência de UI
+  arquivos; **E2E de UI da feature (T-17)** — `apps/web-e2e` com **32 testes**
+  (6 jornadas da lista + 6 de auth), `npx nx e2e web-e2e` → **32 verdes**;
+  `npx nx typecheck web` verde (T-19) e `npx nx sync:check` verde
+- ACs com evidência unit/integração: AC-01–AC-26 (mapa em T-16)
+- ACs com evidência Playwright (UI): AC-01–AC-08, AC-10–AC-20, AC-22–AC-26 (matriz
+  do `PLAN.md`; AC-09 é backend-only — integração). **Gate de UI de ADR 0008
+  satisfeito.**
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
@@ -85,8 +91,136 @@ deve ser delegado antes de T-17 fechar (superfície de UI = sim e o handoff do
   (soma aplicada)** do `POST /items`, o orquestrador autorizou uma alteração
   **aditiva** em `create-shopping-list-item.use-case.ts`/`shopping-list-result.ts`
   (`created?: boolean`), implementada e com testes verdes.
+- **Regressão de `typecheck` causada pela T-10 (corrigida na T-19, `b16f000`):**
+  `apps/web` passou a importar `@lista/contracts` (T-10, `5c5c67f`) e a *project
+  reference* foi adicionada **só** ao `tsconfig.app.json` (`f5a68a4`) — o
+  `tsconfig.spec.json` ficou sem ela, então `npx nx typecheck web` falhava com
+  **10 erros** (`TS6059` + `TS6307`). `build`/`test`/`lint`/`e2e` **não** pegam
+  porque usam outros tsconfigs. Prova de que é **nossa** regressão e não
+  pré-existente: `git log --reverse -S"@lista/contracts" -- apps/web/src` → o
+  primeiro commit é `5c5c67f` (T-10). Correção: a mesma reference no
+  `tsconfig.spec.json` (T-19). **O handoff de T-17 rotulou esses erros como
+  "pré-existentes/alheios" — está incorreto; corrigido aqui.**
+- **Correção de flake no E2E de auth (T-17, fora do escopo da feature):**
+  `apps/web-e2e/src/app.spec.ts` › "duplo toque gera uma requisição (AC-04)" era
+  **instável sob carga** (falhava com 2 requisições no run completo e passava
+  isolado). Causa: o teste simulava o duplo toque com `click()` + `click({ force:
+  true })`; o 2º `click` **re-resolve o locator pelo nome acessível** e, com a 1ª
+  resposta já de volta, o "2º toque" virava um **envio novo** (não um duplo toque).
+  O comportamento do produto está correto (`isSubmitting` síncrono + `disabled`).
+  Corrigido para `submit.dblclick()` (mesmo padrão já usado em AC-26), sem mudar a
+  asserção (`requests === 1`). Evidência antes/depois registrada no handoff de T-17.
+  **Revisar/aceitar ou reverter** livremente — não altera a evidência de nenhum AC
+  da lista.
+- **Observação de UI (não bloqueante, sem AC):** o toast de **erro persistente**
+  (AC-23) fica em `--z-toast (300)`, acima do `--z-overlay (200)` dos bottom
+  sheets, e é ancorado logo acima do bottom nav — ele **cobre** os botões do rodapé
+  de um sheet aberto. As jornadas de T-17 contornam descartando o toast (botão
+  "Dispensar", previsto em AC-23) antes de interagir com o sheet. Se o
+  comportamento desejado for outro (ex.: o sheet empurrar/ocultar o toast), é
+  decisão de design para uma tarefa própria — **não** foi alterado nesta rodada.
 
 ## Últimos handoffs
+
+### T-19 — correção do `typecheck` do `web` (`angular-dev`)
+
+- Estado: concluída
+- Arquivos alterados: `apps/web/tsconfig.spec.json` (+ bloco `references` para
+  `../../libs/contracts/tsconfig.lib.json`, espelhando o `tsconfig.app.json`)
+- ACs cobertos: nenhum (config de build; sem mudança de comportamento/contrato/UI)
+- Testes executados: `npx nx typecheck web` → **verde** (antes: `Found 10 errors`
+  — `TS6059` + `TS6307`); `npx nx sync:check` verde; `npx nx test web` (**177
+  verdes**, 20 arquivos), `npx nx lint web` e `npx nx build web` verdes
+- Decisões registradas: correção mínima de **uma** *project reference* — sem
+  ajuste em `apps/web/tsconfig.json` e sem relaxar `strict`/`rootDir`. O
+  `tsconfig.spec.json` é um **projeto TS separado** (compila `src/**/*.ts`
+  **incluindo** specs, com `types: ["vitest/globals"]`), e *project reference*
+  vale por projeto: declarar em `app.json` não vale para `spec.json`. `build`
+  (esbuild) e `test` (Vitest/esbuild) **não** rodam `tsc --build`, por isso
+  passavam; só o `typecheck` valida a *file list* e o `rootDir` de cada projeto
+  referenciado
+- Observações: tarefa **corretiva** autorizada pelo orquestrador (mesmo
+  tratamento do `f5a68a4`), fora do `PLAN.md`; o handoff de T-17 rotulava esses
+  erros como "pré-existentes/alheios" — **incorreto**, e a prova é que
+  `git log --reverse -S"@lista/contracts" -- apps/web/src` aponta `5c5c67f`
+  (T-10) como o primeiro commit
+- Commit: `b16f000`
+
+### T-17 — E2E Playwright das jornadas da UI (`test-engineer`)
+
+- Estado: concluída
+- Arquivos alterados (novos):
+  `apps/web-e2e/src/support/session.ts` (login hermético com JWT fake),
+  `apps/web-e2e/src/support/shopping-list-fake-api.ts` (contrato HTTP em memória
+  tipado por `@lista/contracts`; rota por **RegExp** `\/api\/shopping-list(?:\/|$)`,
+  exige `Authorization` e devolve `Bearer`; hooks `failNext`/`setLoadFailure`,
+  `delayMs`, `requests()`/`countRequests()`),
+  `apps/web-e2e/src/support/shopping-list-journey.ts` (`openShoppingList`),
+  `apps/web-e2e/src/support/ui.ts` (medidas/tokens/toque; `listRows` isola o `main`),
+  e as **6 jornadas** em `apps/web-e2e/src/shopping-list/`:
+  `load.spec.ts` (6), `items.spec.ts` (6), `duplicates.spec.ts` (2),
+  `purchase.spec.ts` (7), `delete-undo.spec.ts` (1), `checkout.spec.ts` (4) — 26
+  cenários. Alterados: `apps/web-e2e/tsconfig.json` (project reference de
+  `libs/contracts` para o typecheck do e2e) e `apps/web-e2e/src/app.spec.ts`
+  (flake de duplo toque — ver Pendências).
+- ACs cobertos (Playwright/UI): AC-01–AC-08, AC-10–AC-20, AC-22–AC-26; **AC-09 é
+  backend-only** (integração `npx nx test shopping-list-service`). ≥1 jornada
+  (`checkout.spec.ts` — AC-24) afirma a base `http://localhost:3000/api/shopping-list`
+  **com** `Authorization` (ADR 0009).
+- Mapa `AC → jornada/teste` (títulos = matriz do `PLAN.md`):
+  - AC-01 → `load.spec.ts` "abre na Lista: app bar … bottom nav … desabilitadas que não navegam"
+  - AC-02 → `load.spec.ts` "primeira carga mostra skeleton na forma da lista (sem spinner) e depois a lista"
+  - AC-03 → `load.spec.ts` "lista vazia mostra empty state com CTA primary Adicionar item"
+  - AC-04 → `items.spec.ts` "adiciona item só com o nome: aparece pendente com opcionais vazios"
+  - AC-05 → `items.spec.ts` "salvar sem nome/só com espaços: erro no campo e nenhuma requisição"
+  - AC-06 → `items.spec.ts` "unidade oferece exatamente as 7 opções, sem digitação livre (item e compra)"
+  - AC-07 → `duplicates.spec.ts` "`cafe`/`Café`: pergunta somar; confirmar soma e mantém um item; recusar mantém o form com o digitado"
+  - AC-08 → `duplicates.spec.ts` "editar para um nome existente: conflito visível no formulário, a edição **não** é aplicada e **nada** é somado; renomear para o próprio nome aplica"
+  - AC-09 → **backend-only** (integração com Postgres; sem jornada de UI)
+  - AC-10 → `items.spec.ts` "editar planejados e salvar atualiza a linha"
+  - AC-11 → `delete-undo.spec.ts` "excluir sai na hora; Desfazer restaura com os mesmos dados (inclusive comprado); sem desfazer permanece excluído"
+  - AC-12 → `purchase.spec.ts` "marcar com os 3 campos: item comprado com `line-through` e alvo ≥44px, **continua na lista**"
+  - AC-13 → `purchase.spec.ts` "sem um dos campos obrigatórios: erro no campo e nenhuma requisição de marcação"
+  - AC-14 → `purchase.spec.ts` "quantidade diferente avisa e só marca após confirmar; sem quantidade planejada não avisa"
+  - AC-15 → `purchase.spec.ts` "pré-preenche quantidade/unidade planejadas e deixa o preço por unidade vazio"
+  - AC-16 → `purchase.spec.ts` "desmarcar volta a pendente e reabrir preserva os digitados; recarregar usa o prefill de AC-15"
+  - AC-17 → `purchase.spec.ts` "item comprado continua podendo ser editado e excluído"
+  - AC-18 → `load.spec.ts` "com pendentes e comprados, os pendentes aparecem primeiro"
+  - AC-19 → `checkout.spec.ts` "resumo N saem/M permanecem; confirmar remove só os comprados + toast; cancelar mantém a lista"
+  - AC-20 → `checkout.spec.ts` "concluir sem itens comprados mantém a lista exatamente como estava"
+  - AC-21 → `checkout.spec.ts` "o resumo não pede mercado nem data" (+ integração: sem rota/tabela de histórico)
+  - AC-22 → `load.spec.ts` "falha ao carregar: erro visível na área + Tentar novamente recarrega e exibe a lista"
+  - AC-23 → `items.spec.ts` + `purchase.spec.ts` "falha de rede ao salvar/marcar/concluir: toast persistente, digitado preservado, sem estado fantasma"
+  - AC-24 → `checkout.spec.ts` "adicionar/editar/marcar/excluir e **recarregar a PWA**: estado mantido (GET refeito no serviço; nada em `localStorage`)"
+  - AC-25 → `load.spec.ts` "viewport 360px e desktop (`--container-max`), tema claro e escuro, uma única primary, alvos ≥44px, `:focus-visible` visível"
+  - AC-26 → `items.spec.ts` "duplo toque no Salvar: rótulo `Salvando…`, botão desabilitado e **1** requisição"
+- Testes executados (comando + resultado, corrida real):
+  - `npx nx e2e web-e2e` → `Running 32 tests using 6 workers` → **32 passed (28.2s)**
+    (6 jornadas de auth + 26 da lista); portas 4200/3001/3000 livres antes da corrida
+  - Confirmação de não-flake: `npx nx e2e web-e2e --skip-nx-cache` → **32 passed** (2×)
+  - Filtro por jornada: `npx nx e2e web-e2e -- --grep "Lista —"` → **26 passed (24.6s)**
+  - `npx nx lint web-e2e` → **verde, 0 warnings** (o warning pré-existente
+    `no-force-option` saiu junto com o `force` do flake de auth)
+  - `npx tsc --build tsconfig.json --emitDeclarationOnly` (cwd `apps/web-e2e`) →
+    **exit 0**. Nota do orquestrador: `npx nx typecheck web-e2e` fica bloqueado
+    pelo `web:typecheck`, que falha com 10 erros — **não** são pré-existentes nem
+    alheios: são **regressão da T-10** (falta a *project reference* em
+    `apps/web/tsconfig.spec.json`), corrigida na **T-19**. O `tsc --build` direto
+    do e2e passa porque compila só o projeto do e2e, não o grafo do `web`.
+- Decisões registradas: interceptação **hermética** por `page.route` com RegExp (glob
+  `**/api/shopping-list` é ancorado no fim e perde sub-rotas) e store em memória
+  tipado por `@lista/contracts` (`ITEM_UNITS`); `playwright.config.mts` **inalterado**
+  (sem novo `webServer`); `localStorage` só com `lcd.accessToken` (AC-24);
+  `listRows` limita ao `main` porque o bottom nav também tem `listitem`; skeleton
+  provado por `role`/`aria-busy` (o `role=status` não recebe nome acessível do
+  conteúdo); duplo toque via `locator.dblclick()` (o clique por coordenada não
+  disparava o submit)
+- Observações: sem `any`, sem `test.skip`/`passWithNoTests`, sem `waitForTimeout`;
+  a base `http://localhost:3000/api/shopping-list` + `Authorization` é afirmada em
+  AC-24 (ADR 0009); ver Pendências para o flake de auth (corrigido) e para o toast
+  sobre o sheet (apenas observado)
+- Commit: `61a8335` (o orquestrador reconferiu `npx nx e2e web-e2e` → **32 passed
+  (28.2s)** antes de commitar)
 
 ### T-16 — auditoria/completude dos testes unitários da PWA (`test-engineer`)
 
