@@ -1,15 +1,16 @@
 # Estado da feature — Lista de compras
 
-**Fase atual:** Validação
-**Gate atual:** plano **aprovado** — `PLAN.md` com a frase canônica
-`Aprovado pelo usuário em 2026-10-13`; **gate de Implementação e testes fechado**
-(T-01…T-19 concluídas, suítes verdes, corrida Playwright registrada)
+**Fase atual:** Validação — **aprovada** (26/26 ACs pelo `feature-validator`)
+**Gate atual:** `SPEC.md` e `PLAN.md` **aprovados** (`Aprovado pelo usuário em
+2026-10-13`); **gate de Implementação e testes fechado** (T-01…T-19 concluídas,
+suítes verdes, corrida Playwright registrada); **gate de Validação fechado**
+(`VALIDATION.md` com evidência por AC e checklists de design/documentação)
 **Última atualização:** 2026-10-14
-**Próxima ação:** delegar o `feature-validator` (fase de **Validação**). Todas as
-tarefas `T-01…T-19` estão concluídas, o **gate de UI da ADR 0008 está satisfeito**
-(corrida Playwright registrada pelo `test-engineer` e reconferida pelo
-orquestrador: `npx nx e2e web-e2e` → **32 verdes**, com as 6 jornadas de UI) e o
-mapa `AC → jornada/teste` está no handoff de T-17. Nenhum AC ou T reaberto.
+**Próxima ação:** **decisão do usuário** — push da branch e abertura de PR
+(a skill `git-workflow` exige aprovação explícita e separada para push e para
+PR; o merge é uma terceira aprovação). Antes disso, decidir o que fazer com os
+3 `.opencode/agents/*.md` modificados (pré-existentes, fora desta feature).
+Nenhum AC ou T reaberto.
 
 ## Artefatos
 
@@ -25,7 +26,9 @@ mapa `AC → jornada/teste` está no handoff de T-17. Nenhum AC ou T reaberto.
   contrato entre serviços, sem evento, sem mudança de ownership); revisão opcional e
   não bloqueante registrada no `PLAN.md` (limitada à ADR 0009 e ao contrato
   PWA↔serviço)
-- Validação: pendente (`VALIDATION.md` só é criado na fase de Validação)
+- Validação: `docs/features/shopping-list/VALIDATION.md` — **aprovada em
+  2026-10-14** pelo `feature-validator` (**26/26 ACs aprovados**, 0 reprovados);
+  evidência por AC com Playwright nos ACs observáveis na UI e integração no AC-09
 
 ## Escopo desta rodada (confirmado com o usuário)
 
@@ -52,6 +55,9 @@ mapa `AC → jornada/teste` está no handoff de T-17. Nenhum AC ou T reaberto.
 - ACs com evidência Playwright (UI): AC-01–AC-08, AC-10–AC-20, AC-22–AC-26 (matriz
   do `PLAN.md`; AC-09 é backend-only — integração). **Gate de UI de ADR 0008
   satisfeito.**
+- **Validação:** `VALIDATION.md` registra **26/26 ACs aprovados**; a corrida
+  Playwright (`npx nx e2e web-e2e` → 32 passed) foi executada pelo
+  `feature-validator` e reconferida pelo orquestrador; banco deixado com 0 linhas
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
@@ -119,8 +125,54 @@ mapa `AC → jornada/teste` está no handoff de T-17. Nenhum AC ou T reaberto.
   "Dispensar", previsto em AC-23) antes de interagir com o sheet. Se o
   comportamento desejado for outro (ex.: o sheet empurrar/ocultar o toast), é
   decisão de design para uma tarefa própria — **não** foi alterado nesta rodada.
+- **Recomendações não bloqueantes da validação** (o `feature-validator` julgou as
+  três como **não** bloqueantes — ver `## Julgamentos exigidos pelo DoD` no
+  `VALIDATION.md`); ficam para decisão do usuário/features futuras:
+  1. **Toast × sheet:** decidir se o toast de erro deve cobrir o rodapé do sheet
+     ou se o sheet deve ocultá-lo/empurrá-lo (hoje `--z-toast` 300 > `--z-overlay`
+     200, com o toast ancorado acima do bottom nav).
+  2. **Nit de doc em `libs/contracts/README.md`:** explicitar que, na borda,
+     **JSON malformado responde 400 antes do `401`** do `JwtAuthGuard` (precedência
+     de parse; paridade com o `auth-service`). Não é pendência de contrato.
+  3. **`docs/lessons/`:** promover os aprendizados de T-18 (erro de unicidade pelo
+     port, recuperação *bounded*) e T-19 (`typecheck` valida *project references*;
+     `build`/`test` não) se forem considerados transferíveis.
+- **Higiene antes do PR:** os 3 arquivos `.opencode/agents/*.md` aparecem
+  modificados (**pré-existentes, fora desta feature** — alteram `bash: deny` →
+  `bash: ask`). Decidir se entram em algum commit, viram commit próprio ou ficam de
+  fora; **nenhuma** T desta feature os tocou.
 
 ## Últimos handoffs
+
+### VALIDAÇÃO — feature aprovada (`feature-validator`)
+
+- Estado: **aprovada** — **26/26 ACs** (AC-01…AC-26), 0 reprovados, 0 a reabrir
+- Arquivo: `docs/features/shopping-list/VALIDATION.md` (novo; 230 linhas, template
+  completo: evidências por critério, checklist de documentação, checklist de design,
+  verificações transversais, pendências, julgamentos do DoD, comandos executados,
+  parecer)
+- Evidência: 25 ACs com cenário Playwright citado + corrida real; **AC-09**
+  backend-only comprovado por integração com Postgres real (índice único parcial +
+  `409` HTTP direto + corrida)
+- Comandos executados (resultado real, registrado no `VALIDATION.md`):
+  `npx nx e2e web-e2e` → **32 passed** (20.0s; `--skip-nx-cache` → 32 passed);
+  `npx nx test web` → **177 passed / 20 arquivos**; `db:migrate` + `npx nx test
+  shopping-list-service` → **162 passed / 14 arquivos**; `lint` (web, web-e2e,
+  shopping-list-service) verdes; `npx nx typecheck web` e `npx nx sync:check`
+  verdes; `shopping_list_items` com **0 linhas** ao final
+- Julgamentos exigidos pelo DoD (detalhados no `VALIDATION.md`): **(1)** toast de
+  erro persistente acima do rodapé do sheet — decisão de design, **não** viola AC
+  (AC-23 só exige nova tentativa possível, provada descartando o toast);
+  **(2)** deflake do E2E de auth preserva a prova (`requests === 1`), produção
+  intacta; **(3)** `400` de corpo malformado **antes** do `JwtAuthGuard` é ordem de
+  validação documentada (nada é retornado; paridade com o `auth-service`), nit de
+  doc, não pendência de contrato. **Nenhum dos três bloqueia.**
+- Decisões registradas: nenhuma ADR nova (ADR 0009 já versionada nesta feature)
+- Pendências: nenhuma bloqueante; recomendações não bloqueantes na seção
+  `## Pendências` abaixo
+- Commit: **este commit de docs** (`docs(shopping-list): registra a validacao
+  aprovada (26/26 ACs)`) — a referência é descritiva porque o `STATUS.md` está
+  dentro do próprio commit; o hash final está no `git log`
 
 ### T-19 — correção do `typecheck` do `web` (`angular-dev`)
 
