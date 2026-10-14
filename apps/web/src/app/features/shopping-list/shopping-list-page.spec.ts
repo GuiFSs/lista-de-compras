@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { computed, signal } from '@angular/core';
 import type {
   CreateShoppingListItemRequest,
+  MarkItemPurchasedRequest,
   ShoppingListItem,
   UpdateShoppingListItemRequest,
 } from '@lista/contracts';
@@ -9,7 +10,7 @@ import { DEFAULT_SHELL_TITLE, ShellChromeService } from '../../layout/shell-chro
 import { ToastService } from '../../ui';
 import { ShoppingListPage } from './shopping-list-page';
 import { ShoppingListStore, type ShoppingListStatus } from './state';
-import type { CreateItemOutcome, UpdateItemOutcome } from './state';
+import type { CreateItemOutcome, MutationOutcome, UpdateItemOutcome } from './state';
 
 /** Deixa as microtasks drenarem antes de checar a tela. */
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
@@ -65,6 +66,17 @@ class StoreStub {
       return Promise.resolve({ kind: 'updated' });
     },
   );
+  readonly markItemPurchased = vi.fn(
+    (id: string, request: MarkItemPurchasedRequest): Promise<MutationOutcome> => {
+      void id;
+      void request;
+      return Promise.resolve({ kind: 'ok' });
+    },
+  );
+  readonly unmarkItemPurchased = vi.fn((id: string): Promise<MutationOutcome> => {
+    void id;
+    return Promise.resolve({ kind: 'ok' });
+  });
 }
 
 describe('ShoppingListPage', () => {
@@ -214,19 +226,172 @@ describe('ShoppingListPage', () => {
     expect(store.load).toHaveBeenCalledTimes(2);
   });
 
-  it('toques nas ações da tela não mudam a lista por conta própria (sheets são T-12/T-13/T-14)', () => {
+  it('o alvo de um item pendente abre o sheet de compra sem tocar na lista (T-13)', () => {
     store.status.set('loaded');
     store.items.set([item({ name: 'Café' })]);
     const fixture = mount();
     const element = root(fixture);
 
     (element.querySelector('.list__add') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(element.querySelector('#item-name')).not.toBeNull();
+
+    (element.querySelector('.bottom-sheet__close') as HTMLButtonElement).click();
+    fixture.detectChanges();
     (element.querySelector('.item-row__toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.purchase-sheet')).not.toBeNull();
+    expect(store.markItemPurchased).not.toHaveBeenCalled();
+    expect(store.items()).toHaveLength(1);
+  });
+
+  it('o alvo de um item pendente abre o sheet com o prefill planejado; marcar confirma com toast (AC-12/AC-15)', async () => {
+    store.status.set('loaded');
+    store.items.set([item({ id: 'a', name: 'Arroz', plannedQuantity: 2, unit: 'kg' })]);
+    const fixture = mount();
+    const element = root(fixture);
+    const show = vi.spyOn(TestBed.inject(ToastService), 'show');
+
+    (element.querySelector('.item-row__toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.bottom-sheet__title')?.textContent?.trim()).toBe(
+      'Marcar como comprado',
+    );
+    expect((element.querySelector('#purchase-quantity') as HTMLInputElement).value).toBe('2');
+    expect((element.querySelector('#purchase-unit') as HTMLSelectElement).value).toBe('kg');
+    expect((element.querySelector('#purchase-price') as HTMLInputElement).value).toBe('');
+
+    const price = element.querySelector('#purchase-price') as HTMLInputElement;
+    price.value = '10';
+    price.dispatchEvent(new Event('input'));
+    (element.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    await flush();
+    fixture.detectChanges();
+
+    expect(store.markItemPurchased).toHaveBeenCalledWith('a', {
+      purchasedQuantity: 2,
+      unit: 'kg',
+      unitPrice: 10,
+    });
+    expect(show).toHaveBeenCalledWith('Item marcado como comprado');
+    // Sucesso fecha o sheet de compra.
+    expect(element.querySelector('.purchase-sheet')).toBeNull();
+  });
+
+  it('falha ao marcar mantém o digitado na tela e vira toast persistente (AC-23)', async () => {
+    const message = 'Falha de rede. Verifique a conexão e tente novamente.';
+    store.markItemPurchased.mockImplementation(async (): Promise<MutationOutcome> => {
+      store.mutationError.set(message);
+      return { kind: 'error', message };
+    });
+
+    store.status.set('loaded');
+    store.items.set([item({ id: 'a', name: 'Arroz' })]);
+    const fixture = mount();
+    const element = root(fixture);
+    const error = vi.spyOn(TestBed.inject(ToastService), 'error');
+
+    (element.querySelector('.item-row__toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    const quantity = element.querySelector('#purchase-quantity') as HTMLInputElement;
+    quantity.value = '2';
+    quantity.dispatchEvent(new Event('input'));
+    const unit = element.querySelector('#purchase-unit') as HTMLSelectElement;
+    unit.value = 'kg';
+    unit.dispatchEvent(new Event('change'));
+    const price = element.querySelector('#purchase-price') as HTMLInputElement;
+    price.value = '10';
+    price.dispatchEvent(new Event('input'));
+
+    (element.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    await flush();
+    fixture.detectChanges();
+
+    expect(error).toHaveBeenCalledWith(message);
+    expect(store.clearMutationError).toHaveBeenCalled();
+    // O sheet segue aberto com o digitado — a pessoa só precisa tentar de novo.
+    expect(element.querySelector('.purchase-sheet')).not.toBeNull();
+    expect((element.querySelector('#purchase-quantity') as HTMLInputElement).value).toBe('2');
+    expect((element.querySelector('#purchase-unit') as HTMLSelectElement).value).toBe('kg');
+    expect((element.querySelector('#purchase-price') as HTMLInputElement).value).toBe('10');
+  });
+
+  it('desmarcar devolve o item a pendente e reabrir o sheet preserva os digitados (AC-16)', async () => {
+    store.status.set('loaded');
+    const purchased = item({
+      id: 'item-1',
+      name: 'Arroz',
+      plannedQuantity: 1,
+      unit: 'kg',
+      purchased: {
+        quantity: 3,
+        unit: 'pacote',
+        unitPrice: 9.9,
+        purchasedAt: '2026-10-13T11:00:00.000Z',
+      },
+    });
+    store.items.set([purchased]);
+    const fixture = mount();
+    const element = root(fixture);
+    const show = vi.spyOn(TestBed.inject(ToastService), 'show');
+
+    (element.querySelector('.item-row__toggle') as HTMLButtonElement).click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(store.unmarkItemPurchased).toHaveBeenCalledWith('item-1');
+    expect(show).toHaveBeenCalledWith('Item desmarcado');
+
+    // A releitura do serviço traz o item pendente; o digitado fica na tela (RN-12/CD-04).
+    store.items.set([item({ id: 'item-1', name: 'Arroz', plannedQuantity: 1, unit: 'kg' })]);
+    fixture.detectChanges();
+    (element.querySelector('.item-row__toggle') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect((element.querySelector('#purchase-quantity') as HTMLInputElement).value).toBe('3');
+    expect((element.querySelector('#purchase-unit') as HTMLSelectElement).value).toBe('pacote');
+    expect((element.querySelector('#purchase-price') as HTMLInputElement).value).toBe('9,9');
+  });
+
+  it('toque duplo no alvo de desmarcar compartilha uma única requisição (AC-26)', async () => {
+    let resolveUnmark: (outcome: MutationOutcome) => void = () => undefined;
+    store.unmarkItemPurchased.mockImplementation(
+      () =>
+        new Promise<MutationOutcome>((resolve) => {
+          resolveUnmark = resolve;
+        }),
+    );
+
+    store.status.set('loaded');
+    store.items.set([PURCHASED]);
+    const fixture = mount();
+    const element = root(fixture);
+
+    const toggle = element.querySelector('.item-row__toggle') as HTMLButtonElement;
+    toggle.click();
+    toggle.click();
+    await flush();
+
+    expect(store.unmarkItemPurchased).toHaveBeenCalledTimes(1);
+
+    resolveUnmark({ kind: 'ok' });
+    await flush();
+  });
+
+  it('item comprado continua editável: as ações abrem o formulário preenchido (AC-17)', () => {
+    store.status.set('loaded');
+    store.items.set([PURCHASED]);
+    const fixture = mount();
+    const element = root(fixture);
+
     (element.querySelector('.item-row__actions') as HTMLButtonElement).click();
     fixture.detectChanges();
 
-    expect(store.items()).toHaveLength(1);
-    expect(element.querySelector('.list-skeleton')).toBeNull();
+    expect(element.querySelector('.bottom-sheet__title')?.textContent?.trim()).toBe('Editar item');
+    expect((element.querySelector('#item-name') as HTMLInputElement).value).toBe('Arroz');
   });
 
   it('o CTA do vazio abre o formulário e salvar pede a criação com os opcionais vazios (AC-04)', async () => {

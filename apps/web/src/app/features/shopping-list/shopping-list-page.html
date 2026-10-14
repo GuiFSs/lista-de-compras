@@ -42,7 +42,7 @@
           <li class="list__item">
             <app-item-row
               [item]="item"
-              (togglePurchased)="onTogglePurchased()"
+              (togglePurchased)="onTogglePurchased($event)"
               (openActions)="onOpenActions($event)"
             />
           </li>
@@ -62,5 +62,14 @@
     [item]="formItem()"
     (closed)="onFormClosed()"
     (saved)="onFormSaved()"
+  />
+}
+
+@if (purchaseItem(); as purchaseTarget) {
+  <app-purchase-sheet
+    [item]="purchaseTarget"
+    [draft]="purchaseDraft()"
+    (closed)="onPurchaseClosed()"
+    (purchased)="onPurchased()"
   />
 }

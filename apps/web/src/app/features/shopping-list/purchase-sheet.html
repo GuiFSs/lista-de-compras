@@ -1,0 +1,110 @@
+<!-- Sheet de app (guia §4): título + item de contexto + campos agrupados + ação
+     primary no terço inferior. Só tokens. -->
+<app-bottom-sheet [heading]="heading" (closed)="cancel()">
+  <form class="purchase-sheet" (submit)="onSubmit($event)" novalidate>
+    <!-- Contexto do item e campos formam o mesmo grupo: menor respiro dentro,
+         maior respiro entre grupos (guia §4). -->
+    <div class="purchase-sheet__group">
+      <p class="purchase-sheet__item">{{ item().name }}</p>
+
+      <div class="purchase-sheet__fields">
+        <div class="field-row">
+          <div class="field">
+            <label class="field__label" for="purchase-quantity">
+              Quantidade comprada
+              <span class="field__required" aria-hidden="true">*</span>
+              <span class="visually-hidden">(obrigatório)</span>
+            </label>
+            <input
+              id="purchase-quantity"
+              class="field__input"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              [value]="quantityInput()"
+              [class.field__input--error]="quantityError()"
+              [attr.aria-invalid]="quantityError() ? 'true' : null"
+              [attr.aria-describedby]="quantityError() ? 'purchase-quantity-error' : null"
+              (input)="onQuantityInput($event)"
+            />
+            @if (quantityError(); as message) {
+              <p class="field__error" id="purchase-quantity-error" role="alert">{{ message }}</p>
+            }
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="purchase-unit">
+              Unidade
+              <span class="field__required" aria-hidden="true">*</span>
+              <span class="visually-hidden">(obrigatório)</span>
+            </label>
+            <select
+              #unitSelect
+              id="purchase-unit"
+              class="field__input"
+              [class.field__input--error]="unitError()"
+              [attr.aria-invalid]="unitError() ? 'true' : null"
+              [attr.aria-describedby]="unitError() ? 'purchase-unit-error' : null"
+              (change)="onUnitChange($event)"
+            >
+              @for (option of units; track option) {
+                <option [value]="option" [selected]="option === unit()">{{ option }}</option>
+              }
+            </select>
+            @if (unitError(); as message) {
+              <p class="field__error" id="purchase-unit-error" role="alert">{{ message }}</p>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="purchase-price">
+            Preço por unidade (R$)
+            <span class="field__required" aria-hidden="true">*</span>
+            <span class="visually-hidden">(obrigatório)</span>
+          </label>
+          <input
+            id="purchase-price"
+            class="field__input"
+            type="text"
+            inputmode="decimal"
+            autocomplete="off"
+            [value]="priceInput()"
+            [class.field__input--error]="priceError()"
+            [attr.aria-invalid]="priceError() ? 'true' : null"
+            [attr.aria-describedby]="priceError() ? 'purchase-price-error' : null"
+            (input)="onPriceInput($event)"
+          />
+          @if (priceError(); as message) {
+            <p class="field__error" id="purchase-price-error" role="alert">{{ message }}</p>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="purchase-sheet__actions">
+      <button type="button" class="btn-secondary" (click)="cancel()">Cancelar</button>
+      <button type="submit" class="btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Salvando…' : 'Marcar como comprado' }}
+      </button>
+    </div>
+  </form>
+</app-bottom-sheet>
+
+<!-- Aviso de divergência (RN-10/AC-14): empilha sobre os campos preenchidos, que
+     ficam preservados se a pessoa voltar. Decisão explícita — sem fechar no backdrop. -->
+@if (confirming()) {
+  <app-bottom-sheet
+    heading="Quantidade diferente"
+    [closeOnBackdrop]="false"
+    (closed)="backToFields()"
+  >
+    <p class="purchase-sheet__warning" role="alert">{{ divergenceMessage() }}</p>
+    <div class="purchase-sheet__actions">
+      <button type="button" class="btn-secondary" (click)="backToFields()">Voltar</button>
+      <button type="button" class="btn-primary" [disabled]="saving()" (click)="confirmPurchase()">
+        {{ saving() ? 'Salvando…' : 'Confirmar' }}
+      </button>
+    </div>
+  </app-bottom-sheet>
+}

@@ -1,0 +1,143 @@
+// Sheet de compra (guia §4 "Formulário de app"/§5): contexto do item, campos
+// agrupados por whitespace (maior entre grupos, menor dentro) e ação primary no
+// terço inferior. Só tokens.
+.purchase-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+// Contexto do item + campos: respiro curto dentro do grupo, longo entre grupos.
+.purchase-sheet__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+// Nome do item como contexto do sheet — não é rótulo de campo nem dado de compra.
+.purchase-sheet__item {
+  font-size: var(--font-size-body);
+  color: var(--color-ink-secondary);
+  overflow-wrap: anywhere;
+}
+
+.purchase-sheet__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  flex: 1;
+  min-width: 0;
+}
+
+.field-row {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.field__label {
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-secondary);
+}
+
+.field__required {
+  color: var(--color-danger);
+}
+
+.field__input {
+  width: 100%;
+  min-height: var(--touch-target-min);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-body);
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-xs);
+  box-sizing: border-box;
+  touch-action: manipulation;
+}
+
+.field__input:focus-visible {
+  border-color: var(--color-primary-text);
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 2px;
+  box-shadow: var(--shadow-1);
+}
+
+.field__input--error {
+  border-color: var(--color-danger);
+}
+
+.field__error,
+.purchase-sheet__warning {
+  font-size: var(--font-size-caption);
+  color: var(--color-danger);
+}
+
+.field__error:empty {
+  display: none;
+}
+
+.purchase-sheet__warning {
+  font-size: var(--font-size-body-sm);
+  color: var(--color-ink-secondary);
+}
+
+.purchase-sheet__actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: var(--touch-target-min);
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  transition:
+    background-color var(--motion-fast),
+    transform var(--motion-fast),
+    opacity var(--motion-base);
+}
+
+.btn-primary {
+  color: var(--color-on-primary);
+  background-color: var(--color-primary);
+}
+
+.btn-primary:active:not(:disabled) {
+  background-color: var(--color-primary-active);
+  transform: scale(0.97);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+}
+
+.btn-secondary:active {
+  background-color: var(--color-ripple);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary,
+  .btn-secondary {
+    transition: none;
+  }
+}
