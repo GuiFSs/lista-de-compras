@@ -7,7 +7,7 @@ permission:
     "*": deny
     "docs/features/**": allow
     "docs/decisions/**": allow
-  bash: deny
+  bash: ask
   task: deny
 ---
 
