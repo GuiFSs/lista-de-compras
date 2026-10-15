@@ -113,6 +113,32 @@ describe('PurchaseSheet', () => {
     fixture.detectChanges();
   }
 
+  /** Digita no fim do campo, caractere a caractere, como o navegador faria (caret no fim). */
+  function typePrice(fixture: ComponentFixture<PurchaseSheet>, text: string): void {
+    const input = query<HTMLInputElement>(fixture, '#purchase-price');
+    for (const char of text) {
+      input.value += char;
+      input.dispatchEvent(new Event('input'));
+    }
+    fixture.detectChanges();
+  }
+
+  function backspacePrice(fixture: ComponentFixture<PurchaseSheet>): void {
+    const input = query<HTMLInputElement>(fixture, '#purchase-price');
+    input.dispatchEvent(
+      new InputEvent('beforeinput', {
+        inputType: 'deleteContentBackward',
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    fixture.detectChanges();
+  }
+
+  function priceValue(fixture: ComponentFixture<PurchaseSheet>): string {
+    return query<HTMLInputElement>(fixture, '#purchase-price').value;
+  }
+
   function submit(fixture: ComponentFixture<PurchaseSheet>): void {
     query<HTMLFormElement>(fixture, 'form').dispatchEvent(new Event('submit'));
   }
@@ -158,7 +184,8 @@ describe('PurchaseSheet', () => {
 
     expect(query<HTMLInputElement>(fixture, '#purchase-quantity').value).toBe('3');
     expect(query<HTMLSelectElement>(fixture, '#purchase-unit').value).toBe('pacote');
-    expect(query<HTMLInputElement>(fixture, '#purchase-price').value).toBe('9,9');
+    // RN-12: o preço preservado reaparece na máscara (9.9 → R$ 9,90).
+    expect(priceValue(fixture)).toBe('R$ 9,90');
   });
 
   it('os três campos são obrigatórios: erro em cada campo e nenhuma requisição (AC-13)', async () => {
@@ -190,11 +217,11 @@ describe('PurchaseSheet', () => {
     );
   });
 
-  it('valida quantidade > 0 e preço >= 0 sem enviar a marcação (RN-06/AC-13)', async () => {
+  it('valida quantidade > 0 sem enviar a marcação (RN-06/AC-13)', async () => {
     const fixture = mount(item({ plannedQuantity: 2, unit: 'kg' }));
     setQuantity(fixture, '0');
     selectUnit(fixture, 'kg');
-    setPrice(fixture, '-1');
+    setPrice(fixture, '1000');
     submit(fixture);
     await flush();
     fixture.detectChanges();
@@ -203,9 +230,88 @@ describe('PurchaseSheet', () => {
     expect(query(fixture, '#purchase-quantity-error').textContent?.trim()).toBe(
       'A quantidade deve ser maior que zero.',
     );
-    expect(query(fixture, '#purchase-price-error').textContent?.trim()).toBe(
-      'O preço não pode ser negativo.',
-    );
+  });
+
+  it('a máscara não aceita sinal: "-" não vira dígito e o preço nunca fica negativo (RN-21/AC-27)', async () => {
+    const fixture = mount(item());
+    setQuantity(fixture, '1');
+    selectUnit(fixture, 'kg');
+
+    setPrice(fixture, '-');
+    expect(priceValue(fixture)).toBe('');
+
+    setPrice(fixture, '-1');
+    expect(priceValue(fixture)).toBe('R$ 0,01');
+
+    submit(fixture);
+    await flush();
+
+    // A regra defensiva "preço ≥ 0" (RN-06/CD-08) segue no código, mas a máscara
+    // só forma dígitos: o envio acontece, sem o caminho de erro de negativo.
+    expect(fixture.nativeElement.querySelector('#purchase-price-error')).toBeNull();
+    expect(store.markItemPurchased).toHaveBeenCalledWith('item-1', {
+      purchasedQuantity: 1,
+      unit: 'kg',
+      unitPrice: 0.01,
+    });
+  });
+
+  it('máscara de centavos em BRL: 3/30/3015 viram R$ 0,03/R$ 0,30/R$ 30,15 e enviam número (AC-27)', async () => {
+    const fixture = mount(item());
+    setQuantity(fixture, '1');
+    selectUnit(fixture, 'kg');
+
+    typePrice(fixture, '3');
+    expect(priceValue(fixture)).toBe('R$ 0,03');
+
+    typePrice(fixture, '0');
+    expect(priceValue(fixture)).toBe('R$ 0,30');
+
+    typePrice(fixture, '15');
+    expect(priceValue(fixture)).toBe('R$ 30,15');
+
+    submit(fixture);
+    await flush();
+
+    expect(store.markItemPurchased).toHaveBeenCalledWith('item-1', {
+      purchasedQuantity: 1,
+      unit: 'kg',
+      unitPrice: 30.15,
+    });
+  });
+
+  it('um backspace apaga um dígito (RN-21/CD-15)', () => {
+    const fixture = mount(item());
+
+    typePrice(fixture, '3015');
+    expect(priceValue(fixture)).toBe('R$ 30,15');
+
+    backspacePrice(fixture);
+    expect(priceValue(fixture)).toBe('R$ 3,01');
+    backspacePrice(fixture);
+    expect(priceValue(fixture)).toBe('R$ 0,30');
+    backspacePrice(fixture);
+    expect(priceValue(fixture)).toBe('R$ 0,03');
+    backspacePrice(fixture);
+    expect(priceValue(fixture)).toBe('');
+  });
+
+  it('colar mantém só os dígitos, sem separador de milhar (AC-27/CD-15)', () => {
+    const fixture = mount(item());
+
+    setPrice(fixture, 'abc12,34');
+    expect(priceValue(fixture)).toBe('R$ 12,34');
+
+    setPrice(fixture, 'R$ 1.234,56');
+    expect(priceValue(fixture)).toBe('R$ 1234,56');
+  });
+
+  it('o campo de preço usa teclado numérico (AC-27)', () => {
+    const fixture = mount(item());
+
+    expect(
+      query<HTMLInputElement>(fixture, '#purchase-price').getAttribute('inputmode'),
+    ).toBe('numeric');
   });
 
   it('marca com os três campos e emite o sucesso (AC-12)', async () => {
@@ -214,6 +320,7 @@ describe('PurchaseSheet', () => {
     setQuantity(fixture, '1,5');
     selectUnit(fixture, 'kg');
     setPrice(fixture, '12,50');
+    expect(priceValue(fixture)).toBe('R$ 12,50');
     submit(fixture);
     await flush();
 
@@ -237,7 +344,7 @@ describe('PurchaseSheet', () => {
     const fixture = mount(item());
     setQuantity(fixture, '2');
     selectUnit(fixture, 'kg');
-    setPrice(fixture, '10');
+    setPrice(fixture, '1000');
 
     const form = query<HTMLFormElement>(fixture, 'form');
     form.dispatchEvent(new Event('submit'));
@@ -258,7 +365,7 @@ describe('PurchaseSheet', () => {
     const purchased = purchasedCount(fixture);
     setQuantity(fixture, '3');
     selectUnit(fixture, 'kg');
-    setPrice(fixture, '10');
+    setPrice(fixture, '1000');
     submit(fixture);
     await flush();
     fixture.detectChanges();
@@ -286,7 +393,7 @@ describe('PurchaseSheet', () => {
     const fixture = mount(item({ plannedQuantity: 2, unit: 'kg' }));
     setQuantity(fixture, '3');
     selectUnit(fixture, 'kg');
-    setPrice(fixture, '10');
+    setPrice(fixture, '1000');
     submit(fixture);
     await flush();
     fixture.detectChanges();
@@ -297,14 +404,14 @@ describe('PurchaseSheet', () => {
     expect(store.markItemPurchased).not.toHaveBeenCalled();
     expect(topSheetTitle(fixture)).toBe('Marcar como comprado');
     expect(query<HTMLInputElement>(fixture, '#purchase-quantity').value).toBe('3');
-    expect(query<HTMLInputElement>(fixture, '#purchase-price').value).toBe('10');
+    expect(query<HTMLInputElement>(fixture, '#purchase-price').value).toBe('R$ 10,00');
   });
 
   it('quantidade igual à planejada não avisa e marca direto (AC-14)', async () => {
     const fixture = mount(item({ plannedQuantity: 2, unit: 'kg' }));
     setQuantity(fixture, '2');
     selectUnit(fixture, 'kg');
-    setPrice(fixture, '10');
+    setPrice(fixture, '1000');
     submit(fixture);
     await flush();
     fixture.detectChanges();
@@ -317,7 +424,7 @@ describe('PurchaseSheet', () => {
     const fixture = mount(item({ plannedQuantity: null, unit: 'kg' }));
     setQuantity(fixture, '7');
     selectUnit(fixture, 'kg');
-    setPrice(fixture, '3');
+    setPrice(fixture, '300');
     submit(fixture);
     await flush();
     fixture.detectChanges();
@@ -340,7 +447,7 @@ describe('PurchaseSheet', () => {
     const purchased = purchasedCount(fixture);
     setQuantity(fixture, '2');
     selectUnit(fixture, 'unidade');
-    setPrice(fixture, '5');
+    setPrice(fixture, '500');
     submit(fixture);
     await flush();
     fixture.detectChanges();
@@ -348,7 +455,7 @@ describe('PurchaseSheet', () => {
     expect(purchased()).toBe(0);
     expect(query<HTMLInputElement>(fixture, '#purchase-quantity').value).toBe('2');
     expect(query<HTMLSelectElement>(fixture, '#purchase-unit').value).toBe('unidade');
-    expect(query<HTMLInputElement>(fixture, '#purchase-price').value).toBe('5');
+    expect(query<HTMLInputElement>(fixture, '#purchase-price').value).toBe('R$ 5,00');
     expect(query<HTMLFormElement>(fixture, 'form')).toBeTruthy();
   });
 });

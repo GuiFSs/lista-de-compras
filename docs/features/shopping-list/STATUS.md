@@ -181,6 +181,48 @@ seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T da Rodada 1 reaberto.
 
 ## Últimos handoffs
 
+### T-22 — máscara de centavos em BRL no preço por unidade (`angular-dev`)
+
+- Tarefa: **T-22**
+- Estado: **concluída**
+- Arquivos alterados: `apps/web/src/app/features/shopping-list/purchase-sheet.ts`
+  (estado de verdade = dígitos em `unitPriceDigits`, com `unitPriceDisplay` para a
+  exibição, `digitsFromField`/`renderPrice` imperativos, `onPriceBeforeInput` para
+  apagar, prefill do draft por `digitsFromNumber`, payload por `numberFromDigits`
+  ⇒ vazio é `null`; os helpers locais duplicados de decimal foram trocados pelos do
+  `shared/money`), `purchase-sheet.html` (`inputmode="numeric"`,
+  `[value]="unitPriceDisplay()"`, `(beforeinput)`), `purchase-sheet.spec.ts` (+5
+  casos: máscara `3/30/3015`, apagar, colar, teclado numérico e a reescrita do caso
+  `'-1'`; mais a asserção de exibição no prefill do draft) e as asserções de
+  **compra** em `shopping-list-page.spec.ts` (dígitos `'1000'` ⇒ `unitPrice: 10` com
+  exibição `'R$ 10,00'` e prefill do desmarcar `'R$ 9,90'`). Nenhuma asserção de
+  **item** foi tocada (são da T-21); `shared/money` **não** foi alterado.
+- ACs cobertos: **AC-27** (máscara, payload numérico, apagar/colar, teclado
+  numérico), **AC-13** (vazio ⇒ erro "Informe o preço por unidade." + nenhuma
+  requisição), **AC-15** (preço começa vazio) e, exercitados, **RN-12** (draft
+  reaparece na máscara) e **RN-13** (prefill do planejado não preenche o preço).
+- Testes executados (comando + resultado reais):
+  - `npx nx test web` → **202 passed / 21 arquivos** (antes: 197/21; `Cache: 0/1 hit`
+    ⇒ execução real). **Nenhuma regressão.**
+  - `npx nx lint web` → **`All files pass linting`** (0 erros/warnings; sem `any`).
+- Decisões registradas: (1) mesma arquitetura de T-21 — a fonte de verdade é a string
+  de dígitos e exibição/payload/prefill derivam dela, para máscara e número não
+  divergirem. (2) O `priceError` passou a usar `numberFromDigits`: vazio ⇒
+  `'Informe o preço por unidade.'` (obrigatório preservado) e a regra defensiva
+  "preço ≥ 0" **permanece** no código, mas fica **inalcançável pela digitação** — o
+  caso que digitava `-1` e esperava "preço negativo" foi reescrito para provar
+  `'-'` ⇒ campo vazio e `'-1'` ⇒ `R$ 0,01` com envio, em vez de ser removido. O
+  ramo "Informe um número válido." do preço caiu (a máscara só produz dígitos, logo
+  não há `NaN`); a validação de `NaN` da **quantidade** segue intacta. (3) Os
+  helpers `parseDecimal`/`formatDecimal` duplicados no sheet foram substituídos pelos
+  de `shared/money` (T-20) — a quantidade continua com digitação livre (RN-06).
+  (4) Nenhum contrato HTTP, backend ou regra de negócio mudou; sem dependência nova
+  ⇒ sem ADR.
+- Pendências: nenhuma bloqueante.
+- Próximo passo recomendado: delegar **T-23** (`test-engineer`) — jornada Playwright
+  hermética do AC-27 nos dois campos, com apagar/colar, prefill na edição e
+  preservação no desmarcar.
+
 ### T-21 — máscara de centavos em BRL no preço planejado (`angular-dev`)
 
 - Tarefa: **T-21**

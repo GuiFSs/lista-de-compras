@@ -278,8 +278,10 @@ describe('ShoppingListPage', () => {
     expect((element.querySelector('#purchase-price') as HTMLInputElement).value).toBe('');
 
     const price = element.querySelector('#purchase-price') as HTMLInputElement;
-    price.value = '10';
+    price.value = '1000';
     price.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    expect(price.value).toBe('R$ 10,00');
     (element.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
     await flush();
     fixture.detectChanges();
@@ -317,7 +319,7 @@ describe('ShoppingListPage', () => {
     unit.value = 'kg';
     unit.dispatchEvent(new Event('change'));
     const price = element.querySelector('#purchase-price') as HTMLInputElement;
-    price.value = '10';
+    price.value = '1000';
     price.dispatchEvent(new Event('input'));
 
     (element.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
@@ -330,7 +332,7 @@ describe('ShoppingListPage', () => {
     expect(element.querySelector('.purchase-sheet')).not.toBeNull();
     expect((element.querySelector('#purchase-quantity') as HTMLInputElement).value).toBe('2');
     expect((element.querySelector('#purchase-unit') as HTMLSelectElement).value).toBe('kg');
-    expect((element.querySelector('#purchase-price') as HTMLInputElement).value).toBe('10');
+    expect((element.querySelector('#purchase-price') as HTMLInputElement).value).toBe('R$ 10,00');
   });
 
   it('desmarcar devolve o item a pendente e reabrir o sheet preserva os digitados (AC-16)', async () => {
@@ -367,7 +369,7 @@ describe('ShoppingListPage', () => {
 
     expect((element.querySelector('#purchase-quantity') as HTMLInputElement).value).toBe('3');
     expect((element.querySelector('#purchase-unit') as HTMLSelectElement).value).toBe('pacote');
-    expect((element.querySelector('#purchase-price') as HTMLInputElement).value).toBe('9,9');
+    expect((element.querySelector('#purchase-price') as HTMLInputElement).value).toBe('R$ 9,90');
   });
 
   it('toque duplo no alvo de desmarcar compartilha uma única requisição (AC-26)', async () => {

@@ -67,13 +67,14 @@
             id="purchase-price"
             class="field__input"
             type="text"
-            inputmode="decimal"
+            inputmode="numeric"
             autocomplete="off"
-            [value]="priceInput()"
+            [value]="unitPriceDisplay()"
             [class.field__input--error]="priceError()"
             [attr.aria-invalid]="priceError() ? 'true' : null"
             [attr.aria-describedby]="priceError() ? 'purchase-price-error' : null"
             (input)="onPriceInput($event)"
+            (beforeinput)="onPriceBeforeInput($event)"
           />
           @if (priceError(); as message) {
             <p class="field__error" id="purchase-price-error" role="alert">{{ message }}</p>

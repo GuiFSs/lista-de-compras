@@ -12,6 +12,14 @@ import {
 } from '@angular/core';
 import type { ItemUnit, MarkItemPurchasedRequest, ShoppingListItem } from '@lista/contracts';
 import { ITEM_UNITS } from '@lista/contracts';
+import {
+  digitsFromInput,
+  digitsFromNumber,
+  formatBrlFromDigits,
+  formatDecimal,
+  numberFromDigits,
+  parseDecimal,
+} from '../../shared/money/money';
 import { BottomSheet } from '../../ui';
 import { ShoppingListStore } from './state';
 
@@ -20,17 +28,6 @@ export interface PurchaseDraft {
   purchasedQuantity: number;
   unit: ItemUnit;
   unitPrice: number;
-}
-
-/** Decimal digitado com vírgula ou ponto (RN-06): `null` no campo vazio. */
-function parseDecimal(raw: string): number | null {
-  const normalized = raw.trim().replace(',', '.');
-  return normalized === '' ? null : Number(normalized);
-}
-
-/** Mesmo formato aceito na digitação, para o prefill (vírgula decimal). */
-function formatDecimal(value: number): string {
-  return String(value).replace('.', ',');
 }
 
 /**
@@ -61,12 +58,16 @@ export class PurchaseSheet implements OnInit, AfterViewInit {
 
   protected readonly quantityInput = signal('');
   protected readonly unit = signal<ItemUnit | ''>('');
-  protected readonly priceInput = signal('');
+  /** Estado de verdade do preço: só os dígitos, em centavos (RN-21). Exibição e payload derivam dele. */
+  protected readonly unitPriceDigits = signal('');
   protected readonly submitted = signal(false);
   protected readonly submitting = signal(false);
   protected readonly confirming = signal(false);
 
   protected readonly saving = computed(() => this.submitting() || this.store.saving());
+  protected readonly unitPriceDisplay = computed(() =>
+    formatBrlFromDigits(this.unitPriceDigits()),
+  );
 
   protected readonly quantityError = computed(() => {
     if (!this.submitted()) return null;
@@ -82,10 +83,11 @@ export class PurchaseSheet implements OnInit, AfterViewInit {
 
   protected readonly priceError = computed(() => {
     if (!this.submitted()) return null;
-    const value = parseDecimal(this.priceInput());
-    if (value === null) return 'Informe o preço por unidade.';
-    if (Number.isNaN(value)) return 'Informe um número válido.';
-    return value < 0 ? 'O preço não pode ser negativo.' : null;
+    // Defensivo (RN-06/CD-08): a máscara só forma dígitos, então a digitação
+    // nunca produz valor negativo (RN-21) — o caminho fica inalcançável pela UI.
+    const price = numberFromDigits(this.unitPriceDigits());
+    if (price === null) return 'Informe o preço por unidade.';
+    return price < 0 ? 'O preço não pode ser negativo.' : null;
   });
 
   protected readonly hasErrors = computed(() =>
@@ -110,7 +112,7 @@ export class PurchaseSheet implements OnInit, AfterViewInit {
     if (draft !== null) {
       this.quantityInput.set(formatDecimal(draft.purchasedQuantity));
       this.unit.set(draft.unit);
-      this.priceInput.set(formatDecimal(draft.unitPrice));
+      this.unitPriceDigits.set(digitsFromNumber(draft.unitPrice));
       return;
     }
 
@@ -138,7 +140,20 @@ export class PurchaseSheet implements OnInit, AfterViewInit {
   }
 
   protected onPriceInput(event: Event): void {
-    this.priceInput.set((event.target as HTMLInputElement).value);
+    const input = event.target as HTMLInputElement;
+    this.unitPriceDigits.set(this.digitsFromField(input.value));
+    this.renderPrice(input);
+  }
+
+  protected onPriceBeforeInput(event: Event): void {
+    if (!(event instanceof InputEvent) || event.inputType !== 'deleteContentBackward') return;
+
+    // Um backspace apaga um dígito: recomputar pelo texto formatado consumiria
+    // caracteres da máscara (em `R$ 0,03` sobraria `00`) e exigiria vários toques.
+    event.preventDefault();
+    const input = event.target as HTMLInputElement;
+    this.unitPriceDigits.update((digits) => digits.slice(0, -1));
+    this.renderPrice(input);
   }
 
   protected onSubmit(event: Event): void {
@@ -191,10 +206,28 @@ export class PurchaseSheet implements OnInit, AfterViewInit {
   private request(): MarkItemPurchasedRequest | null {
     const purchasedQuantity = parseDecimal(this.quantityInput());
     const unit = this.unit();
-    const unitPrice = parseDecimal(this.priceInput());
+    const unitPrice = numberFromDigits(this.unitPriceDigits());
     if (purchasedQuantity === null || Number.isNaN(purchasedQuantity)) return null;
     if (unit === '') return null;
-    if (unitPrice === null || Number.isNaN(unitPrice)) return null;
+    if (unitPrice === null) return null;
     return { purchasedQuantity, unit, unitPrice };
+  }
+
+  /**
+   * Dígitos digitados/colados sem os zeros que a própria máscara insere à esquerda
+   * (`R$ 0,03` contém `003`); sem normalizar, cada evento somaria um zero e o
+   * backspace precisaria de mais de um toque para esvaziar o campo (RN-21).
+   */
+  private digitsFromField(raw: string): string {
+    return digitsFromInput(raw).replace(/^0+(?=\d)/, '');
+  }
+
+  /**
+   * O `[value]` só reescreve o campo quando a máscara muda; gravar no DOM cobre o
+   * caso em que os dígitos não mudam (ex.: letra digitada) e mantém o caret no fim.
+   */
+  private renderPrice(input: HTMLInputElement): void {
+    input.value = this.unitPriceDisplay();
+    input.setSelectionRange(input.value.length, input.value.length);
   }
 }
