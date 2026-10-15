@@ -1,24 +1,25 @@
 # Estado da feature — Lista de compras
 
-**Fase atual:** **Rodada 2 — Implementação** (T-20 concluída; próximas
-T-21 → T-22 → T-23). A **Rodada 1** (lista ativa) está **validada** (26/26 ACs pelo
+**Fase atual:** **Rodada 2 — Implementação** (T-20 e T-21 concluídas; próximas
+T-22 → T-23). A **Rodada 1** (lista ativa) está **validada** (26/26 ACs pelo
 `feature-validator`) — histórico preservado abaixo.
 **Gate atual:** **spec e plano da Rodada 2 aprovados** (`Aprovado pelo usuário em
 2026-10-14` em `SPEC.md` e `PLAN.md`). **Gate de Implementação da Rodada 2 aberto:**
-T-20 (helper `shared/money`) **concluída** com suíte `web` verde; faltam T-21/T-22
-(wiring dos dois sheets) e T-23 (Playwright do AC-27). Rodada 1: gates de
-Implementação e Validação fechados (não reabertos por si; serão revalidados apenas
-nos ACs afetados pela Rodada 2 — AC-27 e os cross-referenciados
+T-20 (helper `shared/money`) e T-21 (máscara no preço planejado do `item-form-sheet`)
+**concluídas** com suíte `web` verde (**197 testes / 21 arquivos**); faltam T-22
+(máscara no preço por unidade do `purchase-sheet`) e T-23 (Playwright do AC-27).
+Rodada 1: gates de Implementação e Validação fechados (não reabertos por si; serão
+revalidados apenas nos ACs afetados pela Rodada 2 — AC-27 e os cross-referenciados
 AC-04/AC-10/AC-13/AC-15/AC-25).
-**Última atualização:** 2026-10-14
-**Próxima ação:** delegar a **T-21** (`angular-dev`) — ligar a máscara ao **preço
-planejado** do `item-form-sheet` (estado = dígitos, DOM imperativo, caret no fim,
-`inputmode="numeric"`, payload por `numberFromDigits`, prefill pela máscara; vazio ⇒
-`null`, AC-04) e atualizar `item-form-sheet.spec.ts` + as asserções de item em
-`shopping-list-page.spec.ts`. Depois: **T-22** (`purchase-sheet`), **T-23**
-(Playwright do AC-27), auditoria de testes e revalidação dos ACs afetados
-(`feature-validator`). Push/PR seguem **adiados** até a Rodada 2 fechar. Nenhum AC
-ou T da Rodada 1 reaberto.
+**Última atualização:** 2026-10-15
+**Próxima ação:** delegar a **T-22** (`angular-dev`) — ligar a máscara ao **preço por
+unidade** do `purchase-sheet` (mesmo comportamento de T-21: estado = dígitos, DOM
+imperativo, caret no fim, `inputmode="numeric"`, payload por `numberFromDigits`,
+prefill/draft pela máscara; o campo **começa vazio** e vazio bloqueia com erro **sem**
+requisição, RN-13/AC-13/AC-15) e atualizar `purchase-sheet.spec.ts` + as asserções de
+compra em `shopping-list-page.spec.ts`. Depois: **T-23** (Playwright do AC-27),
+auditoria de testes e revalidação dos ACs afetados (`feature-validator`). Push/PR
+seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T da Rodada 1 reaberto.
 
 ## Artefatos
 
@@ -74,8 +75,9 @@ ou T da Rodada 1 reaberto.
 ## Execução
 
 - **Rodada 2:** tarefa em andamento: **nenhuma**; **T-20 concluída** (helper puro
-  `apps/web/src/app/shared/money/money.ts` + `money.spec.ts`, 14 testes; suíte `web`
-  verde com **191 testes / 21 arquivos**); pendentes T-21, T-22, T-23
+  `apps/web/src/app/shared/money/money.ts` + `money.spec.ts`, 14 testes) e **T-21
+  concluída** (máscara no preço planejado do `item-form-sheet`; suíte `web` verde com
+  **197 testes / 21 arquivos**); pendentes T-22, T-23
 - Tarefa em andamento: **nenhuma**
 - Tarefas concluídas (Rodada 1): T-01 … T-19 (todas)
 - Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres real**
@@ -178,6 +180,43 @@ ou T da Rodada 1 reaberto.
   nenhuma T desta feature os tocou.
 
 ## Últimos handoffs
+
+### T-21 — máscara de centavos em BRL no preço planejado (`angular-dev`)
+
+- Tarefa: **T-21**
+- Estado: **concluída**. Nota de processo: a sessão do `angular-dev` caiu por
+  **rate limit** *depois* de gravar as mudanças (sem bloco de handoff). O
+  orquestrador **reconferiu o tree**, revisou o diff contra o escopo da T-21 no
+  `PLAN.md` e rodou suíte + lint antes de aceitar — **nenhum trabalho pendente** e
+  **nenhum arquivo fora do escopo**.
+- Arquivos alterados: `apps/web/src/app/features/shopping-list/item-form-sheet.ts`
+  (máscara: estado = dígitos, `renderPrice` imperativo, `beforeinput` para apagar),
+  `item-form-sheet.html` (`inputmode="numeric"`, `[value]="plannedPriceDisplay()"`,
+  `(beforeinput)`), `item-form-sheet.spec.ts` (+5 casos e reescrita do caso `-1`) e
+  as asserções de **item** em `shopping-list-page.spec.ts` (prefill `'R$ 12,50'`).
+  `git diff --stat` → **4 arquivos**, exatamente os permitidos na T-21.
+- ACs cobertos: **AC-27** (máscara, payload numérico, apagar/colar, teclado
+  numérico), **AC-04** (preço opcional vazio ⇒ `null`) e **AC-10** (prefill da edição
+  na máscara).
+- Testes executados (comando + resultado reais, pelo orquestrador):
+  - `npx nx test web --skip-nx-cache` → **197 passed / 21 arquivos** (antes: 191/21;
+    `Cache: Skipped` ⇒ execução real). **Nenhuma regressão.**
+  - `npx nx lint web` → **`All files pass linting`** (0 erros/warnings; sem `any`).
+- Decisões registradas: (1) `digitsFromField` = `digitsFromInput(raw).replace(/^0+(?=\d)/,
+  '')` — remove os zeros que a própria máscara insere (`R$ 0,03` contém `003`), senão
+  cada evento somaria um zero e o campo nunca esvaziaria. (2) `renderPrice` grava o
+  valor no DOM **imperativamente** e põe o caret no fim — o `[value]` não re-renderiza
+  quando o signal não muda (ex.: letra digitada, que "colaria" na tela). (3)
+  `(beforeinput)` intercepta `deleteContentBackward` e apaga **um dígito** (RN-21/
+  CD-15): recomputar pelo texto formatado consumiria caracteres da máscara. (4) A
+  regra defensiva "preço ≥ 0" **permanece** no código, agora **inalcançável pela
+  digitação** — a máscara só forma dígitos; o caso `-1` foi reescrito para provar
+  `'-'` ⇒ campo vazio e `'-1'` ⇒ `R$ 0,01` com envio (item 4 da aprovação do plano).
+- Pendências: nenhuma bloqueante.
+- Próximo passo recomendado: delegar **T-22** (`angular-dev`) — replicar o
+  comportamento no **preço por unidade** do `purchase-sheet` (campo começa vazio;
+  vazio bloqueia sem requisição) e atualizar as asserções de compra em
+  `shopping-list-page.spec.ts` (tabela de impacto do `PLAN.md`, linhas de T-22).
 
 ### T-20 — helper de máscara de centavos em BRL (`angular-dev`)
 

@@ -17,26 +17,19 @@ import type {
   UpdateShoppingListItemRequest,
 } from '@lista/contracts';
 import { ITEM_UNITS } from '@lista/contracts';
+import {
+  digitsFromInput,
+  digitsFromNumber,
+  formatBrlFromDigits,
+  formatDecimal,
+  numberFromDigits,
+  parseDecimal,
+} from '../../shared/money/money';
 import { BottomSheet } from '../../ui';
 import type { DuplicateOf } from './data';
 import { ShoppingListStore } from './state';
 
 export type ItemFormMode = 'create' | 'edit';
-
-/**
- * Valor decimal digitado com vírgula ou ponto (RN-06): `null` quando o campo
- * opcional está vazio; `NaN` quando não é número (bloqueia o envio).
- */
-function parseOptionalDecimal(raw: string): number | null {
-  const normalized = raw.trim().replace(',', '.');
-  if (normalized === '') return null;
-  return Number(normalized);
-}
-
-/** Prefill do input no mesmo formato aceito na digitação (vírgula decimal). */
-function formatDecimal(value: number): string {
-  return String(value).replace('.', ',');
-}
 
 /**
  * Formulário de item (guia §5): um bottom sheet para adicionar e editar. A
@@ -65,7 +58,8 @@ export class ItemFormSheet implements OnInit, AfterViewInit {
   protected readonly name = signal('');
   protected readonly plannedQuantityInput = signal('');
   protected readonly unit = signal<ItemUnit | ''>('');
-  protected readonly plannedPriceInput = signal('');
+  /** Estado de verdade do preço: só os dígitos, em centavos (RN-21). Exibição e payload derivam dele. */
+  protected readonly plannedPriceDigits = signal('');
   protected readonly submitted = signal(false);
   protected readonly submitting = signal(false);
   protected readonly conflict = signal<string | null>(null);
@@ -75,6 +69,9 @@ export class ItemFormSheet implements OnInit, AfterViewInit {
     this.mode() === 'create' ? 'Adicionar item' : 'Editar item',
   );
   protected readonly saving = computed(() => this.submitting() || this.store.saving());
+  protected readonly plannedPriceDisplay = computed(() =>
+    formatBrlFromDigits(this.plannedPriceDigits()),
+  );
 
   protected readonly nameError = computed(() =>
     this.submitted() && this.name().trim() === '' ? 'Informe o nome do item.' : null,
@@ -84,11 +81,14 @@ export class ItemFormSheet implements OnInit, AfterViewInit {
       value <= 0 ? 'A quantidade deve ser maior que zero.' : null,
     ),
   );
-  protected readonly priceError = computed(() =>
-    this.optionalNumberError(this.plannedPriceInput(), (value) =>
-      value < 0 ? 'O preço não pode ser negativo.' : null,
-    ),
-  );
+  protected readonly priceError = computed(() => {
+    if (!this.submitted()) return null;
+    // Defensivo (RN-06/CD-08): a máscara só forma dígitos, então a digitação
+    // nunca produz valor negativo (RN-21) — o caminho fica inalcançável pela UI.
+    const price = numberFromDigits(this.plannedPriceDigits());
+    return price !== null && price < 0 ? 'O preço não pode ser negativo.' : null;
+  });
+
   protected readonly hasErrors = computed(() =>
     Boolean(this.nameError() ?? this.quantityError() ?? this.priceError()),
   );
@@ -107,7 +107,9 @@ export class ItemFormSheet implements OnInit, AfterViewInit {
       item.plannedQuantity === null ? '' : formatDecimal(item.plannedQuantity),
     );
     this.unit.set(item.unit ?? '');
-    this.plannedPriceInput.set(item.plannedPrice === null ? '' : formatDecimal(item.plannedPrice));
+    this.plannedPriceDigits.set(
+      item.plannedPrice === null ? '' : digitsFromNumber(item.plannedPrice),
+    );
   }
 
   ngAfterViewInit(): void {
@@ -134,7 +136,20 @@ export class ItemFormSheet implements OnInit, AfterViewInit {
   }
 
   protected onPriceInput(event: Event): void {
-    this.plannedPriceInput.set((event.target as HTMLInputElement).value);
+    const input = event.target as HTMLInputElement;
+    this.plannedPriceDigits.set(this.digitsFromField(input.value));
+    this.renderPrice(input);
+  }
+
+  protected onPriceBeforeInput(event: Event): void {
+    if (!(event instanceof InputEvent) || event.inputType !== 'deleteContentBackward') return;
+
+    // Um backspace apaga um dígito: recomputar pelo texto formatado consumiria
+    // caracteres da máscara (em `R$ 0,03` sobraria `00`) e exigiria vários toques.
+    event.preventDefault();
+    const input = event.target as HTMLInputElement;
+    this.plannedPriceDigits.update((digits) => digits.slice(0, -1));
+    this.renderPrice(input);
   }
 
   protected onSubmit(event: Event): void {
@@ -183,9 +198,9 @@ export class ItemFormSheet implements OnInit, AfterViewInit {
     this.submitting.set(true);
     this.pendingCreate = {
       name: this.name().trim(),
-      plannedQuantity: parseOptionalDecimal(this.plannedQuantityInput()),
+      plannedQuantity: parseDecimal(this.plannedQuantityInput()),
       unit: this.selectedUnit(),
-      plannedPrice: parseOptionalDecimal(this.plannedPriceInput()),
+      plannedPrice: numberFromDigits(this.plannedPriceDigits()),
     };
 
     try {
@@ -204,9 +219,9 @@ export class ItemFormSheet implements OnInit, AfterViewInit {
     this.submitting.set(true);
     const request: UpdateShoppingListItemRequest = {
       name: this.name().trim(),
-      plannedQuantity: parseOptionalDecimal(this.plannedQuantityInput()),
+      plannedQuantity: parseDecimal(this.plannedQuantityInput()),
       unit: this.selectedUnit(),
-      plannedPrice: parseOptionalDecimal(this.plannedPriceInput()),
+      plannedPrice: numberFromDigits(this.plannedPriceDigits()),
     };
 
     try {
@@ -223,12 +238,30 @@ export class ItemFormSheet implements OnInit, AfterViewInit {
     return unit === '' ? null : unit;
   }
 
+  /**
+   * Dígitos digitados/colados sem os zeros que a própria máscara insere à esquerda
+   * (`R$ 0,03` contém `003`); sem normalizar, cada evento somaria um zero e o
+   * backspace precisaria de mais de um toque para esvaziar o campo (RN-21).
+   */
+  private digitsFromField(raw: string): string {
+    return digitsFromInput(raw).replace(/^0+(?=\d)/, '');
+  }
+
+  /**
+   * O `[value]` só reescreve o campo quando a máscara muda; gravar no DOM cobre o
+   * caso em que os dígitos não mudam (ex.: letra digitada) e mantém o caret no fim.
+   */
+  private renderPrice(input: HTMLInputElement): void {
+    input.value = this.plannedPriceDisplay();
+    input.setSelectionRange(input.value.length, input.value.length);
+  }
+
   private optionalNumberError(
     raw: string,
     check: (value: number) => string | null,
   ): string | null {
     if (!this.submitted()) return null;
-    const value = parseOptionalDecimal(raw);
+    const value = parseDecimal(raw);
     if (value === null) return null;
     if (Number.isNaN(value)) return 'Informe um número válido.';
     return check(value);

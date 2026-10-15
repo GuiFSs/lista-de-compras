@@ -465,7 +465,7 @@ describe('ShoppingListPage', () => {
     expect((element.querySelector('#item-name') as HTMLInputElement).value).toBe('Arroz');
     expect((element.querySelector('#item-quantity') as HTMLInputElement).value).toBe('2');
     expect((element.querySelector('#item-unit') as HTMLSelectElement).value).toBe('kg');
-    expect((element.querySelector('#item-price') as HTMLInputElement).value).toBe('12,5');
+    expect((element.querySelector('#item-price') as HTMLInputElement).value).toBe('R$ 12,50');
   });
 
   it('salvar a edição atualiza a linha e confirma com toast (AC-10)', async () => {
