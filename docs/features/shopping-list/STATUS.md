@@ -1,25 +1,28 @@
 # Estado da feature — Lista de compras
 
-**Fase atual:** **Rodada 2 — Validação** (T-20…T-23 concluídas e commitadas +
-auditoria de testes feita; revalidação pendente). A **Rodada 1** (lista ativa) está
-**validada** (26/26 ACs pelo `feature-validator`) — histórico preservado abaixo.
-**Gate atual:** **gate de Implementação da Rodada 2 FECHADO** — todas as tarefas
-concluídas com testes verdes e commitadas (`2120634` T-20, `48a8ff2` T-21,
-`e79d354` T-22, `8175f72` T-23, `f93abea` auditoria), Playwright do AC-27 verde com
-**comando + resultado** registrado (ADR 0008) e contrato/ADR inalterados. Suíte da
-Rodada 2: **`web` 204 testes / 21 arquivos** e **`web-e2e` 36 testes** (4 jornadas de
-máscara), lint verde nos dois. **Aberto agora: gate de Validação** — revalidação
-apenas dos ACs afetados (**AC-27** novo + cross-refs **AC-04/AC-10/AC-13/AC-15/AC-25**);
-os demais ACs da Rodada 1 (já aprovados, 26/26) permanecem **salvo regressão**.
+**Fase atual:** **Rodada 2 — CONCLUÍDA** (spec → plano → implementação →
+testes → **validação**) e **aguardando decisão do usuário sobre push/PR**. A
+**Rodada 1** (lista ativa) segue **validada** (26/26 ACs) — histórico preservado.
+**Gate atual:** **gates da Rodada 2 FECHADOS** — implementação (T-20…T-23
+concluídas e commitadas + auditoria de testes) e **validação aprovada pelo
+`feature-validator`**: **AC-27 aprovado** (evidência unit + Playwright com corrida
+real: `--grep "máscara"` → 4 passed; completa → 36 passed, ambos com
+`--skip-nx-cache`) e os **cross-refs AC-04/AC-10/AC-13/AC-15/AC-25 reconfirmados**;
+**nenhum AC/T reaberto** (suítes `web` **204/204** e `web-e2e` **36/36** verdes).
+Contratos, backend e ADRs **sem diff**; `npx nx typecheck web` e `npx nx sync:check`
+verdes. **Nada foi enviado** (sem push/PR).
 **Última atualização:** 2026-10-15
-**Próxima ação:** delegar a revalidação da Rodada 2 ao **`feature-validator`** —
-validar o **AC-27** (e conferir os cross-refs AC-04/AC-10/AC-13/AC-15/AC-25) contra
-a `SPEC.md`, exigindo evidência executável por critério (comando + resultado, nunca
-inferência; a existência de spec não conta) e a corrida `npx nx e2e web-e2e`. Registrar
-o resultado em `docs/features/shopping-list/VALIDATION.md` (seção da Rodada 2, sem
-apagar a evidência da Rodada 1) + bloco no `STATUS.md`. Push/PR/merge seguem
-**adiados** até a aprovação do usuário (skill `git-workflow`, aprovações explícitas e
-separadas). Nenhum AC ou T da Rodada 1 reaberto.
+**Próxima ação:** **decisão do usuário** — a Rodada 2 está pronta para integração.
+Oferecer o fluxo da skill `git-workflow`: (1) revisão consultiva do `code-reviewer`
+(parecer via `gh pr comment`, sem editar código) **antes/depois** do PR, se desejado;
+(2) **push** da branch `feature/shopping-list` (após aprovação **explícita**);
+(3) **PR** para o repositório remoto (após aprovação **explícita e separada**);
+(4) **merge** (novamente aprovação **explícita e separada**). Nenhuma dessas
+operações externas acontece sem essa aprovação. Pendências **não bloqueantes**
+registradas na validação (não impedem o PR): payload E2E com >6 dígitos; `:focus-visible`
+genérico no AC-25; `inputmode="decimal"` da quantidade sem asserção de atributo;
+registrar o padrão da máscara no `GUIA-DESIGN` §5 e reusar `formatBrlFromDigits` em
+`item-row` quando tocado; item 6 do `PLAN.md` com placeholder `YYYY-MM-DD`.
 
 ## Artefatos
 
@@ -78,8 +81,9 @@ separadas). Nenhum AC ou T da Rodada 1 reaberto.
   concluídas** e a **auditoria de testes** do `test-engineer` **concluída** (lacuna
   CD-15(c) — limite artificial de dígitos — fechada só em `*.spec.ts`); suíte `web`
   verde com **204 testes / 21 arquivos** e `web-e2e` com **36 testes** (4 jornadas de
-  máscara); **reabertas: nenhuma**. Faltam revalidação (`feature-validator`) e a
-  decisão do usuário sobre push/PR
+  máscara); **reabertas: nenhuma**. **Validação da Rodada 2 aprovada** pelo
+  `feature-validator` (AC-27 + cross-refs; 0 reprovados, 0 reabertos). Falta apenas a
+  **decisão do usuário** sobre push/PR/merge
 - Tarefa em andamento: **nenhuma**
 - Tarefas concluídas (Rodada 1): T-01 … T-19 (todas)
 - Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres real**
@@ -182,6 +186,92 @@ separadas). Nenhum AC ou T da Rodada 1 reaberto.
   nenhuma T desta feature os tocou.
 
 ## Últimos handoffs
+
+### VALIDAÇÃO da Rodada 2 — aprovada (`feature-validator`)
+
+- Tarefa: revalidação da Rodada 2 — **`AC-27`** (novo, validado integralmente) +
+  cross-refs **`AC-04`/`AC-10`/`AC-13`/`AC-15`/`AC-25`** (conferir que continuam
+  provados após a mudança); os demais ACs da Rodada 1 permanecem aprovados
+  (só reabririam por regressão real).
+- Estado: **concluída — VALIDAÇÃO DA RODADA 2 APROVADA** (26/26 da Rodada 1
+  seguem válidos; `AC-27` aprovado; **0 reprovados; 0 ACs reabertos**).
+- Arquivos alterados (documentação — nenhum código/spec/teste tocado):
+  - `docs/features/shopping-list/VALIDATION.md` — nova seção **"# Rodada 2 —
+    máscara de centavos em BRL"** no fim do arquivo (evidência por AC, regressão,
+    checklist de documentação, checklist de design, verificações transversais,
+    pendências, julgamentos do DoD, comandos com saída real e parecer), mais um
+    ponteiro de 4 linhas no topo. **A seção da Rodada 1 (26/26 ACs, 2026-10-14)
+    ficou intacta.**
+  - `docs/features/shopping-list/STATUS.md` — **este bloco** (logo após
+    `## Últimos handoffs`). O topo (fase/gate/próxima ação) **não** foi tocado —
+    é do orquestrador.
+- ACs cobertos (evidência por critério, com comando + resultado reais):
+  - **`AC-27` — aprovado.** Exibição dígito a dígito nos **dois** campos
+    (`3`/`30`/`3015` ⇒ `R$ 0,03`/`R$ 0,30`/`R$ 30,15`), campo **vazio sem
+    `R$ 0,00`**, **payload número** (`plannedPrice: 30.15`, PATCH `1234.56`,
+    `unitPrice: 30.15`), sem separador de milhar (`R$ 1234,56`), apagar = 1
+    dígito por toque, colar mantém só dígitos, **sem limite artificial**
+    (9/10 dígitos reais via teclado na E2E + helper), prefill na edição
+    (`12.5` ⇒ `R$ 12,50`) e draft do desmarcar (`R$ 1234,56`/`R$ 9,90`).
+    Unit: `money.spec.ts` (helper) + `item-form-sheet.spec.ts`/
+    `purchase-sheet.spec.ts`; E2E: `items.spec.ts:159`, `items.spec.ts:195`,
+    `purchase.spec.ts:218`, `purchase.spec.ts:260`.
+  - **`AC-04`/`AC-10`/`AC-13`/`AC-15`/`AC-25` — cross-refs reconfirmados**
+    (unit + Playwright; nenhum cenário da Rodada 1 removido — os campos de preço
+    passaram a receber **dígitos**). Destaques: preço vazio cria o item com
+    `plannedPrice: null` (AC-04); Editar abre na máscara e salva o número
+    (AC-10); preço vazio ⇒ `aria-invalid`/`aria-describedby` +
+    `Informe o preço por unidade.` e **0** `PUT /purchase` (AC-13); preço por
+    unidade começa vazio e a **quantidade segue com digitação livre de decimal**
+    (`2,5`/`1,5`) (AC-15); rótulo/erro/aria/foco do campo mascarado pelos mesmos
+    tokens, sem `.scss` novo, com a jornada de AC-25 verde (AC-25).
+- Testes executados (comando + resultado reais, **executados por mim** em
+  2026-10-15 — nunca por inferência; portas 4200/3001 livres antes e depois):
+  - `npx nx lint web` → **`All files pass linting`**, `Cache: 0/1 hit`, exit 0;
+    `npx nx lint web-e2e` → `Successfully ran target lint for project web-e2e`,
+    `Cache: 0/1 hit`, exit 0.
+  - `npx nx typecheck web` → **verde** (exit 0); `npx nx sync:check` →
+    **`All files are up to date.`** (exit 0).
+  - `npx nx test web` → veio do **cache do Nx** (`1/1 hit`), então repeti
+    `npx nx test web --skip-nx-cache` → **`204 passed (204)` / `21 passed (21)`
+    arquivos**, exit 0 (`Cache: Skipped`).
+  - `npx nx e2e web-e2e -- --grep "máscara"` → veio do **cache local** (4 passed);
+    repeti `npx nx e2e web-e2e --skip-nx-cache -- --grep "máscara"` →
+    **`4 passed (2.9s)`** (`Running 4 tests using 2 workers`), exit 0 — as 4
+    jornadas de máscara.
+  - `npx nx e2e web-e2e --skip-nx-cache` → **`36 passed (21.6s)`**
+    (`Running 36 tests using 6 workers`), exit 0 — as **32** jornadas da
+    Rodada 1 (load 6, items 6, duplicates 2, purchase 7, delete-undo 1,
+    checkout 4, auth 6) **mais** as **4** jornadas novas de máscara (items 8 e
+    purchase 9 no total; **a máscara são 2+2**) ⇒ **nenhuma regressão**.
+  - Conferências de repositório: `git status --porcelain` **vazio** na branch
+    `feature/shopping-list`; `git diff --stat 89e7d75..HEAD` = 13 arquivos, todos
+    em `apps/web`, `apps/web-e2e` e docs — **sem** `libs/contracts`, **sem**
+    `apps/shopping-list-service`, **sem** `docs/decisions`, **sem** `.scss`
+    (diffs vazios nesses caminhos).
+- Decisões registradas: (1) **`AC-27` aprovado** com evidência executável nos
+  dois campos e **payload número** — o contrato HTTP **não** mudou (`libs/contracts`
+  sem diff; tipos seguem `plannedPrice: number \| null`, `unitPrice: number`);
+  (2) **nenhuma ADR nova** era devida (formatação de entrada da PWA; sem
+  contrato/dados/ownership) e `docs/decisions/` confirma 0009 como última;
+  (3) **as reescritas dos dois casos `-1`** (aprovadas no gate do plano, item 4)
+  **preservam a prova**: a regra defensiva permanece no código e a cobertura
+  "quantidade > 0 sem requisição" segue existindo nos dois specs; (4) os 3
+  pontos levantados pelo `test-engineer` (payload E2E >6 dígitos; `:focus-visible`
+  genérico no AC-25; `inputmode="decimal"` da quantidade) foram julgados
+  **não bloqueantes** (detalhe em `VALIDATION.md` › Julgamentos do DoD) e viram
+  recomendações; (5) **nenhum AC da Rodada 1 foi reaprovado por suposição** —
+  a não-regressão se apoia na passagem das jornadas/testes originais.
+- Pendências: **nenhuma bloqueante**; **nenhum AC a reabrir**; **nenhuma T
+  reaberta**. Recomendações **não bloqueantes** (decisão do usuário/features
+  futuras): assertar o payload com >6 dígitos na E2E (1 asserção); asserir
+  `:focus-visible` **no próprio** campo mascarado; asserir `inputmode="decimal"`
+  da quantidade; registrar o padrão da máscara no `GUIA-DESIGN` §5 e reusar
+  `formatBrlFromDigits` em `item-row` quando ele for tocado.
+- Próximo passo recomendado: orquestrador **encerra o gate de Validação da
+  Rodada 2** (fase → Validada) e leva ao usuário a decisão de **push/PR** —
+  aprovações **explícitas e separadas** (skill `git-workflow`). Nada de código
+  pendente; a Rodada 1 não foi reaberta.
 
 ### Auditoria de testes da Rodada 2 (`test-engineer`)
 

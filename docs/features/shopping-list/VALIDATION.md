@@ -11,6 +11,11 @@ concluídos (T-01…T-19), nenhuma tarefa pendente/reaberta no `STATUS.md`, e o
 handoff do `test-engineer` (T-17) **registra a corrida Playwright**
 (`npx nx e2e web-e2e` → 32 passed). Gate da ADR 0008 satisfeito.
 
+> **Rodada 2 (máscara de centavos em BRL — `AC-27` + cross-refs):** validada em
+> **2026-10-15** na seção **"Rodada 2 — máscara de centavos em BRL"** no fim
+> deste arquivo. O bloco da Rodada 1 acima (26/26 ACs, 2026-10-14) permanece
+> **intacto**; a Rodada 2 não reabre nenhum AC da Rodada 1.
+
 ## Evidências por critério
 
 Legenda: **Comando E2E** = `npx nx e2e web-e2e` (ou filtro `-- --grep`), corrida
@@ -259,3 +264,273 @@ dados (banco com 0 linhas) foram conferidos. Os três julgamentos exigidos pelo 
 foram analisados e **nenhum** constitui pendência de comportamento, contrato ou
 arquitetura. Não há AC a reabrir. A decisão de push/PR/merge permanece com o
 usuário.
+
+---
+
+# Rodada 2 — máscara de centavos em BRL
+
+**Spec:** `docs/features/shopping-list/SPEC.md` — **Rodada 2 aprovada em
+2026-10-14** (`RN-21`/`AC-27`/`CD-14`/`CD-15`; `D-02` resolvida) + Rodada 1
+aprovada em 2026-10-13 (26 ACs, **permanece intacta**)
+**Plano:** `docs/features/shopping-list/PLAN.md` — seção "Rodada 2"
+(`Superfície de UI: sim`, matriz AC ↔ E2E da Rodada 2, T-20…T-23; gate aprovado
+em 2026-10-14)
+**Data:** 2026-10-15
+**Resultado:** **Aprovada** (Rodada 2) — nenhum AC da Rodada 1 reaberto
+**Superfície de UI (do plano):** **sim** (ADR 0008)
+
+DoR da revalidação: tarefas **T-20…T-23** concluídas e commitadas (`2120634`,
+`48a8ff2`, `e79d354`, `8175f72`) + auditoria de testes (`f93abea`); árvore de
+trabalho limpa na branch `feature/shopping-list`; nenhuma tarefa reaberta no
+`STATUS.md`; o handoff do `test-engineer` **registra a corrida Playwright**
+(`npx nx e2e web-e2e -- --grep "máscara"` → 4 passed e a corrida completa → 36
+passed). Gate da ADR 0008 satisfeito — e **reproduzido por mim** (comandos ao
+final). Escopo desta validação: **apenas** `AC-27` (novo, integral) e os
+**cross-refs** `AC-04`, `AC-10`, `AC-13`, `AC-15`, `AC-25` (conferir que
+continuam provados após a mudança); os demais ACs da Rodada 1 seguem aprovados
+**salvo regressão**, que não foi encontrada (ver "Regressão").
+
+## Evidências por critério (Rodada 2)
+
+Legenda: **Comando E2E** = `npx nx e2e web-e2e` (ou filtro `-- --grep`), corrida
+real registrada em "Comandos executados (Rodada 2)". **Unit web** =
+`npx nx test web`. Títulos entre crases = `arquivo › título`.
+
+| AC | Estado | Evidência unit (`npx nx test web`) | Evidência Playwright (ADR 0008) | Contrato/ops | Observação |
+| --- | --- | --- | --- | --- | --- |
+| **AC-27** | **aprovado** | Helper: `money.spec.ts › formata os dígitos como centavos, entrando pela direita` (`'3'`→`R$ 0,03`, `'30'`→`R$ 0,30`, `'3015'`→`R$ 30,15`), `› acima de mil não usa separador de milhar (CD-15)`, `› não há limite artificial de dígitos (CD-15)`, `› o dígito zero é valor, não ausência`; `numberFromDigits › sem dígitos é ausência, não zero`, `› converte centavos no número do payload`, `› não há limite artificial de dígitos no payload (CD-15)`; `digitsFromNumber › faz o prefill sem erro de ponto flutuante`, `› fecha o ciclo prefill → exibição`; `digitsFromInput › mantém apenas os dígitos`, `› descarta prefixo, separadores, sinal e letras — inclusive ao colar`. Wiring **item**: `item-form-sheet.spec.ts › máscara de centavos em BRL: 3/30/3015 viram R$ 0,03/R$ 0,30/R$ 30,15 e enviam número (AC-27)`, `› um backspace apaga um dígito (RN-21/CD-15)`, `› colar mantém só os dígitos, sem separador de milhar (AC-27/CD-15)`, `› texto inválido não cola na tela: o campo volta à máscara (AC-27)`, `› o campo de preço usa teclado numérico (AC-27)`, `› a máscara não aceita sinal… (RN-21/AC-27)`, `› prefill da edição na máscara e limpar os opcionais envia null (RN-03/AC-10)`. Wiring **compra**: `purchase-sheet.spec.ts` com os mesmos casos (`máscara de centavos em BRL: 3/30/3015…`, `um backspace apaga um dígito (RN-21/CD-15)`, `colar mantém só os dígitos…`, `o campo de preço usa teclado numérico (AC-27)`, `a máscara não aceita sinal…`, `usa os valores preservados… (AC-16)` ⇒ `R$ 9,90`) | `items.spec.ts:159 › máscara de centavos em BRL no preço planejado: digitar 3/30/3015 mostra R$ 0,03/R$ 0,30/R$ 30,15 e envia o número` (campo começa **vazio**, **sem** `R$ 0,00`; linha `R$ 30,15`; POST com `plannedPrice: 30.15`); `items.spec.ts:195 › máscara no preço planejado: apagar remove um dígito, colar mantém só dígitos e a edição abre na máscara` (prefill `12.5` ⇒ `R$ 12,50`; Backspace `R$ 12,50`→`R$ 1,25`→`R$ 0,12`; 9 dígitos reais ⇒ `R$ 1234567,89`; `R$ 1.234,56` ⇒ `R$ 1234,56`; PATCH com `plannedPrice: 1234.56`); `purchase.spec.ts:218 › máscara de centavos em BRL no preço por unidade: digitar 3015 mostra R$ 30,15 e envia 30.15` (começa vazio, vazio ⇒ erro no campo + **0** `PUT /purchase`; PUT com `unitPrice: 30.15`); `purchase.spec.ts:260 › máscara no preço por unidade: apagar um dígito, colar só dígitos e o valor volta na máscara ao reabrir` (10 dígitos reais ⇒ `R$ 30123456,78`; draft do RN-12 volta como `R$ 1234,56`) | `libs/contracts/src/http/shopping-list.ts` (`plannedPrice: number \| null`, `unitPrice: number`) — **inalterado**: `git diff 89e7d75..HEAD -- libs/contracts` = vazio; payload assertado pelo *fake api* é **número** (`30.15`/`1234.56`) | Cobre os **dois** campos, exibição, payload, vazio=`''` (não `0`), sem milhar, apagar/colar, sem limite, prefill e draft. Quantidade **não** é afetada (ver AC-15) |
+| **AC-04** | **aprovado (cross-ref reconfirmado)** | `item-form-sheet.spec.ts › adiciona só com o nome, com os opcionais vazios (AC-04)` — `priceValue === ''` e `plannedPrice: null`; `› aceita a quantidade com vírgula e o preço na máscara, enviando números (RN-06/AC-27)` | `items.spec.ts:7 › adiciona item só com o nome: aparece pendente com opcionais vazios` — POST `{plannedQuantity:null,unit:null,plannedPrice:null}` (e a jornada de máscara, l.169, assere o campo **vazio** antes do 1º dígito) | `POST /api/shopping-list/items` → 201 com `plannedPrice: null` (`libs/contracts/README.md`) | O preço **vazio** continua criando o item; a máscara só cria valor a partir do 1º dígito |
+| **AC-10** | **aprovado (cross-ref reconfirmado)** | `item-form-sheet.spec.ts › prefill da edição na máscara e limpar os opcionais envia null (RN-03/AC-10)` (`R$ 12,50`); `shopping-list-page.spec.ts › a ação da linha abre o sheet de ações e Editar preenche o formulário (AC-10)`, `› salvar a edição atualiza a linha e confirma com toast (AC-10)` | `items.spec.ts:72 › editar planejados e salvar atualiza a linha` (`fill('1250')` ⇒ `toHaveValue('R$ 12,50')`; meta da linha `3 kg · R$ 12,50`); `items.spec.ts:195` (abrir Editar mostra `R$ 12,50`) | `PATCH /items/{id}` → 200 com `plannedPrice: 1234.56` (número) | Linha continua no formato `R$ 30,15`/`R$ 12,50` (sem mudança em `item-row`) |
+| **AC-13** | **aprovado (cross-ref reconfirmado)** | `purchase-sheet.spec.ts › os três campos são obrigatórios: erro em cada campo e nenhuma requisição (AC-13)` — no campo mascarado: `aria-invalid="true"`, `aria-describedby="purchase-price-error"`, mensagem `Informe o preço por unidade.`, `markItemPurchased` **não** chamado; `› valida quantidade > 0 sem enviar a marcação (RN-06/AC-13)` | `purchase.spec.ts:34 › sem um dos campos obrigatórios: erro no campo e nenhuma requisição de marcação`; trecho de **preço vazio** dentro de `purchase.spec.ts:218` (`#purchase-price-error` + `countRequests('PUT','/purchase') === 0`) | `PUT .../purchase` exige `unitPrice` (`libs/contracts/README.md`) | A regra defensiva "preço ≥ 0" segue no código, agora **inalcançável pela digitação** (RN-21) — ver Julgamento 1 |
+| **AC-15** | **aprovado (cross-ref reconfirmado)** | `purchase-sheet.spec.ts › pré-preenche quantidade e unidade planejadas e deixa o preço por unidade vazio (AC-15)` (`#purchase-price.value === ''`), `› sem planejados, os três campos começam vazios… (AC-15)`; `shopping-list-page.spec.ts › o alvo de um item pendente abre o sheet com o prefill planejado; marcar confirma com toast (AC-12/AC-15)`; quantidade com decimal livre: `purchase-sheet.spec.ts › marca com os três campos… (AC-12)` (`'1,5'` ⇒ `1.5`), `item-form-sheet.spec.ts › aceita a quantidade com vírgula…` | `purchase.spec.ts:98 › pré-preenche quantidade/unidade planejadas e deixa o preço por unidade vazio` (`toHaveValue('')` no preço; quantidade `2,5` — digitação decimal preservada); `purchase.spec.ts:113` (reload ⇒ preço volta **vazio**) | — | RN-13 preservada; RN-12 (draft) reaparece na máscara (`R$ 7,25`/`R$ 1234,56`) |
+| **AC-25** | **aprovado (cross-ref reconfirmado)** | `shopping-list-page.spec.ts › mantém a ação primária única e no terço inferior quando há itens (AC-25)`; `item-row.spec.ts` (alvos ≥44px, inalterados) | `load.spec.ts:132 › viewport 360px e desktop (--container-max), tema claro e escuro, uma única primary, alvos ≥44px, :focus-visible visível` — verde na corrida completa | `.field__input` / `.field__input:focus-visible` / `.field__input--error` só com tokens (`var(--touch-target-min)`, `var(--space-*)`, `var(--font-size-body)`, `var(--color-*)`, `var(--radius-xs)`, `outline: 2px solid var(--color-primary-text)`); **nenhum `.scss` mudou na Rodada 2** (`git diff 89e7d75..HEAD -- "*.scss"` = vazio) | Rótulo visível + `inputmode="numeric"` + `aria-invalid`/`aria-describedby` no campo mascarado (templates conferidos); `aria-invalid` assertado na E2E |
+
+**Exibição × contrato:** os ACs acima mostram no campo o **texto mascarado**
+(`R$ 30,15`) e enviam ao serviço o **número** (`30.15`) — nenhum AC exige `R$` no
+payload, e o contrato segue sem mudança (o diff de `libs/contracts` e do backend
+é vazio; ver "Verificações transversais").
+
+### Regressão (Rodada 1)
+
+- **Nenhuma.** A corrida completa `npx nx e2e web-e2e --skip-nx-cache` →
+  **36 passed** (as **32** jornadas da Rodada 1 + as **4** da máscara) e
+  `npx nx test web --skip-nx-cache` → **204 passed / 21 arquivos**, ambas
+  executadas por mim (saída real abaixo). Os ACs da Rodada 1 **não** são
+  reaprovados por suposição: como a Rodada 2 tocou dois componentes
+  (`item-form-sheet`, `purchase-sheet`) que servem a vários ACs da Rodada 1, a
+  reconfirmação se dá pela **passagem das jornadas/testes originais** (nenhum
+  cenário da Rodada 1 foi removido — conferido em `items.spec.ts`,
+  `purchase.spec.ts` e `checkout.spec.ts`, que mantêm todos os casos e apenas
+  digitam **dígitos** nos campos de preço).
+
+## Checklist de documentação (Rodada 2)
+
+- [x] **Contratos HTTP/eventos coerentes com a implementação.** **Nada mudou**:
+      `git diff --stat 89e7d75..HEAD -- libs/contracts` = **vazio** e o backend
+      (`apps/shopping-list-service`) também não tem diff; os tipos seguem
+      `plannedPrice: number | null` e `unitPrice: number`
+      (`libs/contracts/src/http/shopping-list.ts`), e o `libs/contracts/README.md`
+      (rotas/status/envelope/`unitPrice >= 0`) segue descrevendo a borda real.
+      **Eventos: nenhum** (RN-16/AC-21) — a Rodada 2 não publica nada.
+- [x] **ADR registrada quando a implementação gerou decisão arquitetural.**
+      **Nenhuma ADR nova** — e é o correto: a máscara é **formatação de entrada
+      da PWA**, sem mudança de contrato, dados, ownership ou integração
+      (`SPEC.md` › "Rodada 2" e `PLAN.md` › "Contratos, dados e ownership").
+      `docs/decisions/` segue com a **0009** (Rodada 1) como última; o diff de
+      `docs/decisions` na Rodada 2 é vazio. Revisão arquitetural: **não
+      aplicável**, declarada no `PLAN.md`.
+- [x] **README / `.env.example`.** Sem mudança de setup: a Rodada 2 não alterou
+      comandos, portas, variáveis ou pré-requisitos (nenhum arquivo de README/
+      `.env.example` aparece no diff da Rodada 2), logo não havia o que atualizar.
+- [x] **`docs/lessons/`** — **N/A nesta rodada**: nenhum arquivo novo (só o
+      `2026-10-07-setup-inicial.md`). Os aprendizados da Rodada 2 (estado =
+      dígitos; DOM sobrescrito imperativamente; `beforeinput` para 1 backspace =
+      1 dígito; zeros que a própria máscara insere) estão registrados de forma
+      versionada nos handoffs T-20…T-23 e nos testes que os guardam. Promovê-los
+      (e registrar o padrão da máscara no `GUIA-DESIGN` §5) é recomendação
+      **não bloqueante**.
+- [x] **Documentação da feature atualizada quando ambiguidades foram
+      resolvidas.** **D-02 → CD-15** foi registrada na `SPEC.md` (sem separador de
+      milhar; campo sem dígitos **vazio**, sem `R$ 0,00`; apagar = último dígito,
+      colar = só dígitos, sem limite artificial) e **RN-21/AC-27** foram
+      refinados; o `PLAN.md` traz a Rodada 2 com a matriz AC ↔ E2E e T-20…T-23
+      (gate aprovado em 2026-10-14). Nenhuma decisão aberta remanescente.
+- [x] **`STATUS.md` final com a próxima ação.** O bloco de handoff desta
+      validação foi registrado logo após `## Últimos handoffs` (o topo
+      fase/gate/próxima ação é do orquestrador e **não** foi tocado por esta
+      validação).
+
+## Checklist de design (Superfície de UI = sim — escopo da Rodada 2)
+
+> A Rodada 2 **não** alterou nenhum `.scss` (`git diff 89e7d75..HEAD -- "*.scss"` =
+> vazio): a máscara reusa a classe de campo já aprovada na Rodada 1. O checklist
+> abaixo confere o que a mudança **poderia** ter afetado.
+
+- [x] **Tokens: nenhuma cor/espaço/raio hardcoded no caminho novo.**
+      `.field__input` usa `var(--touch-target-min)`, `var(--space-*)`,
+      `var(--font-size-body)`, `var(--color-ink)`, `var(--color-surface)`,
+      `1px solid var(--color-hairline)`, `var(--radius-xs)`; erro
+      (`--color-danger`) e foco (`--color-primary-text` + `var(--shadow-1)`).
+      Nenhum hex/px novo (o `1px` é a hairline do guia §5).
+- [x] **Foco e toque.** `.field__input:focus-visible` com
+      `outline: 2px solid var(--color-primary-text)`; E2E `load.spec.ts`
+      (AC-25) assere `:focus-visible` visível e alvos ≥44px (verde na corrida);
+      `inputmode="numeric"` no campo mascarado dos **dois** sheets (unit
+      `… o campo de preço usa teclado numérico (AC-27)`).
+- [x] **Erro visível (não só no console).** O campo mascarado mantém rótulo
+      visível (`Preço (R$)`, `Preço por unidade (R$)` com `*` + "(obrigatório)"),
+      `role=alert` no `#…-price-error`, `aria-invalid`/`aria-describedby` — com
+      asserção unit (AC-13/AC-27) e na E2E.
+- [x] **Quatro estados.** A máscara não altera os estados da tela
+      (carregando/vazio/erro/sucesso) — carregando (skeleton), vazio (empty
+      state), erro (área de carga + toast persistente + erro de campo) e sucesso
+      (lista) permanecem com as jornadas da Rodada 1; o erro de **campo** ganhou
+      a cobertura nova.
+- [x] **Mobile-first / uma coluna / hierarquia / agrupamento / receita do tipo de
+      tela.** Nenhum layout mudou: os preços vivem nos **bottom sheets de
+      formulário** nomeados pelo tipo de fluxo (`item-form-sheet` /
+      `purchase-sheet`), sem form solto no void; app bar + coluna única + bottom
+      nav seguem as jornadas de AC-01/AC-25.
+- [x] **Modo escuro via tokens.** Sem scss novo; E2E AC-25
+      (`emulateMedia({ colorScheme: 'dark' })` → `--color-canvas: #191919`) verde.
+- [x] **Quantidade intocada (RN-06).** Continua com digitação livre de decimal e
+      teclado decimal: `item-form-sheet.spec.ts › aceita a quantidade com vírgula
+      e o preço na máscara, enviando números (RN-06/AC-27)` (`1,5` ⇒ `1.5`),
+      `purchase-sheet.spec.ts › marca com os três campos…` (`'1,5'` ⇒ `1.5`) e a
+      E2E `toHaveValue('2,5')`/`toHaveValue('2')` no sheet de compra.
+
+## Verificações transversais (Rodada 2)
+
+- [x] Contratos HTTP/eventos inalterados e coerentes (diff vazio em
+      `libs/contracts`; backend sem diff; **eventos = nenhum**).
+- [x] ADRs necessárias versionadas: **nenhuma nova** era necessária (máscara é
+      entrada da PWA); `0001…0009` vigentes.
+- [x] Documentação da feature atualizada (SPEC com CD-15/RN-21/AC-27; PLAN com a
+      Rodada 2 e o gate aprovado; STATUS com os handoffs).
+- [x] Testes planejados executados e resultados registrados (seção de comandos).
+- [x] **`npx nx e2e web-e2e` executado por mim** → **36 passed** (e o filtro
+      `-- --grep "máscara"` → **4 passed**), ambas também com `--skip-nx-cache`.
+- [x] Checklists de documentação e de design acima completas.
+- [x] Nenhuma regressão: `web` **204/204** e `web-e2e` **36/36**.
+- [x] Nenhum segredo/credencial novo (nenhum arquivo de configuração tocado na
+      Rodada 2; `git status --porcelain` limpo antes e depois das corridas).
+- [x] Portas livres antes das corridas (`netstat … :4200 :3001` sem `LISTENING`)
+      e livres depois — o Playwright subiu e derrubou os dois `webServer`.
+
+## Pendências (Rodada 2)
+
+- **Nenhuma pendência bloqueante de comportamento, contrato ou arquitetura.**
+  `AC-27` está aprovado e os cross-refs seguem provados; **nenhum AC a reabrir**.
+- Recomendações **não bloqueantes** (não exigem T de correção; decisão do
+  usuário/orquestrador):
+  1. **Payload E2E com >6 dígitos** não é assertado (a E2E prova o *display* com
+     9/10 dígitos reais e o helper prova o número — `numberFromDigits('123456789')
+     → 1234567.89`). Se quiser o valor longo **no payload** da E2E, é o ajuste de
+     uma asserção nas jornadas de máscara.
+  2. **`:focus-visible` do AC-25 na E2E é genérico** (Tab na página), não foca
+     especificamente o campo mascarado; rótulo/erro/`aria-*` do campo têm
+     cobertura própria (AC-13/AC-27).
+  3. **`inputmode="decimal"` da quantidade** (risco do `PLAN.md`, **não** é AC)
+     sem asserção de atributo; o comportamento decimal é coberto.
+  4. Registrar o **padrão da máscara no `GUIA-DESIGN` §5** e reusar
+     `formatBrlFromDigits` em `item-row` quando ele for tocado por outra demanda
+     (recomendações já anotadas no `PLAN.md`).
+- Nada disto muda comportamento, contrato ou arquitetura: **não há devolução ao
+  orquestrador por lacuna** — são melhorias opcionais.
+
+## Julgamentos exigidos pelo DoD (Rodada 2)
+
+1. **Reescrita dos dois casos de teste que digitavam `-1` (item e compra)** —
+   **não bloqueia; preserva a prova.** Foi um item **aprovado** pelo usuário no
+   gate do plano (item 4): o caminho de entrada mudou pela spec (CD-14/RN-21) e a
+   regra defensiva "preço ≥ 0" **permanece no código**, agora inalcançável pela
+   digitação. No item: `item-form-sheet.spec.ts › valida quantidade > 0 sem enviar
+   requisição (RN-06)` e `› a máscara não aceita sinal… (RN-21/AC-27)`; na compra:
+   `purchase-sheet.spec.ts › valida quantidade > 0 sem enviar a marcação
+   (RN-06/AC-13)` e `› os três campos são obrigatórios: erro em cada campo e
+   nenhuma requisição (AC-13)`. Nenhum teste foi removido por conveniência: os
+   casos `-1` viraram testes de máscara **mantendo** o caso "quantidade > 0 sem
+   requisição" (conferido no diff da Rodada 2).
+
+2. **Payload de valor longo sem asserção E2E** — **não bloqueia.** `AC-27` exige
+   "não há limite artificial de dígitos — o limite prático é a precisão do
+   serviço"; isso está provado por (a) 9 e 10 dígitos **reais via teclado** na E2E
+   (`R$ 1234567,89`, `R$ 30123456,78`) e (b) `numberFromDigits`/`digitsFromNumber`
+   no helper unitário. O valor enviado ao serviço já está provado nos dois campos
+   (`30.15` e `1234.56`). Fica como recomendação nº 1.
+
+3. **`:focus-visible` genérico no AC-25** — **não bloqueia.** O campo mascarado
+   usa a **mesma** classe `.field__input:focus-visible` com tokens que já foi
+   aprovada na Rodada 1, e **nenhum `.scss` mudou** nesta rodada; o rótulo visível,
+   `aria-invalid`/`aria-describedby`, `role=alert` e `inputmode="numeric"` do campo
+   têm asserção própria (unit + E2E). Fica como recomendação nº 2.
+
+Nenhum dos três rebaixa `AC-27`, `AC-04`, `AC-10`, `AC-13`, `AC-15` ou `AC-25`.
+
+## Comandos executados (Rodada 2)
+
+Todos executados por mim em 2026-10-15, com a branch `feature/shopping-list` e a
+árvore limpa (`git status --porcelain` vazio), portas 4200/3001 livres antes e
+depois das corridas.
+
+```text
+npx nx lint web
+# Linting "web"... ✔ All files pass linting
+# Successfully ran target lint for project web — Cache: 0/1 hit (0%) — exit 0
+
+npx nx lint web-e2e
+# Successfully ran target lint for project web-e2e — Cache: 0/1 hit (0%) — exit 0
+
+npx nx typecheck web
+# > tsc --build tsconfig.json --emitDeclarationOnly
+# Successfully ran target typecheck for project web and 2 tasks it depends on — exit 0
+# (contratos: build/typecheck vieram do cache; o web:typecheck executou)
+
+npx nx sync:check
+# The workspace is up to date · [@nx/js:typescript-sync]: All files are up to date. — exit 0
+
+npx nx test web
+# nx run web:test [existing outputs match the cache, left as is] — Cache 1/1 hit
+# → repetido para execução real:
+npx nx test web --skip-nx-cache
+# Test Files 21 passed (21); Tests 204 passed (204) — 3.87s
+# Cache: Skipped (--skip-nx-cache) — exit 0
+
+npx nx e2e web-e2e -- --grep "máscara"
+# nx run web-e2e:e2e--grep máscara [local cache] — 4 passed (3.0s)  ← cache do Nx
+# → repetido para execução real:
+npx nx e2e web-e2e --skip-nx-cache -- --grep "máscara"
+# Running 4 tests using 2 workers → 4 passed (2.9s) — exit 0
+#  ok items.spec.ts:159 › Lista — itens › máscara de centavos em BRL no preço planejado: digitar 3/30/3015 mostra R$ 0,03/R$ 0,30/R$ 30,15 e envia o número
+#  ok items.spec.ts:195 › Lista — itens › máscara no preço planejado: apagar remove um dígito, colar mantém só dígitos e a edição abre na máscara
+#  ok purchase.spec.ts:218 › Lista — compra › máscara de centavos em BRL no preço por unidade: digitar 3015 mostra R$ 30,15 e envia 30.15
+#  ok purchase.spec.ts:260 › Lista — compra › máscara no preço por unidade: apagar um dígito, colar só dígitos e o valor volta na máscara ao reabrir
+
+npx nx e2e web-e2e --skip-nx-cache
+# Running 36 tests using 6 workers → 36 passed (21.6s) — exit 0
+# (as 32 jornadas da Rodada 1 — load 6, items 6, duplicates 2, purchase 7,
+#  delete-undo 1, checkout 4, auth 6 — mais as 4 jornadas novas de máscara,
+#  2 em items.spec.ts e 2 em purchase.spec.ts ⇒ items 8 e purchase 9 no total;
+#  contagem conforme a saída real da corrida)
+
+netstat -ano | findstr ":4200 :3001" | findstr "LISTENING"
+# (antes) sem saída — portas livres; (depois) sem saída — webServer derrubados
+```
+
+## Parecer (Rodada 2)
+
+**Aprovada.** O `AC-27` (novo) tem evidência executável nos **dois** campos de
+preço: cenário Playwright com **corrida real registrada** (`--grep "máscara"` →
+**4 passed**, e a corrida completa → **36 passed**, ambas com `--skip-nx-cache`),
+cobrindo dígito a dígito (`3`/`30`/`3015` ⇒ `R$ 0,03`/`R$ 0,30`/`R$ 30,15`),
+campo vazio sem `R$ 0,00`, **payload numérico** (`30.15`, `1234.56`), sem separador
+de milhar, apagar/colar, sem limite de dígitos, prefill na edição e draft do
+desmarcar — mais o helper unitário e os dois sheets. Os **cross-refs** `AC-04`,
+`AC-10`, `AC-13`, `AC-15` e `AC-25` **continuam provados** após a mudança (unit +
+Playwright, com os testes originais mantidos e apenas digitando dígitos nos campos
+de preço). **Nenhum AC da Rodada 1 foi reaberto**: as suítes completas estão
+verdes (`web` **204/204**; `web-e2e` **36/36**) e não há indício de regressão. As
+checklists de documentação e de design estão completas; contratos, backend e ADRs
+**não mudaram** (confirmado por diff), e a quantidade permanece com digitação
+livre. Os três julgamentos do DoD foram analisados e **nenhum** bloqueia. Não há
+pendência bloqueante nem AC a reabrir; push/PR/merge continuam decisão do usuário.
