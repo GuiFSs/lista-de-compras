@@ -183,6 +183,134 @@ seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T da Rodada 1 reaberto.
 
 ## Últimos handoffs
 
+### Auditoria de testes da Rodada 2 (`test-engineer`)
+
+- Tarefa: auditoria de testes (Rodada 2)
+- Estado: **concluída**
+- Arquivos alterados (escopo permitido `*.spec.ts`; nada de produção; sem commit):
+  - `apps/web/src/app/shared/money/money.spec.ts` — **+2 testes** (lacuna fechada,
+    ver "Decisões"): `não há limite artificial de dígitos (CD-15)` no
+    `formatBrlFromDigits` e `não há limite artificial de dígitos no payload (CD-15)`
+    no `numberFromDigits`.
+  - `apps/web-e2e/src/shopping-list/items.spec.ts` — **+1 passo** na jornada
+    "máscara no preço planejado: apagar…": `pressSequentially('3456789')` após os
+    backspaces ⇒ `R$ 1234567,89` (9 dígitos reais via teclado).
+  - `apps/web-e2e/src/shopping-list/purchase.spec.ts` — **+1 passo** na jornada
+    "máscara no preço por unidade: apagar…": `pressSequentially('2345678')` ⇒
+    `R$ 30123456,78` (10 dígitos reais via teclado).
+  - Este `STATUS.md`. Total: **3 arquivos, +16 linhas, 0 removidas**.
+- ACs cobertos (mapa AC → teste, `arquivo › título`):
+  - **AC-27** (RN-21/CD-14/CD-15) — nos **dois** campos:
+    - centavos pela direita `3/30/3015` ⇒ `R$ 0,03/R$ 0,30/R$ 30,15`:
+      `money.spec.ts › formata os dígitos como centavos, entrando pela direita` +
+      `item-form-sheet.spec.ts › máscara de centavos em BRL: 3/30/3015 viram…` +
+      `purchase-sheet.spec.ts › máscara de centavos em BRL: 3/30/3015 viram…` +
+      `items.spec.ts › máscara de centavos em BRL no preço planejado: digitar
+      3/30/3015… e envia o número` + `purchase.spec.ts › máscara de centavos em BRL
+      no preço por unidade: digitar 3015 mostra R$ 30,15 e envia 30.15`;
+    - payload **número** (contrato inalterado): mesmas 2 jornadas E2E (fake api:
+      `plannedPrice: 30.15` / `unitPrice: 30.15`; e `PATCH plannedPrice: 1234.56`) +
+      as asserções de store nos 2 specs de sheet;
+    - vazio = ausência, sem `R$ 0,00`: `item-form-sheet.spec.ts › adiciona só com
+      o nome… (AC-04)` (`priceValue === ''` ⇒ `plannedPrice: null`),
+      `purchase-sheet.spec.ts › pré-preenche… preço por unidade vazio (AC-15)` +
+      `toHaveValue('')` inicial nas 2 jornadas E2E;
+    - sem separador de milhar: `money.spec.ts › acima de mil não usa separador de
+      milhar (CD-15)` + `…colar mantém só os dígitos, sem separador de milhar` nos
+      2 sheets + `fill('R$ 1.234,56') ⇒ R$ 1234,56` nas 2 jornadas E2E;
+    - apagar = 1 toque/dígito: `…um backspace apaga um dígito (RN-21/CD-15)` nos 2
+      sheets + `press('Backspace')` nas 2 jornadas E2E (`R$ 12,50`→`R$ 1,25`;
+      `R$ 30,15`→`R$ 3,01`);
+    - colar só dígitos: `money.spec.ts › descarta prefixo, separadores, sinal e
+      letras — inclusive ao colar` + 2 sheets + 2 jornadas E2E;
+    - **sem limite artificial (lacuna fechada por esta auditoria)**:
+      `money.spec.ts › não há limite artificial de dígitos (CD-15)` (+ payload) e os
+      2 passos novos de teclado nas jornadas E2E (9/10 dígitos);
+    - prefill na edição: `item-form-sheet.spec.ts › prefill da edição na máscara…`,
+      `shopping-list-page.spec.ts › …Editar preenche o formulário (AC-10)` ⇒
+      `R$ 12,50`, `items.spec.ts › máscara no preço planejado: apagar…` (E2E);
+    - draft no desmarcar: `purchase-sheet.spec.ts › usa os valores preservados…
+      (AC-16)` ⇒ `R$ 9,90`, `shopping-list-page.spec.ts › desmarcar… preserva os
+      digitados (AC-16)` ⇒ `R$ 9,90`, `purchase.spec.ts › máscara no preço por
+      unidade: apagar…` (E2E: reabre `R$ 1234,56`);
+    - sem sinal/negativo: `…a máscara não aceita sinal: "-" não vira dígito…` nos 2
+      sheets; `inputmode="numeric"`: `…o campo de preço usa teclado numérico
+      (AC-27)` nos 2 sheets.
+  - **AC-04** (cross-ref): `item-form-sheet.spec.ts › adiciona só com o nome, com os
+    opcionais vazios (AC-04)` + `items.spec.ts › adiciona item só com o nome:
+    aparece pendente com opcionais vazios` (payload `plannedPrice: null`).
+  - **AC-10** (cross-ref): `item-form-sheet.spec.ts › prefill da edição na máscara…`,
+    `shopping-list-page.spec.ts › …Editar preenche o formulário (AC-10)` +
+    `salvar a edição atualiza a linha… (AC-10)` + `items.spec.ts › editar planejados
+    e salvar atualiza a linha` (linha `3 kg · R$ 12,50`).
+  - **AC-13** (cross-ref): `purchase-sheet.spec.ts › os três campos são obrigatórios:
+    erro em cada campo e nenhuma requisição (AC-13)` (aria do campo mascarado) +
+    `purchase.spec.ts › sem um dos campos obrigatórios: erro no campo e nenhuma
+    requisição de marcação` (E2E) + o trecho de **preço vazio** dentro da jornada de
+    máscara (`#purchase-price-error` + **0** `PUT /purchase`).
+  - **AC-15** (cross-ref): `purchase-sheet.spec.ts › pré-preenche quantidade e
+    unidade planejadas e deixa o preço por unidade vazio (AC-15)` +
+    `purchase.spec.ts › pré-preenche quantidade/unidade planejadas e deixa o preço
+    por unidade vazio` (E2E).
+  - **AC-25** (cross-ref): `load.spec.ts › viewport 360px e desktop … tema claro e
+    escuro, uma única primary, alvos ≥44px, :focus-visible visível` + aria/
+    `aria-describedby` do preço mascarado em `purchase-sheet.spec.ts › os três
+    campos são obrigatórios…` e na jornada E2E de máscara (`aria-invalid`).
+- Testes executados (comando + resultado reais, executados por mim — nunca por
+  inferência):
+  - `npx nx test web` → **`204 passed (204)` / `21 passed (21 arquivos)`**,
+    exit **0** (era 202; **+2** da lacuna fechada).
+  - `npx nx e2e web-e2e -- --grep "máscara"` → **`4 passed (3.0s)`**
+    (`Running 4 tests using 2 workers`), exit **0** — as 4 jornadas, agora com os
+    passos de 9/10 dígitos.
+  - `npx nx e2e web-e2e` → **`36 passed (22.2s)`**, exit **0**;
+    repetido **`--skip-nx-cache`** → **`36 passed (23.0s)`**, exit **0** (zero cache
+    do Nx; Playwright subiu `web:serve` (4200) e `auth-service:serve` (3001) e os
+    derrubou ao terminar — portas sem `LISTENING` após a corrida; antes dos runs a
+    checagem `netstat` deu portas livres).
+  - `npx nx lint web --skip-nx-cache` → **`Successfully ran target lint for project
+    web`**, exit **0**; `npx nx lint web-e2e --skip-nx-cache` → **`Successfully ran
+    target lint for project web-e2e`**, exit **0** (sem `any`, sem `test.skip`,
+    sem `waitForTimeout`, sem `passWithNoTests`).
+- Decisões registradas:
+  1. **Lacuna real encontrada e fechada (menor patch):** o detalhe do **AC-27/CD-15(c)**
+     "não há limite artificial de dígitos" **não tinha evidência executável** em
+     lugar nenhum — o maior caso coberto era `'123456'` (6 dígitos); um teto de 6
+     dígitos passaria a suíte inteira. Fechado só em `*.spec.ts` (+16 linhas): 2
+     asserções no helper + 1 passo de digitação real (`pressSequentially`) em **cada**
+     campo na E2E — o passo E2E é o falsificável de verdade para um eventual
+     `maxlength` no template (que `input.value +=` do unit contornaria), e cobre os
+     dois wirings separados (`item-form-sheet` e `purchase-sheet`). **Nenhum** código
+     de produção foi alterado (os templates não têm `maxlength` hoje — conferido).
+  2. **Nada removido por conveniência:** diff `89e7d75..HEAD` nos `*.spec.ts` mostra
+     40 linhas removidas, **todas** da tabela "Impacto nos testes existentes" do
+     PLAN (trocas de `fill('5,50')`→`'550'`, `toHaveValue('9,9')`→`'R$ 9,90'` etc.)
+     e das **duas reescritas aprovadas** dos casos `-1` — cada uma substituída por um
+     teste de máscara **mantendo** o caso "quantidade > 0 sem requisição" original.
+     Os AC-04/AC-10/AC-13/AC-15/AC-26/AC-16 da Rodada 1 continuam com teste.
+  3. **Falsificabilidade conferida:** sem a máscara todas as asserções falham (dígitos
+     crus ≠ `R$ …`, payload `3015` ≠ `30.15`, prefill `12,5` ≠ `R$ 12,50`); os passos
+     novos falham com qualquer teto de dígitos; nenhum teste depende de tautologia.
+  4. Não rodei mutação no código de produção (fora do escopo) — a falsificabilidade
+     acima é por análise das asserções, como registrado na T-23.
+- Pendências (não cobertas por esta auditoria — para decisão do orquestrador/validator):
+  1. **Payload HTTP com >6 dígitos não é assertado na E2E:** as jornadas provam o
+     display sem limite via teclado e o helper prova o número (`numberFromDigits`
+     `123456789` → `1234567.89`); se o validator quiser o valor longo **no payload
+     E2E**, é um ajuste de uma asserção nas jornadas de máscara.
+  2. `inputmode="decimal"` do campo de **quantidade** (risco do PLAN, não é AC da
+     spec) não tem asserção de atributo; a quantidade é coberta pelo comportamento
+     (digitação livre `1,5` → `1.5` e `toHaveValue('2,5')` na E2E).
+  3. No **AC-25** o `:focus-visible` da E2E é genérico (Tab na página), não foca
+     **especificamente** o campo mascarado; rótulo/erro/`aria-*` do campo mascarado
+     estão cobertos nos testes de AC-13/AC-27.
+  4. Topo do `STATUS.md` (fase/gate/próxima ação) **não** foi tocado — é do
+     orquestrador.
+- Próximo passo recomendado: orquestrador registra este commit (3 specs + STATUS) e
+  delega a **revalidação da Rodada 2** ao `feature-validator` (AC-27 + cross-refs
+  AC-04/AC-10/AC-13/AC-15/AC-25), com a suíte `web` (**204**) e as corridas E2E
+  (**4** no filtro `máscara`, **36** completas) já registradas acima.
+
 ### T-23 — jornada Playwright da máscara de centavos em BRL (`test-engineer`)
 
 - Tarefa: **T-23**

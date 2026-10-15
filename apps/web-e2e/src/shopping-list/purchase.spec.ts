@@ -273,6 +273,10 @@ test.describe('Lista — compra', () => {
     await price.press('Backspace');
     await expect(price).toHaveValue('R$ 3,01');
 
+    // Sem limite artificial de dígitos (CD-15): os 10 dígitos seguem entrando.
+    await price.pressSequentially('2345678');
+    await expect(price).toHaveValue('R$ 30123456,78');
+
     // Colar/setar valor formatado mantém **só os dígitos**, sem separador de milhar.
     await price.fill('R$ 1.234,56');
     await expect(price).toHaveValue('R$ 1234,56');

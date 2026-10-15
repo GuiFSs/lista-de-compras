@@ -36,6 +36,10 @@ describe('formatBrlFromDigits', () => {
     expect(formatBrlFromDigits('123456')).toBe('R$ 1234,56');
   });
 
+  it('não há limite artificial de dígitos (CD-15)', () => {
+    expect(formatBrlFromDigits('123456789')).toBe('R$ 1234567,89');
+  });
+
   it('o dígito zero é valor, não ausência', () => {
     expect(formatBrlFromDigits('0')).toBe('R$ 0,00');
   });
@@ -50,6 +54,10 @@ describe('numberFromDigits', () => {
     expect(numberFromDigits('3')).toBe(0.03);
     expect(numberFromDigits('3015')).toBe(30.15);
     expect(numberFromDigits('1000')).toBe(10);
+  });
+
+  it('não há limite artificial de dígitos no payload (CD-15)', () => {
+    expect(numberFromDigits('123456789')).toBe(1234567.89);
   });
 });
 
