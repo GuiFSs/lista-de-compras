@@ -1,26 +1,25 @@
 # Estado da feature — Lista de compras
 
-**Fase atual:** **Rodada 2 — Implementação** (T-20, T-21 e T-22 concluídas; próxima
-T-23). A **Rodada 1** (lista ativa) está **validada** (26/26 ACs pelo
-`feature-validator`) — histórico preservado abaixo.
-**Gate atual:** **spec e plano da Rodada 2 aprovados** (`Aprovado pelo usuário em
-2026-10-14` em `SPEC.md` e `PLAN.md`). **Gate de Implementação da Rodada 2 aberto:**
-T-20 (helper `shared/money`), T-21 (máscara no preço planejado do `item-form-sheet`)
-e T-22 (máscara no preço por unidade do `purchase-sheet`) **concluídas** com suíte
-`web` verde (**202 testes / 21 arquivos**); falta **T-23** (jornada Playwright do
-AC-27, obrigatória por ADR 0008). Rodada 1: gates de Implementação e Validação
-fechados (não reabertos por si; serão revalidados apenas nos ACs afetados pela
-Rodada 2 — AC-27 e os cross-referenciados AC-04/AC-10/AC-13/AC-15/AC-25).
+**Fase atual:** **Rodada 2 — Validação** (T-20…T-23 concluídas e commitadas +
+auditoria de testes feita; revalidação pendente). A **Rodada 1** (lista ativa) está
+**validada** (26/26 ACs pelo `feature-validator`) — histórico preservado abaixo.
+**Gate atual:** **gate de Implementação da Rodada 2 FECHADO** — todas as tarefas
+concluídas com testes verdes e commitadas (`2120634` T-20, `48a8ff2` T-21,
+`e79d354` T-22, `8175f72` T-23, `f93abea` auditoria), Playwright do AC-27 verde com
+**comando + resultado** registrado (ADR 0008) e contrato/ADR inalterados. Suíte da
+Rodada 2: **`web` 204 testes / 21 arquivos** e **`web-e2e` 36 testes** (4 jornadas de
+máscara), lint verde nos dois. **Aberto agora: gate de Validação** — revalidação
+apenas dos ACs afetados (**AC-27** novo + cross-refs **AC-04/AC-10/AC-13/AC-15/AC-25**);
+os demais ACs da Rodada 1 (já aprovados, 26/26) permanecem **salvo regressão**.
 **Última atualização:** 2026-10-15
-**Próxima ação:** delegar a **T-23** (`test-engineer`) — jornada(s) Playwright
-hermética(s) do **AC-27** em `apps/web-e2e/**`: digitar `3`/`30`/`3015` e esperar
-`R$ 0,03`/`R$ 0,30`/`R$ 30,15` nos **dois** campos (item e compra), payload numérico
-no *fake api*, apagar/colar, prefill na edição e preservação no desmarcar, além de
-ajustar os `fill`/`toHaveValue` conforme a tabela de impacto da T-23 no `PLAN.md`.
-Evidência: `npx nx e2e web-e2e -- --grep "máscara"` **e** corrida completa verde
-(`npx nx e2e web-e2e`; portas 4200/3001 livres). Depois: auditoria de testes
-(`test-engineer`) e revalidação dos ACs afetados (`feature-validator`). Push/PR
-seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T da Rodada 1 reaberto.
+**Próxima ação:** delegar a revalidação da Rodada 2 ao **`feature-validator`** —
+validar o **AC-27** (e conferir os cross-refs AC-04/AC-10/AC-13/AC-15/AC-25) contra
+a `SPEC.md`, exigindo evidência executável por critério (comando + resultado, nunca
+inferência; a existência de spec não conta) e a corrida `npx nx e2e web-e2e`. Registrar
+o resultado em `docs/features/shopping-list/VALIDATION.md` (seção da Rodada 2, sem
+apagar a evidência da Rodada 1) + bloco no `STATUS.md`. Push/PR/merge seguem
+**adiados** até a aprovação do usuário (skill `git-workflow`, aprovações explícitas e
+separadas). Nenhum AC ou T da Rodada 1 reaberto.
 
 ## Artefatos
 
@@ -31,10 +30,10 @@ seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T da Rodada 1 reaberto.
 - Plano: `docs/features/shopping-list/PLAN.md` — **Rodada 1 aprovada em 2026-10-13**
   (17 tarefas `T-01…T-17`, matriz AC ↔ E2E com 26 ACs, `Superfície de UI: sim`,
   contrato HTTP completo, `Eventos: nenhum`; status `Aprovado`); **Rodada 2
-  escrita em 2026-10-14** (seção final: `Superfície de UI: sim`, matriz AC ↔ E2E
+  aprovada em 2026-10-14** (seção "Rodada 2": `Superfície de UI: sim`, matriz AC ↔ E2E
   com **AC-27** + cross-refs, tarefas **T-20…T-23**, ordem sequencial sem
-  paralelismo, impacto nos testes existentes por arquivo/linha) — **gate do plano
-  da Rodada 2 aberto**, aguardando a frase canônica do usuário
+  paralelismo, impacto nos testes existentes por arquivo/linha; **gate fechado** com
+  a frase canônica `Aprovado pelo usuário em 2026-10-14`; todas as T concluídas)
 - ADR: `docs/decisions/0009-excecao-temporaria-ao-gateway-shopping-list-service.md`
   — registrada (exceção temporária à ADR 0001 para o `shopping-list-service`);
   ADR 0006 §1 e Consequências com nota apontando para a 0009
@@ -75,11 +74,12 @@ seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T da Rodada 1 reaberto.
 
 ## Execução
 
-- **Rodada 2:** tarefa em andamento: **nenhuma**; **T-20 concluída** (helper puro
-  `apps/web/src/app/shared/money/money.ts` + `money.spec.ts`, 14 testes), **T-21
-  concluída** (máscara no preço planejado do `item-form-sheet`) e **T-22 concluída**
-  (máscara no preço por unidade do `purchase-sheet`); suíte `web` verde com
-  **202 testes / 21 arquivos**; pendente **T-23** (Playwright do AC-27)
+- **Rodada 2:** tarefa em andamento: **nenhuma**; **T-20, T-21, T-22 e T-23
+  concluídas** e a **auditoria de testes** do `test-engineer` **concluída** (lacuna
+  CD-15(c) — limite artificial de dígitos — fechada só em `*.spec.ts`); suíte `web`
+  verde com **204 testes / 21 arquivos** e `web-e2e` com **36 testes** (4 jornadas de
+  máscara); **reabertas: nenhuma**. Faltam revalidação (`feature-validator`) e a
+  decisão do usuário sobre push/PR
 - Tarefa em andamento: **nenhuma**
 - Tarefas concluídas (Rodada 1): T-01 … T-19 (todas)
 - Critérios comprovados: backend completo (T-01–T-07) + **prova com Postgres real**
