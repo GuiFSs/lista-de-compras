@@ -152,14 +152,14 @@ test.describe('Lista — concluir compra', () => {
     await page.getByRole('button', { name: 'Ações de Leite' }).click();
     await page.getByRole('button', { name: 'Editar' }).click();
     await page.locator('#item-name').fill('Leite integral');
-    await page.locator('#item-price').fill('6,50');
+    await page.locator('#item-price').fill('650');
     await page.getByRole('button', { name: 'Salvar' }).click();
     await expect(rows.nth(1)).toContainText('Leite integral');
     await expect(rows.nth(1).locator('.item-row__meta')).toHaveText('1 L · R$ 6,50');
 
     // Marcar como comprado.
     await page.getByRole('button', { name: 'Marcar Leite integral como comprado' }).click();
-    await page.locator('#purchase-price').fill('6,50');
+    await page.locator('#purchase-price').fill('650');
     await page.getByRole('button', { name: 'Marcar como comprado' }).click();
     await expect(page.getByRole('button', { name: 'Desmarcar Leite integral' })).toBeVisible();
 

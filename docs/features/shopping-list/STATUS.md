@@ -183,6 +183,72 @@ seguem **adiados** até a Rodada 2 fechar. Nenhum AC ou T da Rodada 1 reaberto.
 
 ## Últimos handoffs
 
+### T-23 — jornada Playwright da máscara de centavos em BRL (`test-engineer`)
+
+- Tarefa: **T-23**
+- Estado: **concluída**
+- Arquivos alterados (`git status --porcelain` → os **3 specs** abaixo, todos em
+  `apps/web-e2e` — o único escopo permitido desta tarefa —, mais este
+  `STATUS.md`):
+  - `apps/web-e2e/src/shopping-list/items.spec.ts` — **+2 jornadas** com "máscara"
+    no título (dígito a dígito `3`/`30`/`3015` ⇒ `R$ 0,03`/`R$ 0,30`/`R$ 30,15` +
+    campo vazio sem `R$ 0,00` + payload `plannedPrice: 30.15`; e apagar 1 backspace
+    = 1 dígito, colar/setar `R$ 1.234,56` ⇒ `R$ 1234,56` sem milhar, prefill da
+    edição `12.5` ⇒ `R$ 12,50` e payload `1234.56` no `PATCH`); ajuste da linha do
+    `fill('12,50')` da edição para `fill('1250')` + asserção `R$ 12,50`.
+  - `apps/web-e2e/src/shopping-list/purchase.spec.ts` — **+2 jornadas** com
+    "máscara" no título (dígito a dígito `3`/`30`/`3015` no preço por unidade,
+    campo começa vazio, confirmar vazio ⇒ erro no campo + **0** `PUT /purchase`,
+    payload `unitPrice: 30.15`; apagar 1 dígito (`R$ 30,15` → `R$ 3,01`), colar só
+    dígitos (`R$ 1.234,56` → `R$ 1234,56`) e draft do desmarcar de volta **na
+    máscara**) + ajustes da tabela de impacto (`'5,50'`→`'550'`, `'4,00'`→`'400'`,
+    `'2,30'`→`'230'`, `'7,25'`→`'725'` com `toHaveValue('R$ 7,25')`,
+    `'6,40'`→`'640'` com `toHaveValue('R$ 6,40')`; os dois `toHaveValue('')` de
+    campo vazio ficaram **inalterados**).
+  - `apps/web-e2e/src/shopping-list/checkout.spec.ts` — ajuste da tabela:
+    `#item-price` e `#purchase-price` de `'6,50'` para `'650'` (as metas
+    `R$ 6,50` já conferiam). Nenhum comportamento novo foi inventado.
+- ACs cobertos: **AC-27** nos **dois** campos (máscara dígito a dígito, exibição
+  em BRL, **payload numérico** conferido no *fake api*, campo vazio sem
+  `R$ 0,00`, sem separador de milhar, apagar 1 = 1 dígito, colar só dígitos,
+  prefill na edição e draft no desmarcar) + cross-refs exercitados: **AC-04**
+  (preço vazio continua criando o item com `plannedPrice: null`), **AC-10**
+  (editar abre com o preço na máscara e salva o número), **AC-13** (preço vazio
+  ⇒ erro no campo e **zero** requisição de marcação), **AC-15** (preço por
+  unidade começa vazio) e **AC-25** (rótulo/erro/`aria-invalid` do campo
+  mascarado preservados).
+- Testes executados (comando + resultado reais — nunca por inferência):
+  - `npx nx e2e web-e2e -- --grep "máscara"` → **`4 passed (3.0s)`**
+    (`Running 4 tests using 2 workers`; exit code **0**) — as 4 jornadas novas.
+    Repetido sem cache (`--skip-nx-cache`) → **`4 passed (2.9s)`**, exit code
+    **0**, sem nenhuma leitura de cache do Nx.
+  - `npx nx e2e web-e2e` → **`36 passed (22.1s)`**
+    (`Running 36 tests using 6 workers`; exit code **0**). Antes eram **32**
+    (26 da lista + 6 de auth) ⇒ **+4**, nenhuma regressão; as asserções de preço
+    ajustadas seguem verdes.
+  - `npx nx lint web-e2e --skip-nx-cache` → **`Successfully ran target lint for
+    project web-e2e`** (exit code **0**; 0 erros, sem `any`, sem `waitForTimeout`
+    nem `force` novos).
+- Decisões registradas: (1) as jornadas ficaram **nos arquivos da matriz do
+  PLAN.md** (`items.spec.ts` / `purchase.spec.ts`), com "máscara" no título para o
+  filtro `--grep "máscara"` provar exatamente a cobertura nova; (2) o caminho de
+  **colar** foi exercitado com `fill('R$ 1.234,56')` — um único evento `input`
+  com o texto colado, o **mesmo** handler `(input)` que a colagem real usa, sem
+  depender de permissão de clipboard; (3) os testes são **falsificáveis**: sem a
+  máscara o campo mostraria `3`/`3015` (não `R$ 0,03`/`R$ 30,15`), o payload
+  seria `3015` (não `30.15`) e o prefill da edição seria `12,5` (não
+  `R$ 12,50`) — todas as asserções falhariam; (4) nada em `apps/web` foi tocado
+  (T-20/T-21/T-22 seguem intactas) e **nenhum** contrato HTTP foi alterado; (5)
+  não rodei mutação no código de produção para não sair do escopo de arquivos da
+  T-23.
+- Pendências: nenhuma bloqueante. Observação de ambiente: as portas 4200/3001
+  estavam livres antes da corrida (nenhum dev server órfão); o Playwright subiu e
+  derrubou os dois `webServer` por conta própria.
+- Próximo passo recomendado: **revalidação da Rodada 2** pelo `feature-validator`
+  (AC-27 + cross-refs AC-04/AC-10/AC-13/AC-15/AC-25), com a suíte `web` e as duas
+  corridas E2E já registradas; depois seguir para commit/PR conforme o
+  orquestrador.
+
 ### T-22 — máscara de centavos em BRL no preço por unidade (`angular-dev`)
 
 - Tarefa: **T-22**

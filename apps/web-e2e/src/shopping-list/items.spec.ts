@@ -79,7 +79,9 @@ test.describe('Lista — itens', () => {
     await page.locator('#item-name').fill('Arroz integral');
     await page.locator('#item-quantity').fill('3');
     await page.locator('#item-unit').selectOption('kg');
-    await page.locator('#item-price').fill('12,50');
+    // O campo de preço é mascarado (RN-21): os dígitos entram como centavos.
+    await page.locator('#item-price').fill('1250');
+    await expect(page.locator('#item-price')).toHaveValue('R$ 12,50');
     await page.getByRole('button', { name: 'Salvar' }).click();
 
     const row = listRows(page);
@@ -152,6 +154,82 @@ test.describe('Lista — itens', () => {
 
     await expect(errorToast).toContainText('Falha de rede');
     await expect(rows).toHaveCount(2);
+  });
+
+  test('máscara de centavos em BRL no preço planejado: digitar 3/30/3015 mostra R$ 0,03/R$ 0,30/R$ 30,15 e envia o número', async ({
+    page,
+  }) => {
+    const api = await openShoppingList(page);
+
+    await page.getByRole('button', { name: 'Adicionar item' }).click();
+    await page.locator('#item-name').fill('Café');
+
+    const price = page.locator('#item-price');
+    // Sem nenhum dígito o campo **não tem valor**: fica vazio, nunca `R$ 0,00` (CD-15).
+    await expect(price).toHaveValue('');
+
+    // Cada dígito entra pela direita e vale centavos (RN-21/CD-14).
+    await price.pressSequentially('3');
+    await expect(price).toHaveValue('R$ 0,03');
+    await price.pressSequentially('0');
+    await expect(price).toHaveValue('R$ 0,30');
+    await price.pressSequentially('15');
+    await expect(price).toHaveValue('R$ 30,15');
+
+    await page.getByRole('button', { name: 'Salvar' }).click();
+    const rows = listRows(page);
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first().locator('.item-row__meta')).toHaveText('R$ 30,15');
+
+    // O payload é o **número** (30.15), sem `R$` e sem vírgula: contrato HTTP inalterado.
+    const posts = api.requests().filter((request) => request.method === 'POST');
+    expect(posts).toHaveLength(1);
+    expect(posts[0].body).toEqual({
+      name: 'Café',
+      plannedQuantity: null,
+      unit: null,
+      plannedPrice: 30.15,
+    });
+  });
+
+  test('máscara no preço planejado: apagar remove um dígito, colar mantém só dígitos e a edição abre na máscara', async ({
+    page,
+  }) => {
+    const api = await openShoppingList(page, {
+      seeds: [{ name: 'Arroz', plannedQuantity: 1, unit: 'pacote', plannedPrice: 12.5 }],
+    });
+
+    // Prefill na máscara (RN-21): o planejado `12.5` abre como `R$ 12,50` (AC-10).
+    await page.getByRole('button', { name: 'Ações de Arroz' }).click();
+    await page.getByRole('button', { name: 'Editar' }).click();
+
+    const price = page.locator('#item-price');
+    await expect(price).toHaveValue('R$ 12,50');
+
+    // Apagar remove **um** dígito por toque — não a máscara inteira (CD-15).
+    await price.press('Backspace');
+    await expect(price).toHaveValue('R$ 1,25');
+    await price.press('Backspace');
+    await expect(price).toHaveValue('R$ 0,12');
+
+    // Colar/setar valor formatado mantém **só os dígitos**, sem separador de milhar.
+    await price.fill('R$ 1.234,56');
+    await expect(price).toHaveValue('R$ 1234,56');
+
+    await page.getByRole('button', { name: 'Salvar' }).click();
+    await expect(listRows(page).first().locator('.item-row__meta')).toHaveText(
+      '1 pacote · R$ 1234,56',
+    );
+
+    // O número viaja no payload — o contrato HTTP não muda.
+    const patches = api.requests().filter((request) => request.method === 'PATCH');
+    expect(patches).toHaveLength(1);
+    expect(patches[0].body).toEqual({
+      name: 'Arroz',
+      plannedQuantity: 1,
+      unit: 'pacote',
+      plannedPrice: 1234.56,
+    });
   });
 
   test('duplo toque no Salvar: rótulo `Salvando…`, botão desabilitado e **1** requisição', async ({
