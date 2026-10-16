@@ -3,7 +3,7 @@
 **Fase atual:** Implementação
 **Gate atual:** plano fechado — `Aprovado pelo usuário em 2026-10-16`; revisão arquitetural **Aprovada com ressalvas**; ADR 0010 **Aceita**
 **Última atualização:** 2026-10-16
-**Próxima ação:** onda 4 — delegar **T-06** (persistência PH) ∥ **T-11** (outbox SL); dependências T-05 e T-10 concluídas e commitadas.
+**Próxima ação:** onda 5 — delegar **T-07** (casos de uso PH) ∥ **T-12** (checkout + publisher SL); dependências T-05/T-06 e T-10/T-11 concluídas e commitadas.
 
 ## Artefatos
 
@@ -22,7 +22,9 @@
   - **T-03** + **T-04** (`cf997bf`) — scaffold `price-history-service` + env/README
   - **T-05** (`ae5d4ec`) — domínio PH (AC-08, AC-09, AC-10)
   - **T-10** (`6a3f425`) — domínio checkout SL (AC-03, AC-04, AC-05, AC-07, AC-16)
-- Tarefa em andamento: nenhuma (aguarda onda 4: **T-06 ∥ T-11**)
+  - **T-06** (`2676397`) — persistência PH (AC-06, AC-11, AC-16, AC-17)
+  - **T-11** (`a17b14b`) — outbox SL (AC-05, AC-07, AC-16, AC-17 — base)
+- Tarefa em andamento: nenhuma (aguarda onda 5: **T-07 ∥ T-12**)
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
@@ -31,6 +33,32 @@
 - Nenhum.
 
 ## Últimos handoffs
+
+### T-11 — outbox shopping-list (`a17b14b`)
+
+```text
+Tarefa: T-11
+Estado: concluída
+Arquivos alterados: apps/shopping-list-service/src/infrastructure/persistence/drizzle/schema/index.ts (tabela outboxMessages + tipos de row); migrations 0001 + meta; repository/outbox.repository.ts + spec (integração Postgres real); outbox-repository.module.ts + index.ts; src/application/ports/outbox-repository.port.ts (port + tipo OutboxMessage); event-publisher.port.ts (EventPublisher.publish); ports/index.ts; src/infrastructure/messaging/index.ts (export type-only do envelope PurchaseCompletedEventV1); exceção fora de escopo RATIFICADA PELO USUÁRIO em 2026-10-16: 1 asserção do tripwire em src/integration/shopping-list-postgres.spec.ts (arquivo da T-13) — publicTables agora espera ['outbox_messages', 'shopping_list_items']
+ACs cobertos: AC-05, AC-07, AC-16, AC-17 (base de infraestrutura do outbox; evidência ponta-a-ponta fecha na T-12/T-13)
+Testes executados: npx nx run shopping-list-service:db:generate → migração 0001 (9 colunas, unique em completion_id, índice parcial WHERE published_at IS NULL); db:migrate → aplicada no DB shopping_list; npx nx test shopping-list-service → 17 arquivos, 177 testes, 0 falhas (reexecutado na retomada pelo orquestrador: 177/177 verdes); tsc app+spec 0 erros; nx build → webpack compiled; eslint 0 problemas
+Decisões registradas: payload jsonb guarda o envelope COMPLETO PurchaseCompletedEventV1; event_type/event_version espelham o envelope; attempts = tentativas que FALHARAM (sucesso grava published_at e limpa last_error); atomicidade DELETE+INSERT no port deletePurchasedAndEnqueue(purchasedIds, envelope) — a T-12 consome sem alterar ports; findPending(limit?) FIFO best-effort (created_at, id); barrel de messaging exporta SÓ tipos para manter verde o tripwire "mensageria é esqueleto"; drizzle-orm 0.45.3: integer (sem alias int)
+Pendências: (1) rollback real (comprado restaurado se INSERT viola unique) → provar na T-13; (2) T-12 consome planPurchaseCompletion (T-10) + deletePurchasedAndEnqueue, monta envelope, publisher lê findPending → publish → markPublished/recordFailure; exchange domain.events na T-12; (3) T-13 wiring: importar OutboxRepositoryModule e provider de EventPublisher + atualizar tripwire CheckoutShoppingListUseCase.length===1; (4) atualizar comentário do tripwire de mensageria quando o publisher real existir
+Próximo passo recomendado: T-12 — checkout + publisher (use case DELETE+INSERT atômico; publisher periódico com retry; falha do broker não falha o HTTP)
+```
+
+### T-06 — persistência price-history (`2676397`)
+
+```text
+Tarefa: T-06
+Estado: concluída
+Arquivos alterados: apps/price-history-service/src/application/ports/purchase-repository.port.ts (port framework-free + tipo PurchaseSummary); ports/index.ts; infrastructure/persistence/drizzle/schema/index.ts (purchases + purchase_items conforme PLAN, índice em name_normalized); drizzle/repository/purchase.repository.ts + spec (integração Postgres real, 7 testes); migrations/0000 + meta; purchase-repository.module.ts; persistence/index.ts; project.json e drizzle.config.ts inalterados (targets já corretos); .env local (gitignored): PRICE_HISTORY_DATABASE_URL descomentada para o migrate
+ACs cobertos: AC-06, AC-11 (persistência compra+itens; leitura listagem/detalhe), AC-16 (idempotência por PK id = completionId provada no banco), AC-17 (sem client cross-DB)
+Testes executados: db:generate → migração 0000; db:generate/migrate → aplicada no DB price_history; npx nx test price-history-service → 9 arquivos, 49 testes, 0 falhas (reexecutado na retomada pelo orquestrador: 49/49 verdes); build → webpack compiled; eslint 0 problemas; tsc app+spec 0 erros
+Decisões registradas: contrato da port p/ T-07 — insert→boolean (false = duplicata; idempotência via onConflictDoNothing na mesma transação dos itens), listSummaries (purchaseDate desc, empate createdAt desc, itemCount), findById (null → 404), findAllWithItems (insumo de aggregateLowestPrices); adaptador implements (não extends) — extends de classe abstrata quebra o transform swc/webpack; unit mapeado com guard isItemUnit; sem coluna de posição (v1): ordem dos itens no detalhe arbitrária/estável; numeric(12,*) mode:'number'
+Pendências: T-07 consome a port conforme contrato acima; se a UI exigir ordem de inserção dos itens, coluna position será decisão futura do usuário; .env local mantido ativo (pré-requisito dos próximos migrates)
+Próximo passo recomendado: T-07 — casos de uso PH framework-free (ingest idempotente via insert→false, listar compras, detalhe, menores preços com busca)
+```
 
 ### T-05 — domínio price-history (`ae5d4ec`)
 
@@ -79,3 +107,5 @@ Próximo passo recomendado: T-11 — outbox SL (schema outbox_messages + migraç
 - O `STATUS.md` do working tree estava truncado (3 linhas) e divergente do repositório: o STATUS anterior apontava T-03 "em andamento", mas T-03 e T-04 já estavam commitadas em `cf997bf`. Arquivo reconstituído contra PLAN, SPEC, handoffs e `git log` **antes** de delegar.
 - Evidências da retomada: `npx nx test price-history-service` → 42 testes verdes (T-03+T-05); `npx nx test shopping-list-service -- domain` → 49 testes verdes (T-10); `npx nx test price-history-service -- domain` → 31 verdes.
 - Commits T-05 e T-10 feitos pelo orquestrador nesta retomada (sem nova aprovação, conforme `git-workflow`); handoffs versionados em `handoff-T-05.md` e `handoff-T-10.md`.
+- Onda 4 (T-06 ∥ T-11) delegada e concluída na mesma retomada; suítes reexecutadas pelo orquestrador antes dos commits: `price-history-service` 49/49 e `shopping-list-service` 177/177 verdes.
+- **Exceção ratificada:** a T-11 editou 1 asserção do tripwire em `src/integration/shopping-list-postgres.spec.ts` (arquivo da T-13, fora do escopo dela). O handoff alegava autorização sem registro; o orquestrador parou e o **usuário ratificou em 2026-10-16** (commit `a17b14b`). Futuros subagentes devem registrar pendência em vez de assumir aprovação.
