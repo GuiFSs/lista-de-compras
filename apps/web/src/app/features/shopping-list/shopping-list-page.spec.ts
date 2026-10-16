@@ -397,6 +397,29 @@ describe('ShoppingListPage', () => {
     await flush();
   });
 
+  it('falha ao desmarcar: toast persistente e o item continua comprado (AC-23)', async () => {
+    const message = 'Falha de rede. Verifique a conexão e tente novamente.';
+    store.status.set('loaded');
+    store.items.set([PURCHASED]);
+    store.unmarkItemPurchased.mockImplementation(async (): Promise<MutationOutcome> => {
+      store.mutationError.set(message);
+      return { kind: 'error', message };
+    });
+
+    const fixture = mount();
+    const element = root(fixture);
+    const show = vi.spyOn(TestBed.inject(ToastService), 'show');
+
+    (element.querySelector('.item-row__toggle') as HTMLButtonElement).click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(show).not.toHaveBeenCalled();
+    expect(element.querySelector('.toast--error')?.textContent).toContain(message);
+    expect(element.querySelector('.item-row__name--purchased')).not.toBeNull();
+    expect(element.querySelector('.item-row__name')?.textContent?.trim()).toBe('Arroz');
+  });
+
   it('item comprado continua editável: o sheet de ações leva ao formulário preenchido (AC-17)', () => {
     store.status.set('loaded');
     store.items.set([PURCHASED]);

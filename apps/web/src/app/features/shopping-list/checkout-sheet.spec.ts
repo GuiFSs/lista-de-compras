@@ -194,7 +194,7 @@ describe('CheckoutSheet', () => {
     await flush();
     fixture.detectChanges();
 
-    const button = buttonByText(fixture, 'Concluindo…');
+    const button = buttonByText(fixture, 'Salvando…');
     expect(button.disabled).toBe(true);
     expect(store.checkout).toHaveBeenCalledTimes(1);
   });

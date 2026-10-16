@@ -444,14 +444,24 @@ export class ShoppingListFakeApi {
     }
 
     const body = readBody(route) as MarkItemPurchasedRequest;
-    if (
-      typeof body.purchasedQuantity !== 'number' ||
-      body.purchasedQuantity <= 0 ||
-      !ITEM_UNITS.includes(body.unit) ||
-      typeof body.unitPrice !== 'number' ||
-      body.unitPrice < 0
-    ) {
-      await this.fulfill(route, 400, { statusCode: 400, message: 'Quantidade inválida' });
+    // Mensagens canônicas do serviço (`shopping-list-messages.ts`), na mesma
+    // ordem da borda HTTP: quantidade → preço → unidade.
+    if (typeof body.purchasedQuantity !== 'number' || body.purchasedQuantity <= 0) {
+      await this.fulfill(route, 400, {
+        statusCode: 400,
+        message: 'Quantidade deve ser maior que zero',
+      });
+      return;
+    }
+    if (typeof body.unitPrice !== 'number' || body.unitPrice < 0) {
+      await this.fulfill(route, 400, {
+        statusCode: 400,
+        message: 'Preço não pode ser negativo',
+      });
+      return;
+    }
+    if (!ITEM_UNITS.includes(body.unit)) {
+      await this.fulfill(route, 400, { statusCode: 400, message: 'Unidade inválida' });
       return;
     }
 
@@ -464,14 +474,13 @@ export class ShoppingListFakeApi {
   }
 
   private async checkout(route: Route): Promise<void> {
-    const now = nowIso();
-    // A conclusão remove **só** os comprados (AC-19); sem comprados, nada muda.
-    for (const item of this.items) {
-      if (item.removedAt === null && item.purchasedAt !== null) {
-        item.removedAt = now;
-        item.updatedAt = now;
-      }
-    }
+    // Hard delete dos comprados ativos (AC-19/RN-14) — espelha `deleteByIds` do
+    // serviço. Soft-delete aqui permitiria restore “ressuscitar” item concluído.
+    const remaining = this.items.filter(
+      (item) => !(item.removedAt === null && item.purchasedAt !== null),
+    );
+    this.items.length = 0;
+    this.items.push(...remaining);
     await this.fulfill(route, 200, toResponse(this.items));
   }
 

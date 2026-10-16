@@ -12,7 +12,7 @@
     <div class="checkout__actions">
       <button type="button" class="btn-secondary" (click)="cancel()">Cancelar</button>
       <button type="button" class="btn-primary" [disabled]="saving()" (click)="confirm()">
-        {{ saving() ? 'Concluindo…' : 'Concluir compra' }}
+        {{ saving() ? 'Salvando…' : 'Concluir compra' }}
       </button>
     </div>
   </div>
