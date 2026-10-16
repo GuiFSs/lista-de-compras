@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DrizzleModule } from '../infrastructure/persistence/drizzle/drizzle.module';
 import { JwtAuthModule } from '../api/http/auth/jwt-auth.module';
+import { PriceHistoryModule } from '../api/http/price-history/price-history.module';
 
 /**
  * Composition root do price-history-service.
@@ -16,6 +17,7 @@ import { JwtAuthModule } from '../api/http/auth/jwt-auth.module';
     DrizzleModule,
     // Guard global JWT (ADR 0007) — mesma chave pública do auth-service.
     JwtAuthModule,
+    PriceHistoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

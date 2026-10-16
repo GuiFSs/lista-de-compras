@@ -8,12 +8,12 @@ export const DEFAULT_CORS_ORIGINS = 'http://localhost:4200';
 /** Prefixo global dos serviços — todos expõem rotas sob `/api`. */
 export const GLOBAL_PREFIX = 'api';
 
-/** Rota base do histórico (rotas de negócio em T-08). */
+/** Rota base do histórico — os controllers de negócio são anexados aqui. */
 export const PRICE_HISTORY_ROUTE = `/${GLOBAL_PREFIX}/price-history`;
 
 /**
- * Prefixo `api` + CORS da PWA (ADR 0010 §2).
- * Stub mínimo nesta T; wiring completo das rotas é T-08.
+ * Prefixo `api` + CORS da PWA (ADR 0010 §2) — idêntico em produção e nos
+ * testes (`inject`). `PRICE_HISTORY_CORS_ORIGINS` aceita CSV de origens.
  */
 export async function configureApp(app: NestFastifyApplication): Promise<void> {
   const config = app.get(ConfigService);
