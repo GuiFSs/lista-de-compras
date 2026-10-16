@@ -1,2 +1,2 @@
 // Ports da aplicação — implementadas pelos adaptadores em `infrastructure`.
-export {};
+export * from './purchase-repository.port';
