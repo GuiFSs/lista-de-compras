@@ -79,9 +79,11 @@ describe('guards de autenticação', () => {
     await harness.fixture.whenStable();
 
     expect(router.url).toBe('/compras/2026');
-    // Shell autenticado renderizado (app-bar com logout) sem bottom nav.
+    // Shell autenticado renderizado (app-bar com logout) + bottom nav.
     expect(harness.fixture.nativeElement.querySelector('.app-bar')).toBeTruthy();
-    expect(harness.fixture.nativeElement.querySelector('nav')).toBeNull();
+    expect(
+      harness.fixture.nativeElement.querySelector('app-bottom-nav'),
+    ).toBeTruthy();
   });
 
   it('após o login, returnUrl devolve à rota original (AC-12)', async () => {

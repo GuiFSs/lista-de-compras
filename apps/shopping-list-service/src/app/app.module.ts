@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DrizzleModule } from '../infrastructure/persistence/drizzle/drizzle.module';
 import { JwtAuthModule } from '../api/http/auth/jwt-auth.module';
+import { ShoppingListModule } from '../api/http/shopping-list/shopping-list.module';
 
 /**
  * Composition root do serviço de lista de compras.
@@ -20,6 +21,8 @@ import { JwtAuthModule } from '../api/http/auth/jwt-auth.module';
     DrizzleModule,
     // Borda HTTP de autenticação: APP_GUARD global (validação local do JWT).
     JwtAuthModule,
+    // Borda HTTP da lista ativa (controller + casos de uso via useFactory).
+    ShoppingListModule,
   ],
   controllers: [AppController],
   providers: [AppService],

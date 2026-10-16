@@ -1,10 +1,24 @@
 <header class="app-bar">
-  <h1>Lista de Compras</h1>
-  <button type="button" class="app-bar__logout" (click)="logout()">
-    Sair
-  </button>
+  <h1 class="app-bar__title">{{ title() }}</h1>
+
+  <div class="app-bar__actions">
+    @for (action of actions(); track action) {
+      <button
+        type="button"
+        class="app-bar__action"
+        [attr.aria-label]="action.label"
+        (click)="action.run()"
+      >
+        <ng-container *ngComponentOutlet="action.icon" />
+      </button>
+    }
+
+    <button type="button" class="app-bar__logout" (click)="logout()">Sair</button>
+  </div>
 </header>
 
-<main class="container">
+<main class="container content-with-bottom-nav">
   <router-outlet></router-outlet>
 </main>
+
+<app-bottom-nav />

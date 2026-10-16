@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard, loginGuard } from './core/auth';
-import { Home } from './features/home/home';
 import { NotFound } from './features/not-found/not-found';
+import { ShoppingListPage } from './features/shopping-list/shopping-list-page';
 import { AuthenticatedShell } from './layout/authenticated-shell/authenticated-shell';
 
 export const appRoutes: Routes = [
@@ -16,7 +16,7 @@ export const appRoutes: Routes = [
     canActivate: [authGuard],
     component: AuthenticatedShell,
     children: [
-      { path: '', component: Home },
+      { path: '', component: ShoppingListPage },
       { path: '**', component: NotFound },
     ],
   },

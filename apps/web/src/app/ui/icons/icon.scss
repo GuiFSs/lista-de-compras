@@ -1,0 +1,8 @@
+// Base comum dos ícones: herdam a cor do contexto (`currentColor`) e o tamanho
+// da tipografia (`1em`), para casar com o alvo de toque que os envolve.
+:host {
+  display: inline-flex;
+  width: 1em;
+  height: 1em;
+  flex: none;
+}

@@ -1,0 +1,36 @@
+<!-- Sheet de ações (guia §4 "Formulário de app"): nome do item como contexto,
+     ações empilhadas no alcance do polegar e destrutivas longe da de marcar.
+     Só tokens. -->
+<app-bottom-sheet heading="Ações do item" (closed)="closed.emit()">
+  <div class="actions-sheet">
+    <p class="actions-sheet__item">{{ item().name }}</p>
+
+    <div class="actions-sheet__actions">
+      <button
+        type="button"
+        class="actions-sheet__action"
+        [class.actions-sheet__action--primary]="!purchased()"
+        [class.actions-sheet__action--danger]="purchased()"
+        (click)="togglePurchased.emit()"
+      >
+        {{ toggleLabel() }}
+      </button>
+
+      <button
+        type="button"
+        class="actions-sheet__action"
+        (click)="edit.emit()"
+      >
+        Editar
+      </button>
+
+      <button
+        type="button"
+        class="actions-sheet__action actions-sheet__action--danger"
+        (click)="remove.emit()"
+      >
+        Excluir
+      </button>
+    </div>
+  </div>
+</app-bottom-sheet>

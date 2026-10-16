@@ -1,0 +1,176 @@
+// Tela Lista (guia §3/§4): apoio, coluna única e CTA no terço inferior.
+// O fundo, o padding da bottom nav e a centralização vêm do shell.
+:host {
+  display: block;
+}
+
+.summary {
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-muted);
+}
+
+.list {
+  list-style: none;
+  // Espaço para o CTA flutuante — a bottom nav já é reservada pelo shell.
+  padding-bottom: calc(var(--touch-target-min) + var(--space-md));
+}
+
+.list__item {
+  padding-block: var(--space-xs);
+}
+
+// Divisor hairline entre linhas, sem sombra (guia §5).
+.list__item + .list__item {
+  border-top: 1px solid var(--color-hairline);
+}
+
+// Ação primária da tela: fixa acima da bottom nav, na área do polegar (§4/§6).
+.list__add {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-md));
+  z-index: var(--z-bottom-nav);
+  transform: translateX(-50%);
+  width: calc(100% - var(--space-md) * 2);
+  max-width: calc(var(--container-max) - var(--space-md) * 2);
+  box-shadow: var(--shadow-1);
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  width: 100%;
+  min-height: var(--touch-target-min);
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  border-radius: var(--radius-full);
+  transition:
+    background-color var(--motion-fast),
+    transform var(--motion-fast),
+    opacity var(--motion-base);
+}
+
+.btn-primary {
+  color: var(--color-on-primary);
+  background-color: var(--color-primary);
+}
+
+.btn-primary:active {
+  background-color: var(--color-primary-active);
+  transform: scale(0.97);
+}
+
+.btn-secondary {
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+}
+
+.btn-secondary:active {
+  background-color: var(--color-ripple);
+}
+
+// Empty state rico (guia §5): sticker + título + frase + CTA primary.
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xl) var(--space-md);
+  text-align: center;
+}
+
+.empty__sticker {
+  font-size: var(--font-size-display);
+  line-height: var(--line-height-tight);
+}
+
+.empty__title {
+  font-size: var(--font-size-title);
+  letter-spacing: var(--letter-spacing-title);
+}
+
+.empty__text {
+  font-size: var(--font-size-body);
+  color: var(--color-ink-muted);
+}
+
+.empty__cta {
+  margin-top: var(--space-md);
+}
+
+// Erro de carga (AC-22): mensagem na área de conteúdo + nova tentativa.
+.load-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  padding-block: var(--space-lg);
+}
+
+.load-error__title {
+  font-size: var(--font-size-title);
+  letter-spacing: var(--letter-spacing-title);
+}
+
+.load-error__message {
+  font-size: var(--font-size-body-sm);
+  color: var(--color-danger);
+}
+
+.load-error .btn-secondary {
+  width: auto;
+  margin-top: var(--space-sm);
+}
+
+// Skeleton na forma das linhas (AC-02), sem spinner centralizado.
+.list-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding-block: var(--space-xs);
+}
+
+.list-skeleton__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.list-skeleton__target {
+  flex: none;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  background: var(--color-hairline);
+  border-radius: var(--radius-full);
+}
+
+.list-skeleton__lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  flex: 1;
+}
+
+.list-skeleton__line {
+  height: var(--space-sm);
+  background: var(--color-hairline);
+  border-radius: var(--radius-xs);
+}
+
+.list-skeleton__line--short {
+  width: 40%;
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}

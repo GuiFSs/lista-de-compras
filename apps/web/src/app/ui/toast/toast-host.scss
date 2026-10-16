@@ -1,0 +1,71 @@
+// Toasts (guia §5): superfície + `--radius-xl` + `--shadow-2`, ancorados
+// acima da bottom nav em `--z-toast` — só tokens.
+:host {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + var(--space-md));
+  z-index: var(--z-toast);
+  pointer-events: none;
+}
+
+.toast-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-inline: var(--space-md);
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  max-width: var(--container-max);
+  padding: var(--space-xs) var(--space-sm) var(--space-xs) var(--space-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2);
+  pointer-events: auto;
+}
+
+// Erro (AC-23) permanece na tela; a cor semântica é para feedback, não decora.
+.toast--error {
+  border-color: var(--color-danger);
+}
+
+.toast__message {
+  flex: 1;
+  font-size: var(--font-size-body-sm);
+  line-height: var(--line-height-snug);
+  color: var(--color-ink);
+}
+
+.toast--error .toast__message {
+  color: var(--color-danger);
+}
+
+// Ação do toast (ex.: "Desfazer") — ghost do guia (§5), alvo ≥ 44px.
+.toast__action {
+  flex: none;
+  min-height: var(--touch-target-min);
+  padding-inline: var(--space-sm);
+  color: var(--color-primary-text);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+}
+
+.toast__dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  font-size: var(--font-size-body);
+  color: var(--color-ink-muted);
+  background: var(--color-ripple);
+  border-radius: var(--radius-full);
+}

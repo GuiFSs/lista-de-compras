@@ -1,0 +1,79 @@
+// Sheet de conclusão (guia §4 "Formulário de app"/§5): resumo em grupo curto e
+// a decisão no terço inferior — sem campos, só a confirmação. Só tokens.
+.checkout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.checkout__summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.checkout__lead {
+  font-size: var(--font-size-body-sm);
+  color: var(--color-ink-muted);
+}
+
+// As duas linhas do resumo são o dado que a pessoa confere antes de concluir.
+.checkout__line {
+  font-size: var(--font-size-body);
+  color: var(--color-ink);
+}
+
+.checkout__actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: var(--touch-target-min);
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-full);
+  touch-action: manipulation;
+  transition:
+    background-color var(--motion-fast),
+    transform var(--motion-fast),
+    opacity var(--motion-base);
+}
+
+.btn-primary {
+  color: var(--color-on-primary);
+  background-color: var(--color-primary);
+}
+
+.btn-primary:active:not(:disabled) {
+  background-color: var(--color-primary-active);
+  transform: scale(0.97);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+}
+
+.btn-secondary:active {
+  background-color: var(--color-ripple);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary,
+  .btn-secondary {
+    transition: none;
+  }
+}

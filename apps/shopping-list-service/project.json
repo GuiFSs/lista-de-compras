@@ -55,6 +55,22 @@
       "options": {
         "command": "vitest run --config apps/shopping-list-service/vitest.config.mts --run"
       }
+    },
+    "db:generate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/shopping-list-service",
+        "command": "drizzle-kit generate"
+      }
+    },
+    "db:migrate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "apps/shopping-list-service",
+        "command": "drizzle-kit migrate --config drizzle.config.ts"
+      }
     }
   }
 }

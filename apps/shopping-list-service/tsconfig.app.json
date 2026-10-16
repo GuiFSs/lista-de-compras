@@ -18,6 +18,9 @@
   ],
   "references": [
     {
+      "path": "../../libs/contracts/tsconfig.lib.json"
+    },
+    {
       "path": "../../libs/shared/jwt/tsconfig.lib.json"
     }
   ]

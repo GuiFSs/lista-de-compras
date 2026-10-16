@@ -1,0 +1,99 @@
+// Sheet (guia §5): sobe de baixo, `--radius-xl` em cima, backdrop
+// `--color-overlay`, foco preso — só tokens.
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.bottom-sheet__backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--color-overlay);
+}
+
+.bottom-sheet__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  width: 100%;
+  max-width: var(--container-max);
+  max-height: calc(100dvh - var(--space-xxl) - var(--safe-bottom));
+  padding: var(--space-sm) var(--space-md)
+    calc(var(--space-md) + var(--safe-bottom));
+  overflow-y: auto;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: var(--shadow-2);
+  animation: bottom-sheet-in var(--motion-base) ease-out;
+  touch-action: manipulation;
+}
+
+.bottom-sheet__handle {
+  width: var(--space-xxl);
+  height: var(--space-xxs);
+  margin-inline: auto;
+  border-radius: var(--radius-full);
+  background: var(--color-hairline);
+}
+
+.bottom-sheet__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.bottom-sheet__title {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-heading);
+  color: var(--color-ink);
+}
+
+// Botão de ícone do guia (§5): circular, alvo ≥ 44px, sempre com aria-label.
+.bottom-sheet__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  font-size: var(--font-size-title);
+  color: var(--color-ink-secondary);
+  background: var(--color-ripple);
+  border-radius: var(--radius-full);
+  transition:
+    background-color var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.bottom-sheet__close:active {
+  transform: scale(0.97);
+}
+
+.bottom-sheet__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+@keyframes bottom-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bottom-sheet__panel {
+    animation: none;
+  }
+}

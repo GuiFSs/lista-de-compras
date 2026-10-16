@@ -11,6 +11,7 @@ O projeto é também um ambiente de aprendizado prático de Angular, arquitetura
 - [Decisão arquitetural: dados de compra e acesso inicial](docs/decisions/0002-dados-de-compra-e-acesso-inicial.md)
 - [Decisão arquitetural: setup do workspace front-end](docs/decisions/0003-setup-do-workspace-front-end.md)
 - [Decisão arquitetural: setup do front, back e e2e](docs/decisions/0004-setup-do-front-do-back-e-do-e2e.md)
+- [Decisão arquitetural: exceção temporária ao gateway para o shopping-list-service](docs/decisions/0009-excecao-temporaria-ao-gateway-shopping-list-service.md)
 - [Lições do setup inicial](docs/lessons/2026-10-07-setup-inicial.md)
 - [Plano de setup do SDD](docs/plans/2026-10-06-sdd-setup.md)
 - [Fluxo SDD canônico](docs/process/sdd-workflow.md)
@@ -69,6 +70,25 @@ npx nx lint shopping-list-service
 ```
 
 O serviço lê `API_PORT`, `DATABASE_URL` e `RABBITMQ_URL` do `.env` da raiz (ver `.env.example`).
+
+O serviço entrega a feature **Lista de compras ativa**: a PWA
+(`apps/web`, em `http://localhost:4200`) chama `http://localhost:3000/api/shopping-list/*`
+**direto**, sob o prefixo `/api`. É uma **exceção temporária à ADR 0001**,
+registrada na [ADR 0009](docs/decisions/0009-excecao-temporaria-ao-gateway-shopping-list-service.md):
+vale enquanto o gateway não existe e é removida quando ele chegar (URL relativa
+via gateway + CORS removido). A chamada cruzada local é viabilizada pelo CORS
+(`SHOPPING_LIST_CORS_ORIGINS`, default `http://localhost:4200` — ver
+`.env.example`), que **não** é controle de segurança: o JWT continua sendo
+validado **localmente na borda do serviço** ([ADR 0007](docs/decisions/0007-validacao-local-de-jwt.md)).
+
+Os **testes de integração** do serviço e a **migração** exigem o **Docker local**
+e o banco lógico `shopping_list` (criado no primeiro boot do Postgres):
+
+```bash
+npm run docker:up                                # Postgres + RabbitMQ (cria o banco shopping_list)
+npx nx run shopping-list-service:db:generate     # drizzle-kit generate (SQL versionado)
+npx nx run shopping-list-service:db:migrate      # drizzle-kit migrate (aplica no shopping_list)
+```
 
 ### Testes e2e (Playwright)
 

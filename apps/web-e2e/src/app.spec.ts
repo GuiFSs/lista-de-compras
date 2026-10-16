@@ -64,8 +64,11 @@ test('duplo toque gera uma requisição e mostra progresso (AC-04)', async ({
   await page.getByLabel('Senha').fill('incorreta');
 
   const submit = page.getByRole('button', { name: 'Entrar' });
-  await submit.click();
-  await submit.click({ force: true });
+  // Duplo toque no próprio alvo: o segundo toque chega com o botão já em
+  // "Entrando…"/desabilitado, então não há segundo envio. Repetir
+  // `click({ force: true })` re-resolve o locator pelo nome acessível e, com a
+  // resposta já de volta, o "segundo toque" vira um envio novo (2 requisições).
+  await submit.dblclick();
 
   await expect(
     page.getByRole('button', { name: 'Entrando…' }),

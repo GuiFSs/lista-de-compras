@@ -1,0 +1,28 @@
+<button
+  type="button"
+  class="item-row__toggle"
+  [class.item-row__toggle--checked]="purchased()"
+  [attr.aria-pressed]="purchased()"
+  [attr.aria-label]="toggleLabel()"
+  (click)="togglePurchased.emit(item())"
+>
+  <app-icon-check />
+</button>
+
+<span class="item-row__body">
+  <span class="item-row__name" [class.item-row__name--purchased]="purchased()">
+    {{ item().name }}
+  </span>
+  @if (metadata()) {
+    <span class="item-row__meta">{{ metadata() }}</span>
+  }
+</span>
+
+<button
+  type="button"
+  class="item-row__actions"
+  [attr.aria-label]="actionsLabel()"
+  (click)="openActions.emit(item())"
+>
+  <app-icon-more />
+</button>

@@ -1,0 +1,29 @@
+<!-- Backdrop decorativo: o caminho de teclado é o botão "Fechar" e o `Esc`. -->
+<div class="bottom-sheet__backdrop" aria-hidden="true" (click)="onBackdropClick()"></div>
+
+<section
+  #panel
+  class="bottom-sheet__panel"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-labelledby]="headingId"
+  tabindex="-1"
+>
+  <span class="bottom-sheet__handle" aria-hidden="true"></span>
+
+  <header class="bottom-sheet__header">
+    <h2 class="bottom-sheet__title" [id]="headingId">{{ heading() }}</h2>
+    <button
+      type="button"
+      class="bottom-sheet__close"
+      aria-label="Fechar"
+      (click)="requestClose()"
+    >
+      <app-icon-close />
+    </button>
+  </header>
+
+  <div class="bottom-sheet__body">
+    <ng-content></ng-content>
+  </div>
+</section>
