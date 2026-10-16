@@ -24,7 +24,7 @@
   - **T-10** (`6a3f425`) — domínio checkout SL (AC-03, AC-04, AC-05, AC-07, AC-16)
   - **T-06** (`2676397`) — persistência PH (AC-06, AC-11, AC-16, AC-17)
   - **T-11** (`a17b14b`) — outbox SL (AC-05, AC-07, AC-16, AC-17 — base)
-  - **T-07** (`b301a23`) — casos de uso PH (AC-06, AC-08–AC-12, AC-16)
+  - **T-07** (`fa16503`) — casos de uso PH (AC-06, AC-08–AC-12, AC-16)
   - **T-12** (`dbe340a`) — checkout + publisher SL (AC-05, AC-07, AC-16, AC-17)
 - Tarefa em andamento: nenhuma (aguarda onda 6: **T-08 ∥ T-13**)
 - ACs reabertos: nenhum
