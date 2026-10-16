@@ -105,13 +105,18 @@ informada, é sempre uma dessas sete — nenhum cliente envia valor livre.
 | Restaurar (Desfazer) | `POST /api/shopping-list/items/{id}/restore` | — | **200** (item de volta com os mesmos dados) | 401, **404**, **409** |
 | Marcar como comprado | `PUT /api/shopping-list/items/{id}/purchase` | `MarkItemPurchasedRequest` | **200** (item comprado, **presente na lista**) | 400, 401, 404 |
 | Desmarcar | `DELETE /api/shopping-list/items/{id}/purchase` | — | **200** (item pendente, dados da compra limpos) — **idempotente** | 401, 404 |
-| Concluir a compra | `POST /api/shopping-list/checkout` | — (sem corpo; **sem mercado/data**) | **200** (somente os não comprados permanecem) | 401, 500 |
+| Concluir a compra (≥1 comprado) | `POST /api/shopping-list/checkout` | `CheckoutShoppingListRequest` `{ market, purchaseDate }` | **200** (somente os não comprados permanecem) | **400**, 401, 500 |
+| Concluir a compra (0 comprados) | `POST /api/shopping-list/checkout` | corpo omitido ou `{}` | **200** (lista inalterada) | 401, 500 |
 
 Notas de comportamento:
 
-- **Concluir** faz `DELETE` físico apenas dos itens comprados; sem itens
-  comprados, nada muda. Não há mercado, data, registro de compra, evento nem
-  rota de histórico nesta rodada (AC-21).
+- **Concluir com ≥1 comprado** exige `market` (trim, não vazio) e
+  `purchaseDate` (`YYYY-MM-DD`, ≤ hoje). Faz `DELETE` físico dos comprados e
+  grava o outbox do evento na mesma transação; a resposta **200** não depende
+  do broker. Mensagens 400: `"Mercado é obrigatório"`,
+  `"Data da compra é obrigatória"`, `"Data da compra não pode ser futura"`,
+  `"Data da compra inválida"`.
+- **Concluir sem comprados:** sem mercado/data; sem outbox/evento; lista igual.
 - **`PATCH` usa "ausente = manter / `null` = limpar"** nos campos opcionais
   (RN-03). O request **não** tem `duplicateResolution` (ver 409 de edição).
 - **`PUT .../purchase`** exige os três campos (`purchasedQuantity` > 0, `unit`
@@ -134,7 +139,7 @@ Mesmo envelope da feature de auth:
 
 | Status | Significado | `message` (PT, genérica) |
 | --- | --- | --- |
-| 400 | Payload inválido (nome ausente/só espaços; quantidade <= 0; preço < 0; unidade fora de `ITEM_UNITS`) | `Nome do item é obrigatório` · `Quantidade deve ser maior que zero` · `Preço não pode ser negativo` · `Unidade inválida` |
+| 400 | Payload inválido (nome ausente/só espaços; quantidade <= 0; preço < 0; unidade fora de `ITEM_UNITS`; checkout com mercado vazio / data ausente, futura ou inválida) | `Nome do item é obrigatório` · `Quantidade deve ser maior que zero` · `Preço não pode ser negativo` · `Unidade inválida` · `Mercado é obrigatório` · `Data da compra é obrigatória` · `Data da compra não pode ser futura` · `Data da compra inválida` |
 | 401 | Sessão ausente/inválida (uniforme — ADR 0007) | `Não autorizado` |
 | 404 | `id` inexistente ou já removido | `Item não encontrado` |
 | 409 | Nome já existente (duplicidade) — ver abaixo | `Já existe um item com esse nome` |
@@ -176,9 +181,76 @@ O mesmo corpo vale nos **dois** contextos, mas com semânticas diferentes:
   corrigir o nome ou cancelar. Renomear para o **próprio** nome normalizado
   (`cafe` → `café` do mesmo item) **não** é conflito e é aplicado.
 
+## Contratos HTTP — price-history-service
+
+Operações de **histórico de compras** e **menor preço** do
+`price-history-service`, porta `PRICE_HISTORY_API_PORT=3002`, prefixo global
+`api`. A PWA chama o serviço **diretamente** em `http://localhost:3002`
+(exceção temporária à ADR 0001, registrada na ADR 0010). Tipos em
+`src/http/price-history.ts`, re-exportados por `@lista/contracts`.
+
+**Todas** as rotas exigem JWT (guard global, ADR 0007) — **401** uniforme
+`{ "statusCode": 401, "message": "Não autorizado" }`.
+
+**CORS (ADR 0010):** `@fastify/cors` com `PRICE_HISTORY_CORS_ORIGINS` (default
+`http://localhost:4200`), `methods: ['GET','OPTIONS']`,
+`allowedHeaders: ['Content-Type','Authorization']`.
+
+### Operações
+
+| Operação | Rota | Request | Sucesso | Erros |
+| --- | --- | --- | --- | --- |
+| Listar compras | `GET /api/price-history/purchases` | — | **200** `PurchaseListResponse` | 401, 500 |
+| Detalhe | `GET /api/price-history/purchases/{id}` | — | **200** `PurchaseDetailResponse` | **404**, 401, 500 |
+| Menores preços | `GET /api/price-history/lowest-prices` | query opcional `q` | **200** `LowestPricesResponse` | 401, 500 |
+
+Tipos principais:
+
+- `PurchaseListItem` / `PurchaseListResponse` — lista (mais recente primeiro);
+  `id` = `completionId`.
+- `PurchaseDetailResponse` / `PurchaseItem` — detalhe com itens (`unit`:
+  `ItemUnit`; `unitPrice` em R$).
+- `LowestPriceItem` / `LowestPricesResponse` — agregação por
+  `nameNormalized`; ordenação estável asc; busca `q` filtra por substring
+  normalizada.
+
+Envelope de erro: mesmo `ApiErrorResponse` (`statusCode` + `message` PT).
+404 de detalhe: compra inexistente.
+
 ## Contratos de eventos
 
-**Nenhum** na v1: login é comando com resposta imediata (HTTP) e não publica
-fato de domínio via RabbitMQ (`src/events/` mantido para uso futuro). Concluir
-a compra também não publica evento nem grava registro nesta rodada (AC-21); o
-evento de conclusão é contrato da feature de histórico.
+### `shopping-list.purchase-completed` v1
+
+Tipos e constantes em `src/events/shopping-list.ts`, re-exportados por
+`@lista/contracts`.
+
+| Campo | Valor |
+| --- | --- |
+| **Tipo** | `shopping-list.purchase-completed` (`PURCHASE_COMPLETED_EVENT_TYPE`) |
+| **Versão** | `1` (`PURCHASE_COMPLETED_EVENT_VERSION`) |
+| **Routing key** | `shopping-list.purchase-completed.v1` (`PURCHASE_COMPLETED_ROUTING_KEY`) |
+| **Exchange** | `domain.events` (topic, durable) |
+| **Fila** | `price-history.shopping-list.purchase-completed` |
+| **Produtor** | `shopping-list-service` (outbox → RabbitMQ) |
+| **Consumidor** | `price-history-service` (idempotente por `payload.completionId`) |
+
+Envelope `PurchaseCompletedEventV1`:
+
+```ts
+{
+  eventId: string;       // UUID da mensagem
+  eventType: 'shopping-list.purchase-completed';
+  eventVersion: 1;
+  occurredAt: string;    // ISO-8601
+  payload: {
+    completionId: string;
+    market: string;
+    purchaseDate: string; // YYYY-MM-DD
+    items: { name, quantity, unit, unitPrice }[];
+  };
+}
+```
+
+**Quando publica:** checkout bem-sucedido com ≥1 comprado (gravação no outbox
+na conclusão; publicação assíncrona).
+**Quando não publica:** 0 comprados; checkout com 400.

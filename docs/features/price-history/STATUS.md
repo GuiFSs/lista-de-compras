@@ -1,12 +1,11 @@
 # Estado da feature — Histórico de preços
 
-**Fase atual:** Plano **aprovado** — pronta para implementação
-**Gate atual:** fechado — `Aprovado pelo usuário em 2026-10-16` no `PLAN.md`;
-revisão arquitetural **Aprovada com ressalvas** (ressalvas incorporadas no
-PLAN); ADR 0010 **Aceita**
+**Fase atual:** Implementação
+**Gate atual:** plano fechado — `Aprovado pelo usuário em 2026-10-16`;
+revisão arquitetural **Aprovada com ressalvas**; ADR 0010 **Aceita**
 **Última atualização:** 2026-10-16
-**Próxima ação:** Orquestrador cria a branch `feature/price-history` e delega
-**T-01** (ADR 0010 / nota na ADR 0006 / `.env.example`).
+**Próxima ação:** orquestrador comita T-02; segue onda 1/2 conforme T-01
+(paralela) e depois T-03 / T-04.
 
 ## Artefatos
 
@@ -31,37 +30,41 @@ PLAN); ADR 0010 **Aceita**
 
 ## Execução
 
-- Tarefa em andamento: nenhuma (próxima: T-01)
-- Tarefas concluídas: SPEC (product-spec); PLAN + ADR 0010 (tech-planner);
-  ARCHITECTURE-REVIEW (architecture-review); fechamento do gate do plano
-  (tech-planner)
-- Critérios comprovados: nenhum (ainda não implementados)
+- Branch: `feature/price-history`
+- Tarefa em andamento: **T-01** (paralela, se ainda aberta)
+- Tarefas concluídas: SPEC; PLAN + ADR 0010; ARCHITECTURE-REVIEW; gate do plano;
+  **T-02** (contratos)
+- Critérios comprovados: base de contratos para AC-03…AC-11, AC-16, AC-18,
+  AC-21 (tipos/rotas documentados; implementação nos serviços ainda pendente)
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
 ## Pendências e bloqueios
 
-- Nenhum bloqueio de plano/arquitetura.
-- Próxima fase: implementação a partir de T-01 na branch `feature/price-history`.
+- Nenhum.
 
 ## Último handoff
 
 ```text
-Tarefa: fechamento do gate do PLAN
+Tarefa: T-02
 Estado: concluída
-Arquivos alterados: docs/features/price-history/PLAN.md, docs/features/price-history/STATUS.md, docs/decisions/0010-excecao-temporaria-ao-gateway-price-history-service.md
-ACs cobertos: AC-01…AC-21 mapeados no plano aprovado (ainda não implementados)
-Testes executados: não aplicável (fechamento de gate documental)
-Decisões registradas: Aprovado pelo usuário em 2026-10-16; ADR 0010 Aceita; ressalvas ARCHITECTURE-REVIEW incorporadas (outbox mesma tx; nack/requeue; ordem best-effort)
-Pendências: nenhuma no gate do plano
-Próximo passo recomendado: orquestrador cria feature/price-history e delega T-01
+Arquivos alterados: libs/contracts/src/http/shopping-list.ts, libs/contracts/src/http/price-history.ts, libs/contracts/src/http/index.ts, libs/contracts/src/events/shopping-list.ts, libs/contracts/src/events/index.ts, libs/contracts/README.md, docs/features/price-history/STATUS.md
+ACs cobertos: AC-03–AC-11, AC-16, AC-18, AC-21 (base contratos — tipos HTTP checkout/histórico + evento v1)
+Testes executados: npx nx build contracts → Successfully ran target build for project contracts (exit 0); npx nx lint contracts → Successfully ran target lint for project contracts (exit 0)
+Decisões registradas: nenhuma nova (contratos alinhados a PLAN/SPEC + ADR 0010)
+Pendências: nenhuma
+Próximo passo recomendado: orquestrador comita T-02; se T-01 concluída, Onda 2 (T-03 ∥ T-04); senão aguardar T-01
 ```
 
-- Agente: tech-planner
-- Tarefa: fechar gate do PLAN (frase canônica + ressalvas + ADR Aceita + STATUS)
-- Arquivos alterados: `docs/features/price-history/PLAN.md`,
-  `docs/features/price-history/STATUS.md`,
-  `docs/decisions/0010-excecao-temporaria-ao-gateway-price-history-service.md`
-- Testes executados: não aplicável
-- Decisões: plano aprovado; ADR 0010 Aceita; ressalvas incorporadas
-- Pendências: nenhuma — criar branch e delegar T-01
+- Agente: backend-dev
+- Tarefa: T-02 — contratos HTTP + evento em `libs/contracts`
+- Arquivos alterados: `libs/contracts/src/http/shopping-list.ts`,
+  `libs/contracts/src/http/price-history.ts` (novo),
+  `libs/contracts/src/http/index.ts`,
+  `libs/contracts/src/events/shopping-list.ts` (novo),
+  `libs/contracts/src/events/index.ts`,
+  `libs/contracts/README.md`,
+  `docs/features/price-history/STATUS.md`
+- Testes executados: `npx nx build contracts` (ok); `npx nx lint contracts` (ok)
+- Decisões: nenhuma nova
+- Pendências: nenhuma
