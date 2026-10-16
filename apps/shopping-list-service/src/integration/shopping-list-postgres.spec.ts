@@ -504,8 +504,13 @@ describe('Integração com Postgres real — lista ativa (T-15)', () => {
       expect(compradoRows).toHaveLength(0);
       expect(await countRows(db, false)).toBe(1);
 
-      // O schema não ganha nenhuma tabela de histórico/registro de compra.
-      expect(await publicTables(db)).toEqual(['shopping_list_items']);
+      // O schema só ganha o outbox transacional (T-11/CD-06) — nenhuma tabela
+      // de histórico/registro de compra vive neste banco (AC-21; o histórico é
+      // do price-history-service).
+      expect(await publicTables(db)).toEqual([
+        'outbox_messages',
+        'shopping_list_items',
+      ]);
     });
 
     it('concluir sem comprados não remove nada (AC-20 com banco real)', async () => {
