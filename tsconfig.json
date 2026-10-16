@@ -26,6 +26,9 @@
     },
     {
       "path": "./apps/auth-service"
+    },
+    {
+      "path": "./apps/price-history-service"
     }
   ],
   "exclude": ["node_modules", "tmp"]

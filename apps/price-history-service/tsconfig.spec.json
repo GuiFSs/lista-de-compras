@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc/apps/price-history-service-spec",
+    "module": "commonjs",
+    "moduleResolution": "bundler",
+    "types": ["vitest/globals", "node"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    {
+      "path": "../../libs/contracts/tsconfig.lib.json"
+    },
+    {
+      "path": "../../libs/shared/jwt/tsconfig.lib.json"
+    }
+  ]
+}
