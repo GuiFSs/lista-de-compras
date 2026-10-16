@@ -38,6 +38,12 @@ nas variáveis de ambiente e rate limit em memória na v1 (RN13).
   > ativa", decisão CD-01). A regra "qualquer outra chamada direta exige nova
   > decisão registrada" **permanece**; o restante desta ADR (sessão v1, prefixo
   > por serviço, rate limit) segue válido.
+  > **Atualização (2026-10-16):** a
+  > [ADR 0010](0010-excecao-temporaria-ao-gateway-price-history-service.md)
+  > registrou a **terceira** exceção temporária — a PWA chamando o
+  > `price-history-service` em `http://localhost:3002` (feature "Histórico de
+  > preços", decisão CD-04). A regra "qualquer outra chamada direta exige nova
+  > decisão registrada" **permanece**.
 - Para viabilizar essa chamada direta local, o auth-service expõe CORS com a
   origem da PWA (`http://localhost:4200`, default `AUTH_CORS_ORIGINS`) e métodos
   `POST`/`OPTIONS`.
@@ -109,12 +115,15 @@ nas variáveis de ambiente e rate limit em memória na v1 (RN13).
 - A regra "o gateway é a única API chamada pela PWA" (ADR 0001) passa a ter
   exceção nominal e limitada ao auth-service, com escopo e critérios de saída
   explícitos nesta ADR — **ampliada em 2026-10-13 pela
-  [ADR 0009](0009-excecao-temporaria-ao-gateway-shopping-list-service.md)**, que
-  registra a segunda exceção temporária (shopping-list-service) nos mesmos termos
-  (escopo, CORS local, critérios de saída e dono da migração).
-- A PWA depende, na v1, de uma base URL local (`http://localhost:3001`) e do CORS
-  do auth-service; ambos são eliminados na migração para o gateway (critérios de
-  aceite na seção 3).
+  [ADR 0009](0009-excecao-temporaria-ao-gateway-shopping-list-service.md)**
+  (segunda exceção: shopping-list-service) e **em 2026-10-16 pela
+  [ADR 0010](0010-excecao-temporaria-ao-gateway-price-history-service.md)**
+  (terceira: price-history-service), nos mesmos termos (escopo, CORS local,
+  critérios de saída e dono da migração).
+- A PWA depende, na v1, de bases URL locais (`http://localhost:3001` auth,
+  `http://localhost:3000` lista, `http://localhost:3002` histórico) e do CORS
+  de cada serviço sob exceção; ambos são eliminados na migração para o gateway
+  (critérios de aceite na seção 3 de cada ADR de exceção).
 - O token no `localStorage` fica sujeito a XSS; a mitigação v1 (24h, sem refresh,
   logout manual, expiração → login) fica documentada, e o cookie httpOnly/CSRF
   como evolução futura registrada, sem refatoração nesta rodada.

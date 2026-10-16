@@ -59,7 +59,7 @@
   segurança**: ele apenas autoriza o navegador a completar a chamada cruzada; a
   autorização continua sendo o **JWT validado localmente** na borda do serviço
   (ADR 0007).
-- O CORS é removido na migração para o gateway (critério 3 abaixo).
+- O CORS é removido na migração para o gateway (critério 2 abaixo).
 
 ### 3. Critérios de saída (migração para o gateway)
 
