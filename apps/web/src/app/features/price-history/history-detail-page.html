@@ -1,6 +1,48 @@
-<section class="page-placeholder">
-  <h2 class="page-placeholder__title">Detalhe da compra</h2>
-  <p class="page-placeholder__text">
-    Os itens desta compra aparecerão aqui.
-  </p>
-</section>
+<!-- Tipo de tela: lista / conteúdo (detalhe — guia §4). O título "Compra" é do
+     shell; o voltar fica no topo do conteúdo com `aria-label` e continua
+     visível em todos os estados (inclusive erro/404). -->
+<a class="page-back" routerLink="/historico" aria-label="Voltar para o histórico">Voltar</a>
+
+@switch (status()) {
+  @case ('loading') {
+    <div class="detail-skeleton" role="status" aria-busy="true">
+      <span class="visually-hidden">Carregando a compra…</span>
+      <span class="detail-skeleton__title" aria-hidden="true"></span>
+      <span class="detail-skeleton__line detail-skeleton__line--short" aria-hidden="true"></span>
+      <div class="detail-skeleton__rows" aria-hidden="true">
+        @for (row of skeletonItems; track row) {
+          <span class="detail-skeleton__row">
+            <span class="detail-skeleton__line"></span>
+            <span class="detail-skeleton__line detail-skeleton__line--short"></span>
+          </span>
+        }
+      </div>
+    </div>
+  }
+
+  @case ('error') {
+    <div class="load-error" role="alert">
+      <h2 class="load-error__title">Não foi possível carregar a compra</h2>
+      <p class="load-error__message">{{ loadError() }}</p>
+      <button type="button" class="btn-secondary" (click)="retry()">Tentar novamente</button>
+    </div>
+  }
+
+  @default {
+    @if (purchase(); as detail) {
+      <header class="detail__header">
+        <h2 class="detail__market">{{ detail.market }}</h2>
+        <p class="detail__date">{{ formatDate(detail.purchaseDate) }}</p>
+      </header>
+
+      <ul class="detail__items" role="list" aria-label="Itens comprados">
+        @for (item of detail.items; track $index) {
+          <li class="detail__item">
+            <span class="detail__item-name">{{ item.name }}</span>
+            <span class="detail__item-meta">{{ formatQuantity(item.quantity) }} {{ item.unit }} · {{ formatUnitPrice(item.unitPrice) }}</span>
+          </li>
+        }
+      </ul>
+    }
+  }
+}

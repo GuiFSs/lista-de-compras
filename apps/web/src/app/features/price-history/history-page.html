@@ -1,6 +1,50 @@
-<section class="page-placeholder">
-  <h2 class="page-placeholder__title">Histórico</h2>
-  <p class="page-placeholder__text">
-    Suas compras concluídas aparecerão aqui.
-  </p>
-</section>
+<!-- Tipo de tela: lista / conteúdo (guia §4). O título "Histórico" e a coluna
+     única são do shell; aqui ficam o apoio, as linhas data+mercado e os 4
+     estados. Linha inteira é o alvo de toque (≥44px) que abre o detalhe. -->
+@switch (status()) {
+  @case ('loading') {
+    <div class="history-skeleton" role="status" aria-busy="true">
+      <span class="visually-hidden">Carregando o histórico…</span>
+      @for (row of skeletonRows; track row) {
+        <span class="history-skeleton__row" aria-hidden="true">
+          <span class="history-skeleton__line"></span>
+          <span class="history-skeleton__line history-skeleton__line--short"></span>
+        </span>
+      }
+    </div>
+  }
+
+  @case ('error') {
+    <div class="load-error" role="alert">
+      <h2 class="load-error__title">Não foi possível carregar o histórico</h2>
+      <p class="load-error__message">{{ loadError() }}</p>
+      <button type="button" class="btn-secondary" (click)="retry()">Tentar novamente</button>
+    </div>
+  }
+
+  @default {
+    @if (purchases().length === 0) {
+      <div class="empty">
+        <p class="empty__sticker" aria-hidden="true">🧾</p>
+        <h2 class="empty__title">Nenhuma compra ainda</h2>
+        <p class="empty__text">
+          Ao concluir uma compra na Lista, ela aparece aqui com data e mercado.
+        </p>
+        <a class="btn-primary empty__cta" routerLink="/">Ir para a lista</a>
+      </div>
+    } @else {
+      <p class="summary">{{ summary() }}</p>
+
+      <ul class="history" role="list">
+        @for (purchase of purchases(); track purchase.id) {
+          <li class="history__item">
+            <a class="history__link" [routerLink]="['/historico', purchase.id]">
+              <span class="history__date">{{ formatDate(purchase.purchaseDate) }}</span>
+              <span class="history__meta">{{ purchase.market }} · {{ itemsLabel(purchase.itemCount) }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    }
+  }
+}

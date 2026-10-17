@@ -1,14 +1,173 @@
-.page-placeholder {
+// Lista do histórico (guia §4 "Lista / conteúdo"): apoio curto, linhas
+// data+mercado e os 4 estados. Coluna única e padding da bottom nav são do
+// shell; aqui só tokens.
+:host {
+  display: block;
+}
+
+.summary {
+  margin-bottom: var(--space-md);
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-muted);
+}
+
+.history {
+  list-style: none;
+}
+
+// Divisor hairline entre linhas, sem sombra (guia §5).
+.history__item + .history__item {
+  border-top: 1px solid var(--color-hairline);
+}
+
+// A linha inteira é o alvo (≥44px): data como título, mercado + itens como
+// metadado. O padding com margem negativa mantém o texto alinhado à coluna.
+.history__link {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  padding: var(--space-lg) var(--space-md);
+  gap: var(--space-xxs);
+  min-height: var(--touch-target-min);
+  padding: var(--space-sm) var(--space-xs);
+  margin-inline: calc(var(--space-xs) * -1);
+  color: var(--color-ink);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  touch-action: manipulation;
 }
 
-.page-placeholder__title {
-  font-size: var(--font-size-h1);
+.history__link:active {
+  background-color: var(--color-ripple);
 }
 
-.page-placeholder__text {
+.history__date {
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+}
+
+.history__meta {
+  font-size: var(--font-size-caption);
   color: var(--color-ink-muted);
+}
+
+// Empty state rico (guia §5): sticker + título + frase + CTA primary.
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xl) var(--space-md);
+  text-align: center;
+}
+
+.empty__sticker {
+  font-size: var(--font-size-display);
+  line-height: var(--line-height-tight);
+}
+
+.empty__title {
+  font-size: var(--font-size-title);
+  letter-spacing: var(--letter-spacing-title);
+}
+
+.empty__text {
+  font-size: var(--font-size-body);
+  color: var(--color-ink-muted);
+}
+
+.empty__cta {
+  margin-top: var(--space-md);
+}
+
+// Erro de carga (AC-14): mensagem na área de conteúdo + nova tentativa.
+.load-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  padding-block: var(--space-lg);
+}
+
+.load-error__title {
+  font-size: var(--font-size-title);
+  letter-spacing: var(--letter-spacing-title);
+}
+
+.load-error__message {
+  font-size: var(--font-size-body-sm);
+  color: var(--color-danger);
+}
+
+.load-error .btn-secondary {
+  width: auto;
+  margin-top: var(--space-sm);
+}
+
+// Skeleton na forma das linhas (AC-13), sem spinner centralizado.
+.history-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding-block: var(--space-xs);
+}
+
+.history-skeleton__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.history-skeleton__line {
+  height: var(--space-sm);
+  background: var(--color-hairline);
+  border-radius: var(--radius-xs);
+}
+
+.history-skeleton__line--short {
+  width: 40%;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--touch-target-min);
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  border-radius: var(--radius-full);
+  text-decoration: none;
+  touch-action: manipulation;
+  transition:
+    background-color var(--motion-fast),
+    transform var(--motion-fast);
+}
+
+.btn-primary {
+  color: var(--color-on-primary);
+  background-color: var(--color-primary);
+}
+
+.btn-primary:active {
+  background-color: var(--color-primary-active);
+  transform: scale(0.97);
+}
+
+.btn-secondary {
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+}
+
+.btn-secondary:active {
+  background-color: var(--color-ripple);
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.5;
+  }
 }
