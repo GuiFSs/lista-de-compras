@@ -3,7 +3,7 @@
 **Fase atual:** Implementação
 **Gate atual:** plano fechado — `Aprovado pelo usuário em 2026-10-16`; revisão arquitetural **Aprovada com ressalvas**; ADR 0010 **Aceita**
 **Última atualização:** 2026-10-17
-**Próxima ação:** onda 9 — delegar **T-17** (checkout sheet) sozinha; dependências T-15 e T-16 concluídas e commitadas.
+**Próxima ação:** onda 10 — delegar **T-18** (telas Histórico + detalhe) ∥ **T-20** (auditoria backend); dependências T-14/T-16 e T-08/T-09/T-13 satisfeitas; arquivos disjuntos (web × backend).
 
 ## Artefatos
 
@@ -32,19 +32,34 @@
   - **T-14** (`db7966f`) — camada de dados PWA do histórico (AC-21, AC-18, AC-14, AC-12, AC-13)
   - **T-15** (`1ade4b2`) — API e store do checkout no PWA (AC-03, AC-04, AC-05, AC-07, AC-15, AC-20 — camada)
   - **T-16** (`a995c07`) — bottom nav + rotas /historico, /menor-preco (AC-01, AC-02, AC-19 nav)
-- Tarefa em andamento: nenhuma (aguarda onda 9: **T-17** sozinha)
+  - **T-17** (`c810aee`) — checkout sheet com Mercado\* e Data\* (AC-03–AC-05, AC-07, AC-15, AC-19, AC-20) + correção E2E ratificada (`a74b4a4`)
+- Tarefa em andamento: nenhuma (aguarda onda 10: **T-18 ∥ T-20**)
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
+- **Exceção ratificada nº 2 (2026-10-17, chat):** após a T-17, 2 testes de `apps/web-e2e/src/shopping-list/checkout.spec.ts` (arquivo da T-22) ficaram vermelhos por codificarem o comportamento antigo do resumo (sem mercado/data). Usuário **ratificou** a correção; executada pelo `test-engineer` e commitada em `a74b4a4` (jornada agora preenche mercado/data; AC-04 como perna da jornada; caso 0 comprados no teste existente). Pendência conhecida da T-22: AC-15 e AC-20 ainda sem jornada E2E; observação sobre `purchase.spec.ts:179` registrada no handoff T-17-e2e.
 - **Exceção ratificada (2026-10-17, chat):** a T-16 editou `apps/web-e2e/src/shopping-list/load.spec.ts` (arquivo da T-22, fora do escopo declarado) — o teste afirmava o comportamento antigo da nav (abas desabilitadas "em breve"); a mudança era exigida pelos AC-01/AC-02 e sem ela a suíte E2E ficaria vermelha. O subagente alegou autorização que não passou pelo orquestrador; **aceita e ratificada pelo usuário** — registrado no commit da T-16 e aqui.
 
 ## Pendências e bloqueios
 
-- Nenhum. Suíte do SL 206/206; PH 102/102; web 232/232; **E2E 36/36**; lint 0 em todos os escopos (verificado pelo orquestrador após onda 8).
-- Pendências de produto registradas (fora do escopo das T): **DLQ** para payloads tóxicos (fora da v1, handoff T-09); placeholders `history-page`/`history-detail-page`/`lowest-price-page` serão substituídos por T-18/T-19; `checkout-sheet.ts` ainda chama `store.checkout()` sem payload (T-17 é dona dele).
+- Nenhum. Suíte do SL 206/206; PH 102/102; web 238/238; **E2E 36/36**; lint 0 em todos os escopos (verificado pelo orquestrador após onda 9).
+- Pendências de produto/roadmap registradas (fora do escopo das T): **DLQ** para payloads tóxicos (fora da v1, handoff T-09); placeholders `history-page`/`history-detail-page`/`lowest-price-page` serão substituídos por T-18/T-19; **T-22** fecha a matriz AC↔E2E restante (AC-15 e AC-20 de checkout sem jornada; asserção de base `localhost:3002` + Authorization; jornadas Histórico/Menor preço) e revisa o `load.spec.ts`/`checkout.spec.ts` editados sob ratificação (ver Exceções).
 - `PRICE_HISTORY_API_BASE_URL` é token injetável com default `http://localhost:3002` (ADR 0010 §3 — ponto de saída para o gateway; handoff T-14).
-- T-22 (E2E Playwright) deve revisar o `load.spec.ts` editado pela T-16 — ver exceção ratificada acima.
+- Observação do handoff T-17-e2e: `purchase.spec.ts:179` tem perna "falha ao concluir" que hoje passa mas prova fraco (validação local bloqueia antes do POST) — T-22 deve cobrir AC-15 de verdade.
 
 ## Últimos handoffs
+
+### T-17 — checkout sheet (`c810aee`) + correção E2E (`a74b4a4`)
+
+```text
+Tarefa: T-17 (checkout sheet) + correção E2E ratificada
+Estado: concluída
+Arquivos alterados: features/shopping-list/checkout-sheet.{ts,html,scss,spec} (campos Mercado*/Data*, validação local PT, confirming via concluding, tokens GUIA); shopping-list-page.spec.ts (só specs — página não mudou); apps/web-e2e/src/shopping-list/checkout.spec.ts (correção ratificada, feita pelo test-engineer)
+ACs cobertos: AC-03 (campos com comprados, hoje pré-preenchido, max=today), AC-04 (vazio/futuro/inválido → erro no campo + 0 requisição), AC-05 (erro preserva digitado + toast), AC-07/RN-09 (0 comprados → sem campos, checkout(null)), AC-15 (sheet aberto + mensagem + retry), AC-19 (labels, aria-invalid, role=alert, tokens, primary única), AC-20 (Concluindo… + disabled + 1 request)
+Testes executados: web → 238/238; lint 0; build verde; e2e → 36/36 (correção dos 2 vermelhos que codificavam o comportamento antigo)
+Decisões registradas: validação só após submit (submitted); mensagens PT espelham o backend; data futura comparada como texto + isCalendarDate rejeita 2026-02-31; localDateString() exportada p/ specs; single-flight redundante de propósito (store + guard); AC-04 como perna da jornada E2E (sem teste novo); caso 0-comprados no teste existente (sem duplicar); todayLocal() no spec E2E em vez de importar o componente (Playwright não deve puxar @angular/core)
+Pendências: T-22 fecha matriz AC-15/AC-20 e revisa purchase.spec.ts:179 (prova fraca de falha de checkout)
+Próximo passo recomendado: onda 10 — T-18 ∥ T-20
+```
 
 ### T-16 — bottom nav + rotas (`a995c07`)
 
