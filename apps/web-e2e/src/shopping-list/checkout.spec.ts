@@ -2,6 +2,12 @@ import { expect, test } from '@playwright/test';
 import { openShoppingList } from '../support/shopping-list-journey';
 import { listRows, storageKeys } from '../support/ui';
 
+/** Data de calendário local em `YYYY-MM-DD` (RN-04: hoje no fuso desta máquina). */
+function todayLocal(date = new Date()): string {
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
 test.describe('Lista — concluir compra', () => {
   test('resumo N saem/M permanecem; confirmar remove só os comprados + toast; cancelar mantém a lista', async ({
     page,
@@ -44,8 +50,24 @@ test.describe('Lista — concluir compra', () => {
     await expect(rows).toHaveCount(3);
     expect(api.countRequests('POST', '/checkout')).toBe(0);
 
-    // Confirmar: só os comprados saem e a conclusão é confirmada na tela.
+    // AC-04/RN-03: Mercado só com espaços não vale — a validação local bloqueia
+    // antes de qualquer envio, o erro aparece no campo e o digitado permanece.
     await page.getByRole('button', { name: 'Concluir compra' }).click();
+    await dialog.locator('#checkout-market').fill('   ');
+    await dialog.getByRole('button', { name: 'Concluir compra' }).click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('#checkout-market-error')).toHaveText('Mercado é obrigatório');
+    await expect(dialog.locator('#checkout-market')).toHaveAttribute('aria-invalid', 'true');
+    await expect(dialog.locator('#checkout-market')).toHaveValue('   ');
+    await expect(rows).toHaveCount(3);
+    expect(api.countRequests('POST', '/checkout')).toBe(0);
+
+    // AC-03/AC-05: com Mercado válido e a Data já vindo = hoje (RN-04), a
+    // conclusão segue — só os comprados saem e o serviço recebe os dois campos.
+    await dialog.locator('#checkout-market').fill('Mercado Z');
+    await expect(dialog.locator('#checkout-market-error')).toHaveCount(0);
+    const today = todayLocal();
+    await expect(dialog.locator('#checkout-date')).toHaveValue(today);
     await dialog.getByRole('button', { name: 'Concluir compra' }).click();
 
     await expect(dialog).toHaveCount(0);
@@ -56,6 +78,11 @@ test.describe('Lista — concluir compra', () => {
     await expect(page.locator('.summary')).toHaveText('1 pendente · 0 comprados');
     await expect(page.locator('.toast')).toContainText('Compra concluída');
     expect(api.countRequests('POST', '/checkout')).toBe(1);
+    const checkouts = api
+      .requests()
+      .filter((request) => request.method === 'POST' && request.path.endsWith('/checkout'));
+    expect(checkouts).toHaveLength(1);
+    expect(checkouts[0].body).toEqual({ market: 'Mercado Z', purchaseDate: today });
   });
 
   test('concluir sem itens comprados mantém a lista exatamente como estava', async ({ page }) => {
@@ -72,6 +99,8 @@ test.describe('Lista — concluir compra', () => {
     await page.getByRole('button', { name: 'Concluir compra' }).click();
     const dialog = page.getByRole('dialog', { name: 'Concluir compra' });
     await expect(dialog).toContainText('Nenhum item está marcado como comprado');
+    // RN-09/AC-07: sem comprados o sheet não renderiza Mercado nem Data.
+    await expect(dialog.locator('input, select, textarea')).toHaveCount(0);
     await expect(dialog.locator('.checkout__line')).toHaveText([
       'Nenhum item sai da lista.',
       '2 itens permanecem na lista.',
@@ -96,7 +125,9 @@ test.describe('Lista — concluir compra', () => {
     await expect(rows.nth(1).locator('.item-row__meta')).toHaveText('1 L · R$ 6,50');
   });
 
-  test('o resumo não pede mercado nem data', async ({ page }) => {
+  test('com comprados, o resumo mostra Mercado e Data (hoje pré-preenchido, sem data futura)', async ({
+    page,
+  }) => {
     await openShoppingList(page, {
       seeds: [
         { name: 'Arroz', plannedQuantity: 2, unit: 'unidade' },
@@ -113,11 +144,23 @@ test.describe('Lista — concluir compra', () => {
     const dialog = page.getByRole('dialog', { name: 'Concluir compra' });
     await expect(dialog).toBeVisible();
 
-    // Nesta rodada a conclusão é só a seleção do que sai: sem campo de mercado
-    // nem de data e sem nenhum dado de compra consultável na tela.
-    await expect(dialog.locator('input, select, textarea')).toHaveCount(0);
-    await expect(dialog.getByText(/mercado/i)).toHaveCount(0);
-    await expect(dialog.getByText(/data/i)).toHaveCount(0);
+    // AC-03/RN-03: com ≥1 comprado o resumo ganha os campos Mercado* e Data da
+    // compra*, com rótulos associados aos inputs.
+    const market = dialog.locator('#checkout-market');
+    const date = dialog.locator('#checkout-date');
+    await expect(market).toBeVisible();
+    await expect(dialog.locator('label[for="checkout-market"]')).toContainText('Mercado');
+    await expect(date).toBeVisible();
+    await expect(dialog.locator('label[for="checkout-date"]')).toContainText('Data da compra');
+
+    // RN-04: Mercado começa vazio; a Data vem com hoje no fuso local, é editável
+    // e `max=today` impede data futura.
+    const today = todayLocal();
+    await expect(market).toHaveValue('');
+    await expect(date).toHaveValue(today);
+    await expect(date).toHaveAttribute('max', today);
+
+    // AC-19: as ações seguem Cancelar (secondary) + a única `primary` do sheet.
     await expect(dialog.locator('.checkout__actions button')).toHaveText([
       'Cancelar',
       'Concluir compra',
