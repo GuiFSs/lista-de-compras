@@ -11,6 +11,7 @@ import {
   DUPLICATE_ITEM_ERROR_CODE,
   ITEM_DUPLICATE_NAME_MESSAGE,
   ITEM_NOT_FOUND_MESSAGE,
+  messageForCheckoutValidationError,
   messageForValidationError,
 } from './shopping-list-messages';
 
@@ -25,7 +26,8 @@ export function canonicalError(
 /**
  * Traduz a falha de negócio (sem status HTTP) no status/mensagem do contrato.
  * `duplicate-item-name` (criação, fluxo) e `name-conflict` (edição, terminal —
- * CD-13) compartilham o mesmo corpo 409 com `duplicateOf`.
+ * CD-13) compartilham o mesmo corpo 409 com `duplicateOf`; `checkout-validation`
+ * é o 400 de mercado/data do checkout com ≥1 comprado (price-history RN-03/RN-04).
  */
 export function toHttpException(error: ShoppingListError): HttpException {
   if (error.code === 'validation') {
@@ -33,6 +35,14 @@ export function toHttpException(error: ShoppingListError): HttpException {
       canonicalError(
         HttpStatus.BAD_REQUEST,
         messageForValidationError(error.error),
+      ),
+    );
+  }
+  if (error.code === 'checkout-validation') {
+    return new BadRequestException(
+      canonicalError(
+        HttpStatus.BAD_REQUEST,
+        messageForCheckoutValidationError(error.error),
       ),
     );
   }

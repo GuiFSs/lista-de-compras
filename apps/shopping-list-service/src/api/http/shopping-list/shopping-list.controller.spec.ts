@@ -14,9 +14,19 @@
 // - CORS/preflight da origem da PWA (ADR 0009) e ausência de rota de histórico (AC-21);
 // - 500 com envelope canônico, sem detalhe interno no corpo (detalhe só no log).
 //
+// E da evolução do checkout (T-13, spec price-history):
+// - 400 de mercado/data com as mensagens PT do plano (RN-03/RN-04/AC-04);
+// - 200 com mercado/data válidos: só os comprados saem e o outbox recebe o
+//   evento na mesma conclusão (AC-05/CD-06);
+// - 200 sem comprados sem corpo e sem outbox (RN-09/AC-07);
+// - falha da gravação atômica do outbox → 500 canônico sem efeito parcial.
+//
 // O harness troca o port `ShoppingListRepository` por um repositório em memória
-// (reusa `InMemoryShoppingListRepository`) — não depende do banco. Um segundo app
-// com repositório que falha prova o 500 canônico.
+// (reusa `InMemoryShoppingListRepository`) e o port `OutboxRepository` por um
+// gravador em memória — não depende do banco. Os providers reais de mensageria
+// (publisher periódico + AMQP) são substituídos por doubles: o wiring real de
+// publicação é coberto nos specs de `infrastructure/messaging` (T-12). Um
+// segundo app com repositório que falha prova o 500 canônico.
 import { Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
@@ -27,6 +37,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type {
   ApiErrorResponse,
   DuplicateItemErrorResponse,
+  PurchaseCompletedEventV1,
   ShoppingListResponse,
 } from '@lista/contracts';
 import { AppModule } from '../../../app/app.module';
@@ -35,6 +46,9 @@ import {
   SHOPPING_LIST_ROUTE,
   configureApp,
 } from '../../../app/configure-app';
+import { EventPublisher } from '../../../application/ports/event-publisher.port';
+import type { OutboxMessage } from '../../../application/ports/outbox-repository.port';
+import { OutboxRepository } from '../../../application/ports/outbox-repository.port';
 import { ShoppingListRepository } from '../../../application/ports/shopping-list-repository.port';
 import { InMemoryShoppingListRepository } from '../../../application/use-cases/testing/in-memory-shopping-list-repository';
 import {
@@ -44,6 +58,7 @@ import {
   purchasedItem,
 } from '../../../application/use-cases/testing/item-fixtures';
 import type { ShoppingListItem } from '../../../domain/shopping-list-item';
+import { OutboxPublisherService } from '../../../infrastructure/messaging';
 import { signTestJwt } from '../../../test-fixtures/jwt-test-utils';
 
 const ITEMS_ROUTE = `${SHOPPING_LIST_ROUTE}/items`;
@@ -62,8 +77,21 @@ const NOT_FOUND_MESSAGE = 'Item não encontrado';
 const DUPLICATE_MESSAGE = 'Já existe um item com esse nome';
 const INTERNAL_ERROR_MESSAGE = 'Erro interno';
 const AUTHORIZATION_MESSAGE = 'Não autorizado';
+// Mensagens PT do checkout (price-history RN-03/RN-04 — PLAN.md "Contratos").
+const MARKET_REQUIRED_MESSAGE = 'Mercado é obrigatório';
+const PURCHASE_DATE_REQUIRED_MESSAGE = 'Data da compra é obrigatória';
+const PURCHASE_DATE_FUTURE_MESSAGE = 'Data da compra não pode ser futura';
+const PURCHASE_DATE_INVALID_MESSAGE = 'Data da compra inválida';
 
 const FAILURE_DETAIL = 'falha simulada no banco de dados (0xDEADBEEF)';
+const OUTBOX_FAILURE_DETAIL = 'falha simulada na gravação do outbox (0xFACEFEED)';
+
+/** Hoje em calendário UTC — a mesma defesa de data futura do serviço (CD-07). */
+function utcDay(offsetDays = 0): string {
+  const now = new Date();
+  now.setUTCDate(now.getUTCDate() + offsetDays);
+  return now.toISOString().slice(0, 10);
+}
 
 const NAME_REQUIRED_BODY: ApiErrorResponse = {
   statusCode: 400,
@@ -165,9 +193,71 @@ class FailingShoppingListRepository extends ShoppingListRepository {
   }
 }
 
-describe('Borda HTTP da lista ativa — integração via inject (T-06)', () => {
+/**
+ * Outbox em memória para a borda: registra os envelopes gravados e aplica o
+ * DELETE dos comprados no MESMO repositório em memória do harness — o passo
+ * atômico do port vira duas chamadas aqui, o suficiente para provar o wiring
+ * (gravado × não gravado × falha) sem banco.
+ */
+class RecordingOutboxRepository extends OutboxRepository {
+  readonly enqueued: PurchaseCompletedEventV1[] = [];
+  private nextWriteFails = false;
+
+  constructor(private readonly list: ShoppingListRepository) {
+    super();
+  }
+
+  /** Próxima gravação falha uma vez — simula o banco abortando a transação. */
+  failOnNextWrite(): void {
+    this.nextWriteFails = true;
+  }
+
+  reset(): void {
+    this.enqueued.length = 0;
+    this.nextWriteFails = false;
+  }
+
+  async deletePurchasedAndEnqueue(
+    purchasedIds: readonly string[],
+    envelope: PurchaseCompletedEventV1,
+  ): Promise<void> {
+    if (this.nextWriteFails) {
+      this.nextWriteFails = false;
+      throw new Error(OUTBOX_FAILURE_DETAIL);
+    }
+    await this.list.deleteByIds(purchasedIds);
+    this.enqueued.push(envelope);
+  }
+
+  async findPending(): Promise<OutboxMessage[]> {
+    return [];
+  }
+
+  // A borda hermetizada só exercita `deletePurchasedAndEnqueue`; os demais
+  // métodos existem para satisfazer o contrato do port (nunca chamados aqui).
+  markPublished(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  recordFailure(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
+/** Publisher descartável: estes testes herméticos não falam com o broker. */
+class NoopEventPublisher extends EventPublisher {
+  publish(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
+/** Substitui o ciclo do publisher real — varreria banco/broker destes testes. */
+const DISABLED_PUBLISHER_CYCLE = {};
+
+describe('Borda HTTP da lista ativa — integração via inject (T-06/T-13)', () => {
   let app: NestFastifyApplication;
   let repository: ResettableShoppingListRepository;
+  let outbox: RecordingOutboxRepository;
   let token: string;
 
   const auth = (): { authorization: string } => ({
@@ -176,11 +266,18 @@ describe('Borda HTTP da lista ativa — integração via inject (T-06)', () => {
 
   beforeAll(async () => {
     repository = new ResettableShoppingListRepository();
+    outbox = new RecordingOutboxRepository(repository);
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(ShoppingListRepository)
       .useValue(repository)
+      .overrideProvider(OutboxRepository)
+      .useValue(outbox)
+      .overrideProvider(EventPublisher)
+      .useValue(new NoopEventPublisher())
+      .overrideProvider(OutboxPublisherService)
+      .useValue(DISABLED_PUBLISHER_CYCLE)
       .compile();
 
     app = moduleRef.createNestApplication<NestFastifyApplication>(
@@ -200,6 +297,7 @@ describe('Borda HTTP da lista ativa — integração via inject (T-06)', () => {
 
   beforeEach(() => {
     repository.reset();
+    outbox.reset();
   });
 
   describe('GET /api/shopping-list (RN-18/RN-19/AC-18/AC-24)', () => {
@@ -833,18 +931,26 @@ describe('Borda HTTP da lista ativa — integração via inject (T-06)', () => {
     });
   });
 
-  describe('POST /api/shopping-list/checkout (RN-14…RN-16/AC-19…AC-21)', () => {
-    it('200 — remove (hard delete) só os comprados e devolve os pendentes', async () => {
+  describe('POST /api/shopping-list/checkout (price-history RN-03/RN-04/AC-04/AC-05/AC-07)', () => {
+    const VALID_BODY = { market: 'Mercado Central', purchaseDate: utcDay() };
+
+    const seedPurchased = (): void => {
       repository.reset([
         makeItem({ id: ARROZ_ID, name: 'Arroz', createdAt: BASE_TIME }),
         makeItem({ id: CAFE_ID, name: 'Café', createdAt: SECOND }),
         purchasedItem({ id: LEITE_ID, name: 'Leite', createdAt: LATER }),
       ]);
+    };
+
+    it('200 — remove (hard delete) só os comprados, devolve os pendentes e grava o outbox (AC-05)', async () => {
+      seedPurchased();
 
       const res = await app.inject({
         method: 'POST',
         url: `${SHOPPING_LIST_ROUTE}/checkout`,
         headers: auth(),
+        // Mercado com espaços nas bordas chega trimado no evento.
+        payload: { market: '  Mercado Central  ', purchaseDate: utcDay() },
       });
 
       expect(res.statusCode).toBe(200);
@@ -854,9 +960,23 @@ describe('Borda HTTP da lista ativa — integração via inject (T-06)', () => {
       ]);
       // Conclusão é DELETE físico: nada do comprado permanece armazenado.
       expect(repository.stored(LEITE_ID)).toBeNull();
+
+      // O outbox recebeu o evento da conclusão (wiring do caso de uso T-12).
+      expect(outbox.enqueued).toHaveLength(1);
+      const envelope = outbox.enqueued[0];
+      expect(envelope.eventType).toBe('shopping-list.purchase-completed');
+      expect(envelope.eventVersion).toBe(1);
+      expect(envelope.payload).toMatchObject({
+        market: 'Mercado Central',
+        purchaseDate: utcDay(),
+        items: [{ name: 'Leite', quantity: 2, unit: 'kg', unitPrice: 9.9 }],
+      });
+      expect(envelope.payload.completionId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
     });
 
-    it('200 — sem itens comprados mantém a lista exatamente como estava', async () => {
+    it('200 — sem itens comprados mantém a lista exatamente como estava e não grava outbox (RN-09/AC-07)', async () => {
       repository.reset([
         makeItem({ id: ARROZ_ID, name: 'Arroz', createdAt: BASE_TIME }),
         makeItem({ id: CAFE_ID, name: 'Café', createdAt: SECOND }),
@@ -873,6 +993,66 @@ describe('Borda HTTP da lista ativa — integração via inject (T-06)', () => {
         ARROZ_ID,
         CAFE_ID,
       ]);
+      expect(outbox.enqueued).toHaveLength(0);
+    });
+
+    const invalidCheckoutBodies: Array<
+      [string, Record<string, unknown> | undefined, ApiErrorResponse]
+    > = [
+      ['sem corpo com comprados', undefined, { statusCode: 400, message: MARKET_REQUIRED_MESSAGE }],
+      ['mercado ausente', { purchaseDate: utcDay() }, { statusCode: 400, message: MARKET_REQUIRED_MESSAGE }],
+      ['mercado vazio', { market: '', purchaseDate: utcDay() }, { statusCode: 400, message: MARKET_REQUIRED_MESSAGE }],
+      ['mercado só espaços', { market: '   ', purchaseDate: utcDay() }, { statusCode: 400, message: MARKET_REQUIRED_MESSAGE }],
+      ['data ausente', { market: 'Mercado' }, { statusCode: 400, message: PURCHASE_DATE_REQUIRED_MESSAGE }],
+      ['data vazia', { market: 'Mercado', purchaseDate: '' }, { statusCode: 400, message: PURCHASE_DATE_REQUIRED_MESSAGE }],
+      ['data inválida', { market: 'Mercado', purchaseDate: '2026-02-30' }, { statusCode: 400, message: PURCHASE_DATE_INVALID_MESSAGE }],
+      ['data fora do formato ISO', { market: 'Mercado', purchaseDate: '16/10/2026' }, { statusCode: 400, message: PURCHASE_DATE_INVALID_MESSAGE }],
+      ['data futura', { market: 'Mercado', purchaseDate: utcDay(1) }, { statusCode: 400, message: PURCHASE_DATE_FUTURE_MESSAGE }],
+    ];
+
+    it.each(invalidCheckoutBodies)(
+      '400 — checkout inválido (%s) usa o envelope canônico, nada sai da lista e não grava outbox (AC-04)',
+      async (_label, payload, expected) => {
+        seedPurchased();
+
+        const res = await app.inject({
+          method: 'POST',
+          url: `${SHOPPING_LIST_ROUTE}/checkout`,
+          headers: auth(),
+          payload,
+        });
+
+        expect(res.statusCode).toBe(400);
+        expect(res.json<ApiErrorResponse>()).toEqual(expected);
+        expect(Object.keys(res.json()).sort()).toEqual(['message', 'statusCode']);
+        // Nenhum item sai; o comprado permanece exatamente como estava.
+        expect(repository.stored(ARROZ_ID)).not.toBeNull();
+        expect(repository.stored(LEITE_ID)).toMatchObject({
+          purchased: { quantity: 2, unit: 'kg', unitPrice: 9.9 },
+        });
+        expect(outbox.enqueued).toHaveLength(0);
+      },
+    );
+
+    it('500 — falha da gravação atômica do outbox não vira 200 e não deixa efeito parcial', async () => {
+      seedPurchased();
+      outbox.failOnNextWrite();
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `${SHOPPING_LIST_ROUTE}/checkout`,
+        headers: auth(),
+        payload: VALID_BODY,
+      });
+
+      expect(res.statusCode).toBe(500);
+      expect(res.json<ApiErrorResponse>()).toEqual({
+        statusCode: 500,
+        message: INTERNAL_ERROR_MESSAGE,
+      });
+      // Sem DELETE parcial e sem mensagem: a transação é a unidade de escrita.
+      expect(repository.stored(LEITE_ID)).not.toBeNull();
+      expect(outbox.enqueued).toHaveLength(0);
     });
   });
 
@@ -1003,11 +1183,18 @@ describe('Borda HTTP da lista ativa — 500 canônico (T-06)', () => {
 
   beforeAll(async () => {
     Logger.overrideLogger(recordingLogger);
+    const failingRepository = new FailingShoppingListRepository();
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(ShoppingListRepository)
-      .useValue(new FailingShoppingListRepository())
+      .useValue(failingRepository)
+      .overrideProvider(OutboxRepository)
+      .useValue(new RecordingOutboxRepository(failingRepository))
+      .overrideProvider(EventPublisher)
+      .useValue(new NoopEventPublisher())
+      .overrideProvider(OutboxPublisherService)
+      .useValue(DISABLED_PUBLISHER_CYCLE)
       .compile();
 
     app = moduleRef.createNestApplication<NestFastifyApplication>(
@@ -1052,6 +1239,19 @@ describe('Borda HTTP da lista ativa — 500 canônico (T-06)', () => {
       url: ITEMS_ROUTE,
       headers: { authorization: `Bearer ${token}` },
       payload: { name: 'Arroz' },
+    });
+
+    expect(res.statusCode).toBe(500);
+    expect(res.json<ApiErrorResponse>()).toEqual(INTERNAL_ERROR_BODY);
+    expect(JSON.stringify(res.json())).not.toContain(FAILURE_DETAIL);
+  });
+
+  it('500 — o checkout também responde com o envelope canônico', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: `${SHOPPING_LIST_ROUTE}/checkout`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { market: 'Mercado', purchaseDate: utcDay() },
     });
 
     expect(res.statusCode).toBe(500);

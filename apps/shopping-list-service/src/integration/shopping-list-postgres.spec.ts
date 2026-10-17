@@ -1,4 +1,4 @@
-// Testes de integração com Postgres REAL (T-15).
+// Testes de integração com Postgres REAL (T-15/T-13).
 //
 // Complementam a suíte de `inject` com repositório em memória
 // (`api/http/shopping-list/shopping-list.controller.spec.ts`) provando o que só
@@ -8,27 +8,42 @@
 //     409 sem criar segundo item;
 //   - AC-24: o estado da lista sobrevive a uma nova instância da aplicação
 //     (equivale a recarregar/reabrir a PWA: o GET é refeito no serviço);
-//   - AC-21: concluir remove fisicamente os comprados, não deixa tabela/registro
-//     de compra e a mensageria permanece esqueleto (nenhum evento);
+//   - AC-21/T-13: concluir remove fisicamente os comprados, grava o evento no
+//     outbox transacional (mesma conclusão) e não deixa tabela/registro de
+//     histórico (que é do price-history-service);
+//   - T-13: checkout com mercado/data — 400 canônico sem efeito parcial e
+//     rollback real do DELETE quando o INSERT do outbox viola
+//     `unique(completion_id)` (23505);
 //   - contrato por rota (status/envelope e round-trip numérico) contra o banco.
 //
 // Pré-requisitos (PLAN T-15): `npm run docker:up` e
 // `npx nx run shopping-list-service:db:migrate`. A tabela `shopping_list_items`
-// é truncada a cada caso — banco lógico `shopping_list`, local e de dono
+// é truncada a cada caso; linhas de `outbox_messages` criadas pelos casos são
+// rastreadas e removidas no fim (a tabela também é usada em paralelo pelo spec
+// do adaptador de outbox). Banco lógico `shopping_list`, local e de dono
 // exclusivo deste serviço (ADR 0001).
+import { randomUUID } from 'node:crypto';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
-import { eq, isNull, sql } from 'drizzle-orm';
+import { eq, inArray, isNull, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  PURCHASE_COMPLETED_EVENT_TYPE,
+  PURCHASE_COMPLETED_EVENT_VERSION,
+} from '@lista/contracts';
 import type {
   ApiErrorResponse,
   DuplicateItemErrorResponse,
+  PurchaseCompletedEventV1,
   ShoppingListItem as ShoppingListItemResponse,
   ShoppingListResponse,
 } from '@lista/contracts';
 import { AppModule } from '../app/app.module';
 import { SHOPPING_LIST_ROUTE, configureApp } from '../app/configure-app';
 import { CheckoutShoppingListUseCase } from '../application';
+import { EventPublisher } from '../application/ports/event-publisher.port';
+import type { OutboxMessage } from '../application/ports/outbox-repository.port';
+import { OutboxRepository } from '../application/ports/outbox-repository.port';
 import {
   ActiveItemNameConflictError,
   ShoppingListRepository,
@@ -37,8 +52,9 @@ import type { ShoppingListItem as DomainShoppingListItem } from '../domain/shopp
 import * as messagingScaffold from '../infrastructure/messaging';
 import type { ShoppingListDb } from '../infrastructure/persistence/drizzle/client';
 import { DRIZZLE } from '../infrastructure/persistence/drizzle/drizzle.provider';
+import { DrizzleOutboxRepository } from '../infrastructure/persistence/drizzle/repository/outbox.repository';
 import { DrizzleShoppingListRepository } from '../infrastructure/persistence/drizzle/repository/shopping-list.repository';
-import { shoppingListItems } from '../infrastructure/persistence/drizzle/schema';
+import { outboxMessages, shoppingListItems } from '../infrastructure/persistence/drizzle/schema';
 import { signTestJwt } from '../test-fixtures/jwt-test-utils';
 
 const ITEMS_ROUTE = `${SHOPPING_LIST_ROUTE}/items`;
@@ -57,10 +73,34 @@ vi.setConfig({ testTimeout: DB_TIMEOUT_MS, hookTimeout: DB_TIMEOUT_MS });
 
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
-async function createApp(): Promise<NestFastifyApplication> {
-  const moduleRef = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
+/**
+ * App de teste com o adaptador Drizzle REAL por trás do port `OutboxRepository`
+ * (decorado por `ObservingOutboxRepository`, que expõe as chamadas do
+ * checkout). A mensageria é substituída por doubles: o ciclo do publisher
+ * varreria banco/broker compartilhados com os demais specs (pool de arquivos
+ * do vitest) — o publisher real é coberto em `infrastructure/messaging` (T-12).
+ */
+async function createApp(): Promise<{
+  app: NestFastifyApplication;
+  outbox: ObservingOutboxRepository;
+}> {
+  let observing: ObservingOutboxRepository | undefined;
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+    .overrideProvider(OutboxRepository)
+    .useFactory({
+      factory: (drizzle: ShoppingListDb) => {
+        observing = new ObservingOutboxRepository(
+          new DrizzleOutboxRepository(drizzle),
+        );
+        return observing;
+      },
+      inject: [DRIZZLE],
+    })
+    .overrideProvider(EventPublisher)
+    .useValue(new NoopEventPublisher())
+    .overrideProvider(messagingScaffold.OutboxPublisherService)
+    .useValue({})
+    .compile();
 
   const app = moduleRef.createNestApplication<NestFastifyApplication>(
     new FastifyAdapter(),
@@ -69,7 +109,17 @@ async function createApp(): Promise<NestFastifyApplication> {
   await configureApp(app);
   await app.init();
   await app.getHttpAdapter().getInstance().ready();
-  return app;
+  if (observing === undefined) {
+    throw new Error('ObservingOutboxRepository não instanciado no módulo de teste');
+  }
+  return { app, outbox: observing };
+}
+
+/** Hoje em calendário UTC — a mesma defesa de data futura do serviço (CD-07). */
+function utcDay(offsetDays = 0): string {
+  const now = new Date();
+  now.setUTCDate(now.getUTCDate() + offsetDays);
+  return now.toISOString().slice(0, 10);
 }
 
 function dbOf(app: NestFastifyApplication): ShoppingListDb {
@@ -213,6 +263,61 @@ class StaleReadShoppingListRepository extends ShoppingListRepository {
   }
 }
 
+/**
+ * Decorator observável do port `OutboxRepository` em volta do adaptador Drizzle
+ * REAL: a conclusão passa por aqui (gravação na mesma transação) e o contador
+ * prova — sem contar linhas globais, que flutuariam com o spec do adaptador de
+ * outbox rodando em paralelo — se a chamada HTTP invocou o passo atômico.
+ * `armCompletionIdOverride` troca a chave do próximo INSERT para forçar a
+ * violação de `unique(completion_id)` e provar o rollback transacional.
+ */
+class ObservingOutboxRepository extends OutboxRepository {
+  enqueuedCalls = 0;
+  private completionIdOverride: string | null = null;
+
+  constructor(private readonly inner: DrizzleOutboxRepository) {
+    super();
+  }
+
+  /** Próxima gravação usa este completionId — colide com linha pré-existente. */
+  armCompletionIdOverride(completionId: string): void {
+    this.completionIdOverride = completionId;
+  }
+
+  async deletePurchasedAndEnqueue(
+    purchasedIds: readonly string[],
+    envelope: PurchaseCompletedEventV1,
+  ): Promise<void> {
+    this.enqueuedCalls += 1;
+    const armed = this.completionIdOverride;
+    this.completionIdOverride = null;
+    const guarded =
+      armed === null
+        ? envelope
+        : { ...envelope, payload: { ...envelope.payload, completionId: armed } };
+    return this.inner.deletePurchasedAndEnqueue(purchasedIds, guarded);
+  }
+
+  findPending(limit?: number): Promise<OutboxMessage[]> {
+    return this.inner.findPending(limit);
+  }
+
+  markPublished(id: string, publishedAt: Date): Promise<void> {
+    return this.inner.markPublished(id, publishedAt);
+  }
+
+  recordFailure(id: string, lastError: string): Promise<void> {
+    return this.inner.recordFailure(id, lastError);
+  }
+}
+
+/** Publisher descartável: estes testes não falam com o broker real. */
+class NoopEventPublisher extends EventPublisher {
+  publish(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
 function findItem(
   items: readonly ShoppingListItemResponse[],
   id: string,
@@ -235,10 +340,14 @@ function findItemByName(
   return found;
 }
 
-describe('Integração com Postgres real — lista ativa (T-15)', () => {
+describe('Integração com Postgres real — lista ativa (T-15/T-13)', () => {
   let app: NestFastifyApplication;
   let db: ShoppingListDb;
+  let outbox: ObservingOutboxRepository;
   let token: string;
+  // Linhas de outbox criadas pelos casos (rastreadas para limpeza no fim:
+  // a tabela é compartilhada com o spec do adaptador em paralelo).
+  const trackedCompletionIds: string[] = [];
 
   const call = (
     target: NestFastifyApplication,
@@ -256,16 +365,30 @@ describe('Integração com Postgres real — lista ativa (T-15)', () => {
       ...(payload === undefined ? {} : { payload }),
     });
 
+  /** Linhas do outbox cujo envelope carrega este mercado (valor único no spec). */
+  const outboxRowsForMarket = (market: string) =>
+    db
+      .select()
+      .from(outboxMessages)
+      .where(sql`${outboxMessages.payload}->'payload'->>'market' = ${market}`);
+
   beforeAll(async () => {
-    app = await createApp();
+    const created = await createApp();
+    app = created.app;
+    outbox = created.outbox;
     db = dbOf(app);
     token = await signTestJwt();
   });
 
   afterAll(async () => {
-    // Deixa o banco local limpo (os casos truncam antes de rodar; o último
-    // caso deixa as linhas que ele criou).
+    // Deixa o banco local limpo (os casos truncam a lista antes de rodar;
+    // as linhas de outbox rastreadas são removidas aqui).
     await truncate(db);
+    if (trackedCompletionIds.length > 0) {
+      await db
+        .delete(outboxMessages)
+        .where(inArray(outboxMessages.completionId, trackedCompletionIds));
+    }
     await closeApp(app);
   });
 
@@ -424,7 +547,7 @@ describe('Integração com Postgres real — lista ativa (T-15)', () => {
       // GET refeito no serviço — nenhum estado é recombinado de memória local.
       const restarted = await createApp();
       try {
-        const res = await restarted.inject({
+        const res = await restarted.app.inject({
           method: 'GET',
           url: SHOPPING_LIST_ROUTE,
           headers: { authorization: `Bearer ${token}` },
@@ -450,7 +573,7 @@ describe('Integração com Postgres real — lista ativa (T-15)', () => {
         // O excluído sai da lista ativa...
         expect(items.some((item) => item.id === cafe.id)).toBe(false);
       } finally {
-        await closeApp(restarted);
+        await closeApp(restarted.app);
       }
 
       // ...mas continua no banco com `removed_at` (soft delete do Desfazer).
@@ -464,7 +587,9 @@ describe('Integração com Postgres real — lista ativa (T-15)', () => {
     });
   });
 
-  describe('AC-21 — concluir não grava registro nem publica evento', () => {
+  describe('AC-21/T-13 — concluir remove comprados, grava o outbox e não cria histórico', () => {
+    const MARKET = 'Mercado AC-21';
+
     it('remove fisicamente os comprados e não deixa dado de compra consultável', async () => {
       const createdPendente = await call(app, 'POST', ITEMS_ROUTE, {
         name: 'Arroz',
@@ -490,7 +615,11 @@ describe('Integração com Postgres real — lista ativa (T-15)', () => {
       );
       expect(marked.statusCode).toBe(200);
 
-      const checkout = await call(app, 'POST', `${SHOPPING_LIST_ROUTE}/checkout`);
+      const callsBefore = outbox.enqueuedCalls;
+      const checkout = await call(app, 'POST', `${SHOPPING_LIST_ROUTE}/checkout`, {
+        market: MARKET,
+        purchaseDate: utcDay(),
+      });
       expect(checkout.statusCode).toBe(200);
       expect(checkout.json<ShoppingListResponse>().items.map((item) => item.id)).toEqual([
         pendente.id,
@@ -503,6 +632,14 @@ describe('Integração com Postgres real — lista ativa (T-15)', () => {
         .where(eq(shoppingListItems.id, comprado.id));
       expect(compradoRows).toHaveLength(0);
       expect(await countRows(db, false)).toBe(1);
+
+      // A conclusão grava UMA mensagem no outbox, na mesma transação do DELETE
+      // (CD-06) — o histórico em si é do price-history-service, que consome o
+      // evento depois; nada de "registro de compra" persistido aqui.
+      expect(outbox.enqueuedCalls).toBe(callsBefore + 1);
+      const enqueued = await outboxRowsForMarket(MARKET);
+      expect(enqueued).toHaveLength(1);
+      trackedCompletionIds.push(enqueued[0].completionId);
 
       // O schema só ganha o outbox transacional (T-11/CD-06) — nenhuma tabela
       // de histórico/registro de compra vive neste banco (AC-21; o histórico é
@@ -517,11 +654,14 @@ describe('Integração com Postgres real — lista ativa (T-15)', () => {
       await call(app, 'POST', ITEMS_ROUTE, { name: 'Arroz' });
       await call(app, 'POST', ITEMS_ROUTE, { name: 'Feijão' });
 
+      const callsBefore = outbox.enqueuedCalls;
       const checkout = await call(app, 'POST', `${SHOPPING_LIST_ROUTE}/checkout`);
 
       expect(checkout.statusCode).toBe(200);
       expect(checkout.json<ShoppingListResponse>().items).toHaveLength(2);
       expect(await countRows(db, false)).toBe(2);
+      // Sem comprados não há passo atômico (nem linhas no outbox).
+      expect(outbox.enqueuedCalls).toBe(callsBefore);
     });
 
     it('não existe rota de histórico nesta rodada (404)', async () => {
@@ -532,12 +672,232 @@ describe('Integração com Postgres real — lista ativa (T-15)', () => {
       expect(post.statusCode).toBe(404);
     });
 
-    it('não há publicador de evento: mensageria é esqueleto e a conclusão só conhece o repositório', () => {
-      // Tripwire: publicar exigiria implementar o adaptador de mensageria
-      // (hoje `export {}`) e dar à conclusão um segundo colaborador. A ausência
-      // disso é a prova executável de "não publica evento" nesta rodada.
-      expect(Object.keys(messagingScaffold)).toHaveLength(0);
-      expect(CheckoutShoppingListUseCase.length).toBe(1);
+    it('a mensageria virou módulo real e a conclusão tem o outbox como segundo colaborador', () => {
+      // Tripwire atualizado na T-13. Na T-11 a mensageria era `export {}` e a
+      // conclusão só conhecia o repositório; a T-12 criou o módulo de publicação
+      // (retry/backoff) e a T-13 ligou a gravação do outbox ao checkout, na
+      // mesma transação do DELETE. O que este tripwire ancora agora: (1) a
+      // publicação existe como módulo à parte e (2) o caso de uso tem
+      // EXATAMENTE dois colaboradores — o broker nunca entra no caminho
+      // síncrono do HTTP (o envio é assíncrono, pelo publisher).
+      //
+      // As provas de "0 comprados → 0 outbox" e "broker fora não falha o HTTP"
+      // ficam nos specs de use case e de messaging (T-12); aqui ficam os
+      // efeitos no banco real (casos acima e describe de checkout da T-13).
+      expect(Object.keys(messagingScaffold).sort()).toEqual(
+        expect.arrayContaining([
+          'MessagingModule',
+          'OutboxPublisher',
+          'OutboxPublisherService',
+          'RabbitmqEventPublisher',
+        ]),
+      );
+      expect(CheckoutShoppingListUseCase.length).toBe(2);
+    });
+  });
+
+  describe('checkout com mercado/data e outbox transacional (T-13 — RN-03/RN-04, AC-04/AC-05)', () => {
+    const CHECKOUT_ROUTE = `${SHOPPING_LIST_ROUTE}/checkout`;
+    const UUID_PATTERN =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+    /** Um pendente + um comprado via HTTP — o caminho real de escrita da PWA. */
+    async function seedPendingAndPurchased(): Promise<{
+      pendenteId: string;
+      compradoId: string;
+    }> {
+      const pendenteCreate = await call(app, 'POST', ITEMS_ROUTE, {
+        name: 'Arroz T-13',
+      });
+      const pendente = findItemByName(
+        pendenteCreate.json<ShoppingListResponse>().items,
+        'Arroz T-13',
+      );
+
+      const compradoCreate = await call(app, 'POST', ITEMS_ROUTE, {
+        name: 'Leite T-13',
+      });
+      const comprado = findItemByName(
+        compradoCreate.json<ShoppingListResponse>().items,
+        'Leite T-13',
+      );
+
+      const marked = await call(
+        app,
+        'PUT',
+        `${ITEMS_ROUTE}/${comprado.id}/purchase`,
+        { purchasedQuantity: 1.5, unit: 'L', unitPrice: 5.49 },
+      );
+      expect(marked.statusCode).toBe(200);
+      return { pendenteId: pendente.id, compradoId: comprado.id };
+    }
+
+    async function itemRow(id: string) {
+      const rows = await db
+        .select()
+        .from(shoppingListItems)
+        .where(eq(shoppingListItems.id, id));
+      return rows[0];
+    }
+
+    it('200 — o corpo vira o evento: mercado trimado, data e itens comprados no outbox', async () => {
+      const { pendenteId, compradoId } = await seedPendingAndPurchased();
+      const callsBefore = outbox.enqueuedCalls;
+      const date = utcDay();
+
+      const res = await call(app, 'POST', CHECKOUT_ROUTE, {
+        market: '  Mercado T-13 sucesso  ',
+        purchaseDate: date,
+      });
+
+      expect(res.statusCode).toBe(200);
+      // Só o comprado sai da lista ativa; o pendente permanece.
+      expect(res.json<ShoppingListResponse>().items.map((item) => item.id)).toEqual([
+        pendenteId,
+      ]);
+      expect(outbox.enqueuedCalls).toBe(callsBefore + 1);
+      expect(await itemRow(compradoId)).toBeUndefined();
+      expect(await itemRow(pendenteId)).toBeDefined();
+
+      // A mensagem existe no banco, com o envelope v1 completo (T-02) e pendente
+      // de publicação — a remoção e a gravação foram o MESMO passo (CD-06).
+      const rows = await outboxRowsForMarket('Mercado T-13 sucesso');
+      expect(rows).toHaveLength(1);
+      const [row] = rows;
+      trackedCompletionIds.push(row.completionId);
+
+      expect(row.completionId).toMatch(UUID_PATTERN);
+      expect(row.eventType).toBe(PURCHASE_COMPLETED_EVENT_TYPE);
+      expect(row.eventVersion).toBe(PURCHASE_COMPLETED_EVENT_VERSION);
+      expect(row.publishedAt).toBeNull();
+      expect(row.payload.eventId).toMatch(UUID_PATTERN);
+      expect(row.payload.payload).toMatchObject({
+        completionId: row.completionId,
+        market: 'Mercado T-13 sucesso',
+        purchaseDate: date,
+        items: [{ name: 'Leite T-13', quantity: 1.5, unit: 'L', unitPrice: 5.49 }],
+      });
+    });
+
+    it('400 — mercado/data inválidos param antes de qualquer escrita no banco', async () => {
+      const { compradoId } = await seedPendingAndPurchased();
+      const callsBefore = outbox.enqueuedCalls;
+
+      const cases: ReadonlyArray<{
+        label: string;
+        body?: Record<string, unknown>;
+        message: string;
+      }> = [
+        { label: 'sem corpo com comprados', message: 'Mercado é obrigatório' },
+        {
+          label: 'mercado só espaços',
+          body: { market: '   ', purchaseDate: utcDay() },
+          message: 'Mercado é obrigatório',
+        },
+        {
+          label: 'data ausente',
+          body: { market: 'Mercado T-13' },
+          message: 'Data da compra é obrigatória',
+        },
+        {
+          label: 'data inexistente no calendário',
+          body: { market: 'Mercado T-13', purchaseDate: '2026-02-30' },
+          message: 'Data da compra inválida',
+        },
+        {
+          label: 'data futura',
+          body: { market: 'Mercado T-13', purchaseDate: utcDay(1) },
+          message: 'Data da compra não pode ser futura',
+        },
+      ];
+
+      for (const { label, body, message } of cases) {
+        const res = await call(app, 'POST', CHECKOUT_ROUTE, body);
+        expect(res.statusCode, label).toBe(400);
+        expect(res.json<ApiErrorResponse>(), label).toEqual({
+          statusCode: 400,
+          message,
+        });
+      }
+
+      // Nada saiu da lista e nenhum passo atômico (nem evento) foi gravado.
+      const stored = await itemRow(compradoId);
+      if (stored === undefined) {
+        throw new Error('comprado sumiu do banco em checkout recusado');
+      }
+      expect(stored.purchasedQuantity).not.toBeNull();
+      expect(outbox.enqueuedCalls).toBe(callsBefore);
+    });
+
+    it('200 — sem comprados o corpo é opcional e nada vai para o outbox (RN-09)', async () => {
+      const created = await call(app, 'POST', ITEMS_ROUTE, { name: 'Arroz T-13' });
+      const arroz = findItemByName(
+        created.json<ShoppingListResponse>().items,
+        'Arroz T-13',
+      );
+      const callsBefore = outbox.enqueuedCalls;
+
+      const res = await call(app, 'POST', CHECKOUT_ROUTE);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json<ShoppingListResponse>().items.map((item) => item.id)).toEqual([
+        arroz.id,
+      ]);
+      expect(outbox.enqueuedCalls).toBe(callsBefore);
+    });
+
+    it('500 — violar unique(completion_id) desfaz o DELETE dos comprados (rollback real)', async () => {
+      // Linha "antiga" ocupando o completionId que o próximo INSERT tentará usar.
+      // É o padrão de reprocesso que a unicidade da tabela existe para barrar.
+      const collisionId = randomUUID();
+      trackedCompletionIds.push(collisionId);
+      await db.insert(outboxMessages).values({
+        completionId: collisionId,
+        eventType: PURCHASE_COMPLETED_EVENT_TYPE,
+        eventVersion: PURCHASE_COMPLETED_EVENT_VERSION,
+        payload: {
+          eventId: randomUUID(),
+          eventType: PURCHASE_COMPLETED_EVENT_TYPE,
+          eventVersion: PURCHASE_COMPLETED_EVENT_VERSION,
+          occurredAt: new Date().toISOString(),
+          payload: {
+            completionId: collisionId,
+            market: 'Mercado Antigo',
+            purchaseDate: '2026-01-01',
+            items: [],
+          },
+        },
+      });
+
+      const { compradoId } = await seedPendingAndPurchased();
+
+      // O decorator troca a chave do próximo INSERT pela linha colidida: o
+      // `23505` de unique(completion_id) acontece DENTRO da transação real.
+      outbox.armCompletionIdOverride(collisionId);
+      const res = await call(app, 'POST', CHECKOUT_ROUTE, {
+        market: 'Mercado T-13 rollback',
+        purchaseDate: utcDay(),
+      });
+
+      expect(res.statusCode).toBe(500);
+      expect(res.json<ApiErrorResponse>()).toEqual({
+        statusCode: 500,
+        message: 'Erro interno',
+      });
+
+      // Rollback: o DELETE dos comprados foi desfeito — o item segue comprado.
+      const stored = await itemRow(compradoId);
+      if (stored === undefined) {
+        throw new Error('comprado não persistiu após o rollback da conclusão');
+      }
+      expect(stored.purchasedQuantity).not.toBeNull();
+
+      // E o outbox não ganhou segunda linha para o completionId colidido.
+      const collided = await db
+        .select()
+        .from(outboxMessages)
+        .where(eq(outboxMessages.completionId, collisionId));
+      expect(collided).toHaveLength(1);
     });
   });
 
@@ -746,6 +1106,12 @@ describe('Corrida na criação com Postgres real (T-18)', () => {
         },
         inject: [DRIZZLE],
       })
+      // A corrida exercita só a criação (sem checkout): neutraliza a mensageria
+      // para o publisher não tocar banco/broker compartilhados com outros specs.
+      .overrideProvider(EventPublisher)
+      .useValue(new NoopEventPublisher())
+      .overrideProvider(messagingScaffold.OutboxPublisherService)
+      .useValue({})
       .compile();
 
     app = moduleRef.createNestApplication<NestFastifyApplication>(
