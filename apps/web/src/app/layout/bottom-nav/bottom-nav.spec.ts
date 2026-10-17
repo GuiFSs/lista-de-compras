@@ -7,10 +7,21 @@ import { BottomNav } from './bottom-nav';
 @Component({ selector: 'app-blank-outlet', template: '' })
 class Blank {}
 
-function tabButtons(fixture: ComponentFixture<BottomNav>): HTMLButtonElement[] {
+function tabs(fixture: ComponentFixture<BottomNav>): HTMLAnchorElement[] {
   return Array.from(
-    fixture.nativeElement.querySelectorAll('button.bottom-nav__tab'),
-  ) as HTMLButtonElement[];
+    fixture.nativeElement.querySelectorAll('a.bottom-nav__tab'),
+  ) as HTMLAnchorElement[];
+}
+
+function tabByLabel(
+  fixture: ComponentFixture<BottomNav>,
+  label: string,
+): HTMLAnchorElement {
+  const tab = tabs(fixture).find((anchor) =>
+    anchor.textContent?.includes(label),
+  );
+  if (tab === undefined) throw new Error(`Aba "${label}" não encontrada`);
+  return tab;
 }
 
 describe('BottomNav', () => {
@@ -21,6 +32,9 @@ describe('BottomNav', () => {
       providers: [
         provideRouter([
           { path: '', component: Blank },
+          { path: 'historico', component: Blank },
+          { path: 'historico/:id', component: Blank },
+          { path: 'menor-preco', component: Blank },
           { path: '**', component: Blank },
         ]),
         provideLocationMocks(),
@@ -49,9 +63,7 @@ describe('BottomNav', () => {
 
   it('marca a aba Lista como ativa na rota da lista (AC-01)', async () => {
     const fixture = await mountAt('/');
-    const list = fixture.nativeElement.querySelector(
-      'a.bottom-nav__tab',
-    ) as HTMLAnchorElement;
+    const list = tabByLabel(fixture, 'Lista');
 
     expect(list.getAttribute('href')).toBe('/');
     expect(list.classList.contains('bottom-nav__tab--active')).toBe(true);
@@ -60,34 +72,57 @@ describe('BottomNav', () => {
 
   it('não marca Lista como ativa fora da rota da lista', async () => {
     const fixture = await mountAt('/compras/2026');
-    const list = fixture.nativeElement.querySelector(
-      'a.bottom-nav__tab',
-    ) as HTMLAnchorElement;
+    const list = tabByLabel(fixture, 'Lista');
 
     expect(list.classList.contains('bottom-nav__tab--active')).toBe(false);
     expect(list.getAttribute('aria-current')).toBeNull();
   });
 
-  it('Histórico e Menor preço ficam desabilitadas, com "em breve" e sem rota (AC-01)', async () => {
-    const fixture = await mountAt('/');
-    const [history, lowestPrice] = tabButtons(fixture);
-
-    expect(history.disabled).toBe(true);
-    expect(history.textContent).toContain('Histórico');
-    expect(history.textContent).toContain('em breve');
-    expect(lowestPrice.disabled).toBe(true);
-    expect(lowestPrice.textContent).toContain('Menor preço');
-    expect(lowestPrice.textContent).toContain('em breve');
-  });
-
-  it('tocar nas abas desabilitadas não navega (AC-01)', async () => {
+  it('tocar em Histórico navega para /historico e ativa a aba (AC-01)', async () => {
     const fixture = await mountAt('/');
     const router = TestBed.inject(Router);
-    const url = router.url;
+    const history = tabByLabel(fixture, 'Histórico');
+    expect(history.getAttribute('href')).toBe('/historico');
 
-    tabButtons(fixture).forEach((tab) => tab.click());
+    history.click();
     await fixture.whenStable();
 
-    expect(router.url).toBe(url);
+    expect(router.url).toBe('/historico');
+    expect(history.classList.contains('bottom-nav__tab--active')).toBe(true);
+    expect(history.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('tocar em Menor preço navega para /menor-preco e ativa a aba (AC-02)', async () => {
+    const fixture = await mountAt('/');
+    const router = TestBed.inject(Router);
+    const lowestPrice = tabByLabel(fixture, 'Menor preço');
+    expect(lowestPrice.getAttribute('href')).toBe('/menor-preco');
+
+    lowestPrice.click();
+    await fixture.whenStable();
+
+    expect(router.url).toBe('/menor-preco');
+    expect(lowestPrice.classList.contains('bottom-nav__tab--active')).toBe(true);
+    expect(lowestPrice.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('mantém a aba Histórico ativa no detalhe /historico/:id', async () => {
+    const fixture = await mountAt('/historico/42');
+
+    expect(tabByLabel(fixture, 'Histórico').classList.contains('bottom-nav__tab--active')).toBe(
+      true,
+    );
+    expect(tabByLabel(fixture, 'Lista').classList.contains('bottom-nav__tab--active')).toBe(
+      false,
+    );
+  });
+
+  it('nenhuma aba vem desabilitada nem exibe "em breve" (AC-01/AC-02)', async () => {
+    const fixture = await mountAt('/');
+    const native = fixture.nativeElement as HTMLElement;
+
+    expect(native.querySelectorAll('button')).toHaveLength(0);
+    expect(native.textContent).not.toContain('em breve');
+    tabs(fixture).forEach((tab) => expect(tab.hasAttribute('disabled')).toBe(false));
   });
 });

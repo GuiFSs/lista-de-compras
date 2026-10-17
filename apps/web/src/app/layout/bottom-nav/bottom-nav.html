@@ -14,19 +14,27 @@
     </li>
 
     <li class="bottom-nav__item">
-      <button type="button" class="bottom-nav__tab" disabled>
+      <a
+        class="bottom-nav__tab"
+        routerLink="/historico"
+        routerLinkActive="bottom-nav__tab--active"
+        ariaCurrentWhenActive="page"
+      >
         <app-icon-clock class="bottom-nav__icon" />
         <span class="bottom-nav__label">Histórico</span>
-        <span class="bottom-nav__soon">em breve</span>
-      </button>
+      </a>
     </li>
 
     <li class="bottom-nav__item">
-      <button type="button" class="bottom-nav__tab" disabled>
+      <a
+        class="bottom-nav__tab"
+        routerLink="/menor-preco"
+        routerLinkActive="bottom-nav__tab--active"
+        ariaCurrentWhenActive="page"
+      >
         <app-icon-tag class="bottom-nav__icon" />
         <span class="bottom-nav__label">Menor preço</span>
-        <span class="bottom-nav__soon">em breve</span>
-      </button>
+      </a>
     </li>
   </ul>
 </nav>

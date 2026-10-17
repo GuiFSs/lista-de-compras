@@ -38,10 +38,6 @@
   touch-action: manipulation;
 }
 
-.bottom-nav__tab:disabled {
-  cursor: not-allowed;
-}
-
 .bottom-nav__tab--active {
   color: var(--color-primary-text);
   font-weight: var(--font-weight-semibold);
@@ -51,7 +47,6 @@
   font-size: var(--font-size-title);
 }
 
-.bottom-nav__label,
-.bottom-nav__soon {
+.bottom-nav__label {
   line-height: var(--line-height-tight);
 }
