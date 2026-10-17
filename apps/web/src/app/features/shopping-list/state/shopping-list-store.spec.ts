@@ -1,7 +1,12 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { MarkItemPurchasedRequest, PurchasedDetails, ShoppingListItem } from '@lista/contracts';
+import {
+  CheckoutShoppingListRequest,
+  MarkItemPurchasedRequest,
+  PurchasedDetails,
+  ShoppingListItem,
+} from '@lista/contracts';
 import { ShoppingListStore, UNDO_WINDOW_MS } from './shopping-list-store';
 
 const BASE_URL = 'http://localhost:3000/api/shopping-list';
@@ -296,16 +301,116 @@ describe('ShoppingListStore', () => {
     expect(store.items()).toEqual([item({ id: 'a' })]);
   });
 
-  it('conclui a compra sem corpo e aplica só o que permanece (AC-19/AC-20)', async () => {
-    const checkout = store.checkout();
+  describe('checkout com mercado e data (AC-03/AC-04/AC-05/RN-09/AC-20)', () => {
+    const REQUEST: CheckoutShoppingListRequest = {
+      market: 'Mercado Central',
+      purchaseDate: '2026-10-15',
+    };
 
-    const req = http.expectOne(url('/checkout'));
-    expect(req.request.method).toBe('POST');
-    expect(req.request.body).toBeNull();
-    req.flush({ items: [item({ id: 'b', name: 'Arroz' })] });
+    it('envia o payload do contrato e aplica a lista devolvida (AC-05)', async () => {
+      const checkout = store.checkout(REQUEST);
 
-    await expect(checkout).resolves.toEqual({ kind: 'ok' });
-    expect(store.items().map((i) => i.name)).toEqual(['Arroz']);
+      const req = http.expectOne(url('/checkout'));
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ market: 'Mercado Central', purchaseDate: '2026-10-15' });
+      req.flush({ items: [item({ id: 'b', name: 'Arroz' })] });
+
+      await expect(checkout).resolves.toEqual({ kind: 'ok' });
+      expect(store.items().map((i) => i.name)).toEqual(['Arroz']);
+      // A resposta do POST já é a lista sem os comprados (RN-19): aplicar é
+      // recarregar, sem um GET extra pelo mesmo dado.
+      http.expectNone(BASE_URL);
+    });
+
+    it('sem nenhum comprado, o corpo é omitido e a lista volta como estava (RN-09)', async () => {
+      const before = [item({ id: 'p1' }), item({ id: 'p2', name: 'Arroz' })];
+      const load = store.load();
+      http.expectOne(BASE_URL).flush({ items: before });
+      await load;
+
+      const checkout = store.checkout();
+
+      const req = http.expectOne(url('/checkout'));
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toBeNull();
+      req.flush({ items: before });
+
+      await expect(checkout).resolves.toEqual({ kind: 'ok' });
+      expect(store.items()).toEqual(before);
+    });
+
+    it('toques repetidos no CTA compartilham uma única requisição (AC-20, single-flight)', async () => {
+      expect(store.concluding()).toBe(false);
+
+      const first = store.checkout(REQUEST);
+      const second = store.checkout(REQUEST);
+      expect(store.concluding()).toBe(true);
+
+      http.expectOne(url('/checkout')).flush({ items: [] });
+
+      await expect(first).resolves.toEqual({ kind: 'ok' });
+      await expect(second).resolves.toEqual({ kind: 'ok' });
+      http.expectNone(url('/checkout'));
+      expect(store.concluding()).toBe(false);
+      expect(store.saving()).toBe(false);
+    });
+
+    it('400 de mercado entrega a mensagem do envelope e não mexe na lista (AC-04)', async () => {
+      const checkout = store.checkout({ market: '   ', purchaseDate: '2026-10-15' });
+      http.expectOne(url('/checkout')).flush(
+        { statusCode: 400, message: 'Mercado é obrigatório' },
+        { status: 400, statusText: 'Bad Request' },
+      );
+
+      await expect(checkout).resolves.toEqual({ kind: 'error', message: 'Mercado é obrigatório' });
+      expect(store.mutationError()).toBe('Mercado é obrigatório');
+      // 400 não mudou nada no serviço: nenhum item sai da lista e não há releitura.
+      expect(store.items()).toEqual([]);
+      http.expectNone(BASE_URL);
+    });
+
+    it('400 de data futura entrega a mensagem do envelope (AC-04/CD-07)', async () => {
+      const checkout = store.checkout({ market: 'Mercado Central', purchaseDate: '2999-01-01' });
+      http.expectOne(url('/checkout')).flush(
+        { statusCode: 400, message: 'Data da compra não pode ser futura' },
+        { status: 400, statusText: 'Bad Request' },
+      );
+
+      await expect(checkout).resolves.toEqual({
+        kind: 'error',
+        message: 'Data da compra não pode ser futura',
+      });
+      expect(store.mutationError()).toBe('Data da compra não pode ser futura');
+    });
+
+    it('falha não descarta o digitado: o payload segue intacto para a nova tentativa (AC-05)', async () => {
+      // Congelado de propósito: a camada não reescreve o objeto do formulário.
+      const typed: CheckoutShoppingListRequest = Object.freeze({
+        market: ' Mercado Central ',
+        purchaseDate: '2026-10-15',
+      });
+
+      const checkout = store.checkout(typed);
+      http.expectOne(url('/checkout')).error(new ProgressEvent('error'));
+      await flushMicrotasks();
+      // Rede caiu: o serviço pode ter aplicado a conclusão, então o store relê (AC-23).
+      http.expectOne(BASE_URL).flush({ items: [item({ id: 'p1' })] });
+
+      await expect(checkout).resolves.toEqual({
+        kind: 'error',
+        message: 'Falha de rede. Verifique a conexão e tente novamente.',
+      });
+      expect(store.concluding()).toBe(false);
+      expect(typed).toEqual({ market: ' Mercado Central ', purchaseDate: '2026-10-15' });
+      expect(store.items().map((i) => i.id)).toEqual(['p1']);
+
+      // Nova tentativa com o MESMO digitado: o payload volta ao serviço idêntico.
+      const retry = store.checkout(typed);
+      const retryReq = http.expectOne(url('/checkout'));
+      expect(retryReq.request.body).toEqual({ market: ' Mercado Central ', purchaseDate: '2026-10-15' });
+      retryReq.flush({ items: [] });
+      await expect(retry).resolves.toEqual({ kind: 'ok' });
+    });
   });
 
   it('falha ao restaurar: erro visível e releitura do serviço (AC-23, sem fantasma)', async () => {
