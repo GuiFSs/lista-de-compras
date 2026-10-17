@@ -3,7 +3,7 @@
 **Fase atual:** Implementação
 **Gate atual:** plano fechado — `Aprovado pelo usuário em 2026-10-16`; revisão arquitetural **Aprovada com ressalvas**; ADR 0010 **Aceita**
 **Última atualização:** 2026-10-17
-**Próxima ação:** onda 7 — delegar **T-09** (consumidor RabbitMQ PH) ∥ **T-14** (camada de dados PWA do histórico); dependências T-07/T-02 e T-02 satisfeitas; arquivos disjuntos (back PH × web).
+**Próxima ação:** onda 8 — delegar **T-15** (data checkout PWA) ∥ **T-16** (bottom nav + rotas); dependências T-02 satisfeitas para ambas; arquivos disjuntos (`features/shopping-list` + `core/shopping-list` × `layout/` + `app.routes.ts`).
 
 ## Artefatos
 
@@ -28,15 +28,45 @@
   - **T-12** (`dbe340a`) — checkout + publisher SL (AC-05, AC-07, AC-16, AC-17)
   - **T-08** (`903d5d8`) — borda HTTP PH (AC-06, AC-08–AC-12, AC-14, AC-18, AC-21)
   - **T-13** (`54368c2`) — HTTP checkout SL + wiring (AC-04, AC-05, AC-07; rollback 23505 fecha pendência da T-11)
-- Tarefa em andamento: nenhuma (aguarda onda 7: **T-09 ∥ T-14**)
+  - **T-09** (`9ea5e66`) — consumidor RabbitMQ PH (AC-06, AC-16, AC-17, RN-02, RN-11)
+  - **T-14** (`db7966f`) — camada de dados PWA do histórico (AC-21, AC-18, AC-14, AC-12, AC-13)
+- Tarefa em andamento: nenhuma (aguarda onda 8: **T-15 ∥ T-16**)
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 
 ## Pendências e bloqueios
 
-- Nenhum. Suíte do SL 206/206 verde (incl. integração com Postgres real e RabbitMQ); suíte do PH 84/84 verde. Docker reiniciado em 2026-10-17.
+- Nenhum. Suíte do SL 206/206 verde; suíte do PH 102/102 verde (incl. integração RabbitMQ real); suíte do web 225/225 verde; lint 0 em todos os escopos.
+- Pendências de produto registradas (fora do escopo das T): **DLQ** para payloads tóxicos (fora da v1, ver handoff T-09); rota de histórico ainda 404 até a T-16; telas T-18/T-19 consomem o store da T-14.
+- `PRICE_HISTORY_API_BASE_URL` é token injetável com default `http://localhost:3002` (ADR 0010 §3 — ponto de saída para o gateway na migração; ver handoff T-14).
 
 ## Últimos handoffs
+
+### T-14 — camada de dados PWA do histórico (`db7966f`)
+
+```text
+Tarefa: T-14
+Estado: concluída
+Arquivos alterados: core/price-history/{price-history-config, price-history-api.service, price-history-api.service.spec, index}; features/price-history/{data/index, state/price-history-store, state/price-history-store.spec, state/index} (todos novos)
+ACs cobertos: AC-21 (URL literal localhost:3002 + Authorization via authInterceptor), AC-18 (401 → logout + /login com returnUrl), AC-14 (refetch repete última seleção/busca), AC-12/AC-13 (estados loading/loaded/error), AC-06/AC-11 (payload aplicado sem reordenar), AC-08–AC-10 (consumo puro, busca como query q); AC-01/AC-02 observáveis só com T-16/T-18
+Testes executados: web → 23 arquivos, 225/225 verdes (20 novos); lint 0; build production verde
+Decisões registradas: base como token injetável `PRICE_HISTORY_API_BASE_URL` com default 3002 (espelho de SHOPPING_LIST_API_BASE_URL; nome igual ao da ADR 0010 §3); store único com 3 seções em estado composto {status,data,error}; guarda de sequência por seção (última carga vence) em vez de singleFlight; `apiErrorMessage` reusado de features/shopping-list/data (extração para core/http se usuário pedir)
+Pendências: nenhuma no escopo; features/price-history/data contém só barrel (serviço em core/price-history — mover se preferir espelho exato)
+Próximo passo recomendado: onda 8 — T-15 ∥ T-16
+```
+
+### T-09 — consumidor RabbitMQ PH (`9ea5e66`)
+
+```text
+Tarefa: T-09
+Estado: concluída
+Arquivos alterados: infrastructure/messaging/{topology, purchase-completed-handler, rabbitmq-purchase-completed-consumer, purchase-completed-consumer.service, messaging.module, index} + specs (5 arquivos novos); app/app.module.ts (wiring)
+ACs cobertos: AC-06, AC-16 (2× publish → 1 compra, integração RabbitMQ real), AC-17 (só PRICE_HISTORY_DATABASE_URL; nenhum client do DB shopping_list), RN-02, RN-11 (start() nunca derruba o app HTTP; backoff 1s→30s)
+Testes executados: price-history-service → 19 arquivos, 102/102 verdes (18 novos); build webpack ok; eslint 0
+Decisões registradas: ack só após ingest OK (inclusive created=false); payload tóxico → nack sem requeue + log (DLQ fora da v1 — pendência de produto); falha transitória → nack com requeue; porta estreita MessageHandling/ConsumeDecision; PurchaseCompletedHandler provisionado no MessagingModule com PurchaseRepositoryModule (decisão do handoff T-08); prefetch(1); corte VITEST no ciclo de vida p/ specs HTTP não disputarem a fila durable; integração com filas únicas + deleteQueue
+Pendências: DLQ fora da v1; STATUS intocado (escopo)
+Próximo passo recomendado: onda 8 — T-15 ∥ T-16
+```
 
 ### T-13 — HTTP checkout SL + wiring (`54368c2`)
 
