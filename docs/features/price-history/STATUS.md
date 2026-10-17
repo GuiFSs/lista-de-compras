@@ -3,7 +3,7 @@
 **Fase atual:** Implementação
 **Gate atual:** plano fechado — `Aprovado pelo usuário em 2026-10-16`; revisão arquitetural **Aprovada com ressalvas**; ADR 0010 **Aceita**
 **Última atualização:** 2026-10-17
-**Próxima ação:** onda 10 — delegar **T-18** (telas Histórico + detalhe) ∥ **T-20** (auditoria backend); dependências T-14/T-16 e T-08/T-09/T-13 satisfeitas; arquivos disjuntos (web × backend).
+**Próxima ação:** onda 11 — delegar **T-19** (tela Menor preço, mesma pasta `features/price-history/**` — sequencial por isso e porque T-18 já foi commitada); depois T-21 e T-22.
 
 ## Artefatos
 
@@ -33,7 +33,9 @@
   - **T-15** (`1ade4b2`) — API e store do checkout no PWA (AC-03, AC-04, AC-05, AC-07, AC-15, AC-20 — camada)
   - **T-16** (`a995c07`) — bottom nav + rotas /historico, /menor-preco (AC-01, AC-02, AC-19 nav)
   - **T-17** (`c810aee`) — checkout sheet com Mercado\* e Data\* (AC-03–AC-05, AC-07, AC-15, AC-19, AC-20) + correção E2E ratificada (`a74b4a4`)
-- Tarefa em andamento: nenhuma (aguarda onda 10: **T-18 ∥ T-20**)
+  - **T-18** (`cbe8ea1`) — telas Histórico + detalhe (AC-01, AC-06, AC-11–AC-14, AC-19)
+  - **T-20** (`3e0d298`) — auditoria backend: mapa AC→teste + lacuna AC-17 preenchida (104 testes PH)
+- Tarefa em andamento: nenhuma (aguarda onda 11: **T-19**)
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 - **Exceção ratificada nº 2 (2026-10-17, chat):** após a T-17, 2 testes de `apps/web-e2e/src/shopping-list/checkout.spec.ts` (arquivo da T-22) ficaram vermelhos por codificarem o comportamento antigo do resumo (sem mercado/data). Usuário **ratificou** a correção; executada pelo `test-engineer` e commitada em `a74b4a4` (jornada agora preenche mercado/data; AC-04 como perna da jornada; caso 0 comprados no teste existente). Pendência conhecida da T-22: AC-15 e AC-20 ainda sem jornada E2E; observação sobre `purchase.spec.ts:179` registrada no handoff T-17-e2e.
@@ -41,12 +43,40 @@
 
 ## Pendências e bloqueios
 
-- Nenhum. Suíte do SL 206/206; PH 102/102; web 238/238; **E2E 36/36**; lint 0 em todos os escopos (verificado pelo orquestrador após onda 9).
-- Pendências de produto/roadmap registradas (fora do escopo das T): **DLQ** para payloads tóxicos (fora da v1, handoff T-09); placeholders `history-page`/`history-detail-page`/`lowest-price-page` serão substituídos por T-18/T-19; **T-22** fecha a matriz AC↔E2E restante (AC-15 e AC-20 de checkout sem jornada; asserção de base `localhost:3002` + Authorization; jornadas Histórico/Menor preço) e revisa o `load.spec.ts`/`checkout.spec.ts` editados sob ratificação (ver Exceções).
+- Nenhum. Suíte do SL 206/206; PH **104/104**; web **253/253**; **E2E 36/36**; lint 0 em todos os escopos (revalidado pelo orquestrador após a onda 10: `nx test shopping-list-service`, `nx test price-history-service`, `nx test web`, `nx e2e web-e2e`, `nx lint web`, `nx build web`, eslint backend).
+- Pendências de produto/roadmap registradas (fora do escopo das T): **DLQ** para payloads tóxicos (fora da v1, handoff T-09); o placeholder restante é `lowest-price-page` (será substituído por **T-19**); **T-22** fecha a matriz AC↔E2E restante (AC-15 e AC-20 de checkout sem jornada; asserção de base `localhost:3002` + Authorization; jornadas Histórico/Menor preço) e revisa o `load.spec.ts`/`checkout.spec.ts` editados sob ratificação (ver Exceções).
 - `PRICE_HISTORY_API_BASE_URL` é token injetável com default `http://localhost:3002` (ADR 0010 §3 — ponto de saída para o gateway; handoff T-14).
 - Observação do handoff T-17-e2e: `purchase.spec.ts:179` tem perna "falha ao concluir" que hoje passa mas prova fraco (validação local bloqueia antes do POST) — T-22 deve cobrir AC-15 de verdade.
+- Pendências da T-20 (baixa, registradas no handoff): id malformado/não-UUID em `GET purchases/:id` é indefinido na SPEC (devolver ao product-spec se relevante); endurecimento opcional de AC-05 com teste "HTTP 200 com broker morto"; ausência de guard de module boundaries no eslint (AC-17 apoia-se no spec novo + tripwire `publicTables`).
+- **Observação de processo:** o subagente da T-20 editou `STATUS.md` apesar da delegação proibir (não executou git, mas gravou o próprio handoff no STATUS). O orquestrador reconciliou o arquivo (hashes reais, T-18 confirmada como concluída — o T-20 a marcava como pendente por desconhecer o resultado paralelo). Nenhum dado foi aceito sem verificação: os gates das duas tarefas foram re-executados pelo orquestrador.
 
 ## Últimos handoffs
+
+### T-18 — telas Histórico + detalhe (`cbe8ea1`)
+
+```text
+Tarefa: T-18
+Estado: concluída
+Arquivos alterados: features/price-history/{history-page, history-detail-page}.{ts,html,scss,spec} (substituíram os placeholders em lugar, rotas inalteradas); purchase-format.ts + spec (data DD/MM/AAAA, quantidade, R$ — sem Intl, determinístico)
+ACs cobertos: AC-01 (título via ShellChromeService), AC-06 (data+mercado na ordem do serviço — RN-08), AC-11 (linha abre detalhe; voltar aria-label em todos os estados; clearPurchase no destroy — RN-19), AC-12 (empty rico com 1 primary), AC-13 (skeleton na forma do conteúdo, role=status), AC-14 (erro + Tentar novamente refaz o GET; 404 no mesmo bloco), AC-19 (tokens, ≥44px, aria-labels)
+Testes executados: web → 26 arquivos, 253/253 (eram 238); lint 0; build verde (chunks lazy history-page/history-detail-page); e2e → 36/36
+Decisões registradas: data como linha primária com legenda "mercado · N itens"; linha é <a [routerLink]> com min-height 44px e margem inline negativa; sem Intl (determinismo em CI); voltar dentro do conteúdo (shell sem slot à esquerda, layout/ fora do escopo); 404 exibe a mensagem do serviço no bloco de erro padrão; retry do detalhe sem id (store repete a última seleção); route.snapshot.paramMap (fluxo sempre lista→detalhe)
+Pendências: nenhuma no escopo; web-e2e intocado (jornadas de histórico são da T-22)
+Próximo passo recomendado: onda 11 — T-19 (sequencial por compartilhar a pasta)
+```
+
+### T-20 — auditoria backend (`3e0d298`; handoff completo em `handoff-T-20.md`)
+
+```text
+Tarefa: T-20 (Auditoria backend)
+Estado: concluída e commitada (`3e0d298`)
+Arquivos alterados: apps/price-history-service/src/app/db-ownership.spec.ts (novo — 2 testes de AC-17; nenhuma linha de produção tocada); docs/features/price-history/handoff-T-20.md
+ACs cobertos: AC-03, AC-04, AC-05, AC-06, AC-07, AC-16, AC-17 e AC-18 (backend, 401) + contratos HTTP — mapa AC→teste completo no handoff. ACs observáveis só na UI (AC-01/AC-02, AC-05…AC-15, AC-19…AC-21 e a parte PWA de AC-18) ficam com a T-22.
+Testes executados: npx nx test shopping-list-service --skip-nx-cache → 20 arquivos, 206/206; npx nx test price-history-service --skip-nx-cache → 20 arquivos, 104/104 (era 19/102); npx vitest run src/app/db-ownership.spec.ts → 2/2; npx eslint apps/shopping-list-service/src apps/price-history-service/src → 0 problemas; npx tsc -p apps/price-history-service/tsconfig.spec.json --noEmit → exit 0
+Decisões registradas: T-20 é auditoria backend (Playwright é da T-22; sem E2E para ACs backend-only); única lacuna preenchida = AC-17 no lado PH (item nomeado no PLAN: "ausência de DATABASE_URL do shopping-list / sem client cross-DB"), com o menor teste comportamental (AppModule real + DATABASE_URL do shopping-list em host morto → GET /purchases 200) e o cliente Drizzle preso ao banco price_history; não adicionado teste redundante de "broker fora" (AC-05 provado por composição: CheckoutShoppingListUseCase.length === 2 + retry do publisher); nenhum comportamento inventado (o HTTP do PH não define 400 nem paginação na SPEC)
+Pendências: (baixa) id malformado/não-UUID em `GET purchases/:id` é indefinido na SPEC (Postgres real daria 500) — devolver ao product-spec; (baixa, opcional) 1 teste de integração "HTTP 200 com RABBITMQ_URL morto" para AC-05; (baixa) sem guard de module boundaries (eslint permissivo) — AC-17 apoia-se no spec novo + tripwire `publicTables`
+Próximo passo recomendado: T-18 (telas Histórico) e, na sequência, T-19/T-21/T-22; a T-22 roda `npx nx e2e web-e2e` e fecha o gate de UI
+```
 
 ### T-17 — checkout sheet (`c810aee`) + correção E2E (`a74b4a4`)
 
