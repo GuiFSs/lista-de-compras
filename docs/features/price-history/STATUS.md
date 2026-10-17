@@ -3,7 +3,7 @@
 **Fase atual:** Implementação
 **Gate atual:** plano fechado — `Aprovado pelo usuário em 2026-10-16`; revisão arquitetural **Aprovada com ressalvas**; ADR 0010 **Aceita**
 **Última atualização:** 2026-10-17
-**Próxima ação:** onda 11 — delegar **T-19** (tela Menor preço, mesma pasta `features/price-history/**` — sequencial por isso e porque T-18 já foi commitada); depois T-21 e T-22.
+**Próxima ação:** onda 12 — delegar **T-21** (auditoria unitária PWA, `test-engineer`) sozinha; dependências T-17/T-18/T-19 satisfeitas. Depois a onda 13 — **T-22** (E2E Playwright), gate de UI antes do `feature-validator` (ADR 0008).
 
 ## Artefatos
 
@@ -35,7 +35,8 @@
   - **T-17** (`c810aee`) — checkout sheet com Mercado\* e Data\* (AC-03–AC-05, AC-07, AC-15, AC-19, AC-20) + correção E2E ratificada (`a74b4a4`)
   - **T-18** (`cbe8ea1`) — telas Histórico + detalhe (AC-01, AC-06, AC-11–AC-14, AC-19)
   - **T-20** (`3e0d298`) — auditoria backend: mapa AC→teste + lacuna AC-17 preenchida (104 testes PH)
-- Tarefa em andamento: nenhuma (aguarda onda 11: **T-19**)
+  - **T-19** (`a24e633`) — tela Menor preço com busca por nome (AC-02, AC-08–AC-10, AC-12–AC-14, AC-19)
+- Tarefa em andamento: nenhuma (aguarda onda 12: **T-21** sozinha)
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 - **Exceção ratificada nº 2 (2026-10-17, chat):** após a T-17, 2 testes de `apps/web-e2e/src/shopping-list/checkout.spec.ts` (arquivo da T-22) ficaram vermelhos por codificarem o comportamento antigo do resumo (sem mercado/data). Usuário **ratificou** a correção; executada pelo `test-engineer` e commitada em `a74b4a4` (jornada agora preenche mercado/data; AC-04 como perna da jornada; caso 0 comprados no teste existente). Pendência conhecida da T-22: AC-15 e AC-20 ainda sem jornada E2E; observação sobre `purchase.spec.ts:179` registrada no handoff T-17-e2e.
@@ -43,14 +44,27 @@
 
 ## Pendências e bloqueios
 
-- Nenhum. Suíte do SL 206/206; PH **104/104**; web **253/253**; **E2E 36/36**; lint 0 em todos os escopos (revalidado pelo orquestrador após a onda 10: `nx test shopping-list-service`, `nx test price-history-service`, `nx test web`, `nx e2e web-e2e`, `nx lint web`, `nx build web`, eslint backend).
-- Pendências de produto/roadmap registradas (fora do escopo das T): **DLQ** para payloads tóxicos (fora da v1, handoff T-09); o placeholder restante é `lowest-price-page` (será substituído por **T-19**); **T-22** fecha a matriz AC↔E2E restante (AC-15 e AC-20 de checkout sem jornada; asserção de base `localhost:3002` + Authorization; jornadas Histórico/Menor preço) e revisa o `load.spec.ts`/`checkout.spec.ts` editados sob ratificação (ver Exceções).
+- Nenhum. Suíte do SL 206/206; PH **104/104**; web **263/263**; **E2E 36/36**; lint 0 em todos os escopos (revalidado pelo orquestrador após a onda 11: `nx test web`, `nx lint web`, `nx build web`, `nx e2e web-e2e`).
+- Pendências de produto/roadmap registradas (fora do escopo das T): **DLQ** para payloads tóxicos (fora da v1, handoff T-09); **T-22** fecha a matriz AC↔E2E restante (AC-15 e AC-20 de checkout sem jornada; asserção de base `localhost:3002` + Authorization; jornadas Histórico/Menor preço) e revisa o `load.spec.ts`/`checkout.spec.ts` editados sob ratificação (ver Exceções).
 - `PRICE_HISTORY_API_BASE_URL` é token injetável com default `http://localhost:3002` (ADR 0010 §3 — ponto de saída para o gateway; handoff T-14).
 - Observação do handoff T-17-e2e: `purchase.spec.ts:179` tem perna "falha ao concluir" que hoje passa mas prova fraco (validação local bloqueia antes do POST) — T-22 deve cobrir AC-15 de verdade.
 - Pendências da T-20 (baixa, registradas no handoff): id malformado/não-UUID em `GET purchases/:id` é indefinido na SPEC (devolver ao product-spec se relevante); endurecimento opcional de AC-05 com teste "HTTP 200 com broker morto"; ausência de guard de module boundaries no eslint (AC-17 apoia-se no spec novo + tripwire `publicTables`).
 - **Observação de processo:** o subagente da T-20 editou `STATUS.md` apesar da delegação proibir (não executou git, mas gravou o próprio handoff no STATUS). O orquestrador reconciliou o arquivo (hashes reais, T-18 confirmada como concluída — o T-20 a marcava como pendente por desconhecer o resultado paralelo). Nenhum dado foi aceito sem verificação: os gates das duas tarefas foram re-executados pelo orquestrador.
 
 ## Últimos handoffs
+
+### T-19 — tela Menor preço (`a24e633`)
+
+```text
+Tarefa: T-19
+Estado: concluída
+Arquivos alterados: features/price-history/lowest-price-page.{ts,html,scss,spec} (substituíram o placeholder da T-16 em lugar; rota /menor-preco inalterada); reuso de purchase-format.ts (T-18), sem ajuste nele
+ACs cobertos: AC-02 (título "Menor preço" via ShellChromeService), AC-08 (nome + menor preço em R$, ordem do serviço), AC-09 (busca vai como q ao serviço, debounce 300ms, zero filtro no cliente), AC-10 (busca vazia → lista completa), AC-12 (empty de lista vazia), AC-13 (empty distinto de busca sem resultado), AC-14 (erro + Tentar novamente refaz a MESMA query via loadLowestPrices() sem argumento), AC-19 (tokens, alvos ≥44px, label no campo, uma primary)
+Testes executados: web → 27 arquivos, 263/263 (eram 253); lint 0; build verde (chunk lazy lowest-price-page); e2e → 36/36 (sem regressão)
+Decisões registradas: Subject + debounceTime(300) + takeUntilDestroyed para a busca (sem filtro local); busca vazia chama loadLowestPrices('') explícita; dois empties visualmente distintos (lista vs busca) com ação coerente; erro reusa o bloco padrão com retry sem argumento; formatUnitPrice de purchase-format reusado; web-e2e intocado (jornadas são da T-22)
+Pendências: nenhuma no escopo; jornada E2E de menor preço fica com a T-22
+Próximo passo recomendado: onda 12 — T-21 (auditoria unitária PWA) sozinha
+```
 
 ### T-18 — telas Histórico + detalhe (`cbe8ea1`)
 
