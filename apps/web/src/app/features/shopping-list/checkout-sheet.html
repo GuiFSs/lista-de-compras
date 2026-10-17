@@ -1,19 +1,69 @@
-<!-- Sheet de confirmação (guia §4 "Formulário de app"/§5): resumo curto em
-     linhas e decisão explícita no terço inferior — sem campos de mercado/data
-     nesta rodada (RN-16/AC-21). Só tokens. -->
+<!-- Sheet de conclusão (guia §4 "Formulário de app"/§5): resumo curto + campos
+     de mercado/data quando há comprados (RN-03/RN-04); sem comprados, só a
+     confirmação (RN-09). Só tokens. -->
 <app-bottom-sheet heading="Concluir compra" [closeOnBackdrop]="false" (closed)="cancel()">
-  <div class="checkout">
+  <form class="checkout" (submit)="onSubmit($event)" novalidate>
     <div class="checkout__summary">
       <p class="checkout__lead">{{ lead() }}</p>
       <p class="checkout__line">{{ leavingText() }}</p>
       <p class="checkout__line">{{ remainingText() }}</p>
     </div>
 
+    @if (leaving() > 0) {
+      <!-- Resumo + campos formam o mesmo grupo: menor respiro dentro, maior
+           entre grupos (guia §4). -->
+      <div class="checkout__fields">
+        <div class="field">
+          <label class="field__label" for="checkout-market">
+            Mercado
+            <span class="field__required" aria-hidden="true">*</span>
+            <span class="visually-hidden">(obrigatório)</span>
+          </label>
+          <input
+            id="checkout-market"
+            class="field__input"
+            type="text"
+            autocomplete="off"
+            [value]="market()"
+            [class.field__input--error]="marketError()"
+            [attr.aria-invalid]="marketError() ? 'true' : null"
+            [attr.aria-describedby]="marketError() ? 'checkout-market-error' : null"
+            (input)="onMarketInput($event)"
+          />
+          @if (marketError(); as message) {
+            <p class="field__error" id="checkout-market-error" role="alert">{{ message }}</p>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="checkout-date">
+            Data da compra
+            <span class="field__required" aria-hidden="true">*</span>
+            <span class="visually-hidden">(obrigatório)</span>
+          </label>
+          <input
+            id="checkout-date"
+            class="field__input"
+            type="date"
+            [max]="today"
+            [value]="purchaseDate()"
+            [class.field__input--error]="dateError()"
+            [attr.aria-invalid]="dateError() ? 'true' : null"
+            [attr.aria-describedby]="dateError() ? 'checkout-date-error' : null"
+            (input)="onDateInput($event)"
+          />
+          @if (dateError(); as message) {
+            <p class="field__error" id="checkout-date-error" role="alert">{{ message }}</p>
+          }
+        </div>
+      </div>
+    }
+
     <div class="checkout__actions">
       <button type="button" class="btn-secondary" (click)="cancel()">Cancelar</button>
-      <button type="button" class="btn-primary" [disabled]="saving()" (click)="confirm()">
-        {{ saving() ? 'Salvando…' : 'Concluir compra' }}
+      <button type="submit" class="btn-primary" [disabled]="concluding()">
+        {{ concluding() ? 'Concluindo…' : 'Concluir compra' }}
       </button>
     </div>
-  </div>
+  </form>
 </app-bottom-sheet>
