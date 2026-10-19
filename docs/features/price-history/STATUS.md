@@ -1,9 +1,9 @@
 # Estado da feature — Histórico de preços
 
-**Fase atual:** Implementação — **gate cumprido** (todas as T concluídas, incl. Playwright do ADR 0008); próximo é **Validação**
-**Gate atual:** plano fechado — `Aprovado pelo usuário em 2026-10-16`; revisão arquitetural **Aprovada com ressalvas**; ADR 0010 **Aceita**; **gate de implementação cumprido** (nenhum AC/T reaberto)
+**Fase atual:** **Validação aprovada** (21/21 ACs) — feature concluída no fluxo SDD
+**Gate atual:** plano fechado — `Aprovado pelo usuário em 2026-10-16`; revisão arquitetural **Aprovada com ressalvas**; ADR 0010 **Aceita**; **gate de implementação cumprido** (nenhum AC/T reaberto); **validação aprovada** pelo `feature-validator`
 **Última atualização:** 2026-10-19
-**Próxima ação:** delegar **`feature-validator`** — gate de implementação cumprido: todas as T-01…T-22 concluídas e commitadas, **nenhum AC/T reaberto**, e superfície de UI coberta com corrida Playwright registrada (T-22: `npx nx e2e web-e2e --skip-nx-cache` → **56/56**). Nenhuma onda restante do PLAN (ondas 1–13 fechadas).
+**Próxima ação:** decisão do **usuário** — `push` da branch `feature/price-history` (27+ commits locais), depois **PR + merge** (skill `git-workflow`, aprovação explícita e separada por operação). Após o PR, oferecer a review do `code-reviewer` (parecer via `gh pr comment`).
 
 ## Artefatos
 
@@ -11,7 +11,7 @@
 - Plano: `docs/features/price-history/PLAN.md` — **aprovado** (`Aprovado pelo usuário em 2026-10-16`)
 - ADR 0010: **Aceita**
 - Revisão arquitetural: **Aprovada com ressalvas** (`ARCHITECTURE-REVIEW.md`)
-- Validação: pendente
+- Validação: `docs/features/price-history/VALIDATION.md` — **aprovada** (`feature-validator`, 2026-10-19; 21/21 ACs, 19 via Playwright 56/56; AC-16/AC-17 backend com integração Postgres+RabbitMQ reais; 10 pendências não bloqueantes registradas)
 
 ## Execução
 
