@@ -3,7 +3,7 @@
 **Fase atual:** Implementação
 **Gate atual:** plano fechado — `Aprovado pelo usuário em 2026-10-16`; revisão arquitetural **Aprovada com ressalvas**; ADR 0010 **Aceita**
 **Última atualização:** 2026-10-17
-**Próxima ação:** onda 12 — delegar **T-21** (auditoria unitária PWA, `test-engineer`) sozinha; dependências T-17/T-18/T-19 satisfeitas. Depois a onda 13 — **T-22** (E2E Playwright), gate de UI antes do `feature-validator` (ADR 0008).
+**Próxima ação:** onda 13 — delegar **T-22** (E2E Playwright, `test-engineer`) sozinha; dependências T-17/T-18/T-19/T-21 satisfeitas. É o **gate de UI** do ADR 0008 antes do `feature-validator`: sem corrida Playwright registrada (comando + resultado) não se avança.
 
 ## Artefatos
 
@@ -36,7 +36,8 @@
   - **T-18** (`cbe8ea1`) — telas Histórico + detalhe (AC-01, AC-06, AC-11–AC-14, AC-19)
   - **T-20** (`3e0d298`) — auditoria backend: mapa AC→teste + lacuna AC-17 preenchida (104 testes PH)
   - **T-19** (`a24e633`) — tela Menor preço com busca por nome (AC-02, AC-08–AC-10, AC-12–AC-14, AC-19)
-- Tarefa em andamento: nenhuma (aguarda onda 12: **T-21** sozinha)
+  - **T-21** (`723c239`) — auditoria unitária PWA: mapa AC→teste + rotas reais e smoke de tokens (AC-01–AC-15, AC-18–AC-21)
+- Tarefa em andamento: nenhuma (aguarda onda 13: **T-22** sozinha)
 - ACs reabertos: nenhum
 - Tarefas reabertas: nenhuma
 - **Exceção ratificada nº 2 (2026-10-17, chat):** após a T-17, 2 testes de `apps/web-e2e/src/shopping-list/checkout.spec.ts` (arquivo da T-22) ficaram vermelhos por codificarem o comportamento antigo do resumo (sem mercado/data). Usuário **ratificou** a correção; executada pelo `test-engineer` e commitada em `a74b4a4` (jornada agora preenche mercado/data; AC-04 como perna da jornada; caso 0 comprados no teste existente). Pendência conhecida da T-22: AC-15 e AC-20 ainda sem jornada E2E; observação sobre `purchase.spec.ts:179` registrada no handoff T-17-e2e.
@@ -44,14 +45,27 @@
 
 ## Pendências e bloqueios
 
-- Nenhum. Suíte do SL 206/206; PH **104/104**; web **263/263**; **E2E 36/36**; lint 0 em todos os escopos (revalidado pelo orquestrador após a onda 11: `nx test web`, `nx lint web`, `nx build web`, `nx e2e web-e2e`).
-- Pendências de produto/roadmap registradas (fora do escopo das T): **DLQ** para payloads tóxicos (fora da v1, handoff T-09); **T-22** fecha a matriz AC↔E2E restante (AC-15 e AC-20 de checkout sem jornada; asserção de base `localhost:3002` + Authorization; jornadas Histórico/Menor preço) e revisa o `load.spec.ts`/`checkout.spec.ts` editados sob ratificação (ver Exceções).
+- Nenhum. Suíte do SL 206/206; PH **104/104**; web **278/278**; **E2E 36/36** (pré-T-22); lint 0 em todos os escopos (web revalidado pelo orquestrador após a onda 12).
+- **Pendências para a T-22 (E2E, gate de UI do ADR 0008):** fechar a matriz AC↔E2E das jornadas `nav`, `history`, `lowest-price` e checkout atualizado; afirmar a base `http://localhost:3002/api/price-history` com `Authorization`; cobrir AC-15 de verdade (a perna "falha ao concluir" em `purchase.spec.ts:179` prova fraco — validação local bloqueia antes do POST) e AC-20 (duplo toque no sheet real); AC-19 viewport ~360px/desktop e tema claro/escuro na tela real; AC-18 (PWA 401 → login) e AC-21 na jornada.
+- **Pendências de produto/roadmap registradas (fora do escopo das T):** **DLQ** para payloads tóxicos (fora da v1, handoff T-09).
+- **Pendências de baixa prioridade (handoffs T-20/T-21, opcionais):** endurecer AC-18 com um caso por operação no store (hoje apoiado no interceptor agnóstico de URL + serviço PH); estender o guard de tokens de "proibido hex/rgb/hsl" para prender também tamanhos/cores esperados por tela; id malformado/não-UUID em `GET purchases/:id` é indefinido na SPEC (devolver ao `product-spec` se virar requisito); endurecimento opcional de AC-05 com teste "HTTP 200 com broker morto"; ausência de guard de module boundaries no eslint (AC-17 apoia-se no spec novo + tripwire `publicTables`).
 - `PRICE_HISTORY_API_BASE_URL` é token injetável com default `http://localhost:3002` (ADR 0010 §3 — ponto de saída para o gateway; handoff T-14).
-- Observação do handoff T-17-e2e: `purchase.spec.ts:179` tem perna "falha ao concluir" que hoje passa mas prova fraco (validação local bloqueia antes do POST) — T-22 deve cobrir AC-15 de verdade.
-- Pendências da T-20 (baixa, registradas no handoff): id malformado/não-UUID em `GET purchases/:id` é indefinido na SPEC (devolver ao product-spec se relevante); endurecimento opcional de AC-05 com teste "HTTP 200 com broker morto"; ausência de guard de module boundaries no eslint (AC-17 apoia-se no spec novo + tripwire `publicTables`).
 - **Observação de processo:** o subagente da T-20 editou `STATUS.md` apesar da delegação proibir (não executou git, mas gravou o próprio handoff no STATUS). O orquestrador reconciliou o arquivo (hashes reais, T-18 confirmada como concluída — o T-20 a marcava como pendente por desconhecer o resultado paralelo). Nenhum dado foi aceito sem verificação: os gates das duas tarefas foram re-executados pelo orquestrador.
 
 ## Últimos handoffs
+
+### T-21 — auditoria unitária PWA (`723c239`)
+
+```text
+Tarefa: T-21
+Estado: concluída
+Arquivos alterados: apps/web/src/app/app.routes.spec.ts (novo — 3 testes: Lista em / sob shell+authGuard; historico/historico:id/menor-preco resolvem loadComponent lazy entregando as telas reais; curinga ** por último); apps/web/src/app/design-tokens.smoke.spec.ts (novo — 12 testes: lê scss/html da superfície nova e barra cor hardcoded; guard não-vácuo conferindo que _tokens.scss tem cor literal). Nenhuma linha de produção tocada (mutações de falsificação revertidas — git limpo).
+ACs cobertos: AC-01 a AC-15, AC-18, AC-19, AC-20, AC-21 (camada unit/integração web); mapa AC→teste completo no handoff. AC-16/AC-17 são backend (T-20). ACs só observáveis na jornada ficam para a T-22 (nav real, history/lowest journeys, checkout atualizado, viewport/tema, 401 PWA, base 3002+Authorization).
+Testes executados: web → 29 arquivos, 278/278 (eram 27/263; +15 = 12 tokens smoke + 3 rotas); lint 0. Falsificações: cor hardcoded injetada em history-page.scss → vermelho no smoke de tokens (revertido); loadComponent de historico apontado para lowest-price-page → vermelho em app.routes.spec.ts:47 (revertido).
+Decisões registradas: AC-15 já tinha prova de REDE real no store (ProgressEvent('error') + payload congelado) — não duplicado; AC-20 já coberto (store + UI) — não duplicado; 401 provado pelo interceptor agnóstico de URL + serviço PH — evitei 1 teste por método; detalhe sem empty state por design (404 cai no erro, AC-14) — não inventei empty; ordem/agregação/normalização são do serviço — specs provam que o cliente não recalcula; tsconfig.spec.json fixa types=vitest/globals, exigindo /// <reference types="node" /> para fs/path/url
+Pendências: baixa prioridade (endurecer AC-18 por operação; estender guard de tokens a tamanhos/cores); para a T-22 — matriz AC↔E2E de jornadas e prova real de AC-15 (purchase.spec.ts:179 prova fraco)
+Próximo passo recomendado: onda 13 — T-22 (E2E Playwright) sozinha
+```
 
 ### T-19 — tela Menor preço (`a24e633`)
 
