@@ -1,9 +1,13 @@
 # Estado da feature — Histórico de preços
 
-**Fase atual:** **Validação aprovada** (21/21 ACs) — feature concluída no fluxo SDD
-**Gate atual:** plano fechado — `Aprovado pelo usuário em 2026-10-16`; revisão arquitetural **Aprovada com ressalvas**; ADR 0010 **Aceita**; **gate de implementação cumprido** (nenhum AC/T reaberto); **validação aprovada** pelo `feature-validator`
+**Fase atual:** **Encerrada e integrada** — validação aprovada (21/21 ACs) e **PR #4 mergeado** na `master`
+**Gate atual:** todos os gates cumpridos — plano `Aprovado pelo usuário em 2026-10-16`; revisão arquitetural **Aprovada com ressalvas**; ADR 0010 **Aceita**; gate de implementação cumprido (nenhum AC/T reaberto); validação aprovada pelo `feature-validator`
 **Última atualização:** 2026-10-19
-**Próxima ação:** **review do `code-reviewer`** no PR **#4** (`https://github.com/GuiFSs/lista-de-compras/pull/4`, parecer via `gh pr comment`, skill `code-review`) — oferecida ao usuário; depois **merge** (VALIDATION aprovada, checks/revisão tratados) com aprovação explícita nova. Aprovações já dadas: push (`cf997bf..b0afeb6`) e criação do PR. Resta aprovada também a atualização de doc deste registro (`STATUS.md`).
+**Próxima ação:** nenhuma pendente na feature. Trabalho futuro registrado: (a) **rework pequeno** da higiene do spec de integração do PH (resíduo no banco de dev — ver Pendências); (b) **mudanças na tela Menor preço** a especificar com o usuário (nova feature ou emenda, a decidir) — a `master` é a base.
+
+
+
+**Integração:** PR **#4** (`feat(price-history): historico de precos ponta a ponta (spec -> validacao)`) mergeado em **2026-10-19T18:38:48Z** via **merge commit `017801a`** (`--merge`, mesmo método dos PRs #2/#3), com aprovação explícita do usuário. Branch `feature/price-history` mantida (o repo não deleta branch no merge). A review do `code-reviewer` foi oferecida e não executada — decisão do usuário, registrada aqui.
 
 ## Artefatos
 
