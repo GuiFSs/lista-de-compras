@@ -1,28 +1,13 @@
 # Estado da feature — Lista de compras
 
-**Fase atual:** **Rodada 2 — CONCLUÍDA** (spec → plano → implementação →
-testes → **validação**) e **aguardando decisão do usuário sobre push/PR**. A
-**Rodada 1** (lista ativa) segue **validada** (26/26 ACs) — histórico preservado.
-**Gate atual:** **gates da Rodada 2 FECHADOS** — implementação (T-20…T-23
-concluídas e commitadas + auditoria de testes) e **validação aprovada pelo
-`feature-validator`**: **AC-27 aprovado** (evidência unit + Playwright com corrida
-real: `--grep "máscara"` → 4 passed; completa → 36 passed, ambos com
-`--skip-nx-cache`) e os **cross-refs AC-04/AC-10/AC-13/AC-15/AC-25 reconfirmados**;
-**nenhum AC/T reaberto** (suítes `web` **204/204** e `web-e2e` **36/36** verdes).
-Contratos, backend e ADRs **sem diff**; `npx nx typecheck web` e `npx nx sync:check`
-verdes. **Nada foi enviado** (sem push/PR).
-**Última atualização:** 2026-10-15
-**Próxima ação:** **decisão do usuário** — a Rodada 2 está pronta para integração.
-Oferecer o fluxo da skill `git-workflow`: (1) revisão consultiva do `code-reviewer`
-(parecer via `gh pr comment`, sem editar código) **antes/depois** do PR, se desejado;
-(2) **push** da branch `feature/shopping-list` (após aprovação **explícita**);
-(3) **PR** para o repositório remoto (após aprovação **explícita e separada**);
-(4) **merge** (novamente aprovação **explícita e separada**). Nenhuma dessas
-operações externas acontece sem essa aprovação. Pendências **não bloqueantes**
-registradas na validação (não impedem o PR): payload E2E com >6 dígitos; `:focus-visible`
-genérico no AC-25; `inputmode="decimal"` da quantidade sem asserção de atributo;
-registrar o padrão da máscara no `GUIA-DESIGN` §5 e reusar `formatBrlFromDigits` em
-`item-row` quando tocado; item 6 do `PLAN.md` com placeholder `YYYY-MM-DD`.
+**Fase atual:** **Concluída** (Rodada 1 + Rodada 2 validadas e **integradas** em
+`master` via **PR #3**). A Rodada 1 (lista ativa, 26/26 ACs) e a Rodada 2 (máscara
+BRL, AC-27 + cross-refs) seguem fechadas; **nenhum AC/T reaberto**.
+**Gate atual:** **fechado** — feature integrada; não há próxima ação nesta feature.
+**Última atualização:** 2026-10-16
+**Próxima ação:** nenhuma nesta feature. A **próxima feature de produto** no escopo
+inicial é o **histórico de preços** (`price-history`) — ver
+`docs/product/initial-scope.md` § Histórico de preços e ADR 0001.
 
 ## Artefatos
 

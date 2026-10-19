@@ -202,17 +202,24 @@ test.describe('Lista — compra', () => {
     await expect(errorToast).toBeVisible();
     await page.getByRole('button', { name: 'Cancelar' }).click();
 
-    // Falha ao concluir: nenhum comprado sai da lista.
-    await page.getByRole('button', { name: 'Concluir compra' }).click();
-    api.failNext('POST', '/checkout');
-    await page
-      .getByRole('dialog', { name: 'Concluir compra' })
-      .getByRole('button', { name: 'Concluir compra' })
-      .click();
+    // Descarta o toast da falha anterior: sem isso, a perna de conclusão abaixo
+    // passaria com o toast antigo mesmo sem nenhum POST (prova fraca — T-21).
+    await page.getByRole('button', { name: 'Dispensar' }).click();
+    await expect(page.locator('.toast--error')).toHaveCount(0);
 
-    await expect(errorToast).toContainText('Falha de rede');
+    // Falha ao concluir **com mercado preenchido**: o POST /checkout acontece de
+    // verdade, falha na rede e nenhum comprado sai da lista (AC-15).
+    await page.getByRole('button', { name: 'Concluir compra' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Concluir compra' });
+    await dialog.locator('#checkout-market').fill('Mercado Central');
+    api.failNext('POST', '/checkout');
+    await dialog.getByRole('button', { name: 'Concluir compra' }).click();
+
+    await expect(page.locator('.toast--error').last()).toContainText('Falha de rede');
+    await expect(dialog.locator('#checkout-market')).toHaveValue('Mercado Central');
     await expect(listRows(page)).toHaveCount(2);
     await expect(page.getByRole('button', { name: 'Desmarcar Café' })).toBeVisible();
+    expect(api.countRequests('POST', '/checkout')).toBe(1);
   });
 
   test('máscara de centavos em BRL no preço por unidade: digitar 3015 mostra R$ 30,15 e envia 30.15', async ({

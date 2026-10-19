@@ -12,6 +12,7 @@ O projeto é também um ambiente de aprendizado prático de Angular, arquitetura
 - [Decisão arquitetural: setup do workspace front-end](docs/decisions/0003-setup-do-workspace-front-end.md)
 - [Decisão arquitetural: setup do front, back e e2e](docs/decisions/0004-setup-do-front-do-back-e-do-e2e.md)
 - [Decisão arquitetural: exceção temporária ao gateway para o shopping-list-service](docs/decisions/0009-excecao-temporaria-ao-gateway-shopping-list-service.md)
+- [Decisão arquitetural: exceção temporária ao gateway para o price-history-service](docs/decisions/0010-excecao-temporaria-ao-gateway-price-history-service.md)
 - [Lições do setup inicial](docs/lessons/2026-10-07-setup-inicial.md)
 - [Plano de setup do SDD](docs/plans/2026-10-06-sdd-setup.md)
 - [Fluxo SDD canônico](docs/process/sdd-workflow.md)
@@ -25,6 +26,8 @@ apps/
   web/                    PWA Angular (zoneless, PWA, bundler esbuild)
   web-e2e/                testes e2e (Playwright)
   shopping-list-service/  NestJS + Fastify (arquitetura hexagonal)
+  auth-service/           NestJS + Fastify (login / JWT)
+  price-history-service/  NestJS + Fastify (histórico e menor preço)
 libs/
   contracts/              contratos HTTP/eventos compartilhados
   shared/util/            utilitários compartilhados
@@ -70,6 +73,8 @@ npx nx lint shopping-list-service
 ```
 
 O serviço lê `API_PORT`, `DATABASE_URL` e `RABBITMQ_URL` do `.env` da raiz (ver `.env.example`).
+`RABBITMQ_URL` é compartilhada com o price-history-service: aqui o shopping-list
+é o **produtor** do evento `shopping-list.purchase-completed` (outbox → broker).
 
 O serviço entrega a feature **Lista de compras ativa**: a PWA
 (`apps/web`, em `http://localhost:4200`) chama `http://localhost:3000/api/shopping-list/*`
@@ -82,12 +87,48 @@ via gateway + CORS removido). A chamada cruzada local é viabilizada pelo CORS
 validado **localmente na borda do serviço** ([ADR 0007](docs/decisions/0007-validacao-local-de-jwt.md)).
 
 Os **testes de integração** do serviço e a **migração** exigem o **Docker local**
-e o banco lógico `shopping_list` (criado no primeiro boot do Postgres):
+(Postgres + RabbitMQ) e o banco lógico `shopping_list` (criado no primeiro boot
+do Postgres):
 
 ```bash
 npm run docker:up                                # Postgres + RabbitMQ (cria o banco shopping_list)
 npx nx run shopping-list-service:db:generate     # drizzle-kit generate (SQL versionado)
 npx nx run shopping-list-service:db:migrate      # drizzle-kit migrate (aplica no shopping_list)
+```
+
+### Backend (`apps/price-history-service`)
+
+```bash
+npx nx serve price-history-service   # API NestJS/Fastify em http://localhost:3002/api
+npx nx build price-history-service   # bundle Node em dist/apps/price-history-service
+npx nx test price-history-service
+npx nx lint price-history-service
+```
+
+O serviço lê `PRICE_HISTORY_API_PORT`, `PRICE_HISTORY_DATABASE_URL`,
+`PRICE_HISTORY_CORS_ORIGINS` (opcional) e `RABBITMQ_URL` do `.env` da raiz (ver
+`.env.example`). Prefixo `PRICE_HISTORY_*` ([ADR 0010](docs/decisions/0010-excecao-temporaria-ao-gateway-price-history-service.md) §4).
+`RABBITMQ_URL` é a mesma do shopping-list: aqui o price-history é o
+**consumidor** do evento `shopping-list.purchase-completed` (fila → ingestão).
+
+A PWA (`apps/web`, em `http://localhost:4200`) chama
+`http://localhost:3002/api/price-history/*` **direto** (consultas GET). É uma
+**exceção temporária à ADR 0001**, registrada na
+[ADR 0010](docs/decisions/0010-excecao-temporaria-ao-gateway-price-history-service.md):
+vale enquanto o gateway não existe e é removida quando ele chegar (URL relativa
+via gateway + CORS removido). A chamada cruzada local é viabilizada pelo CORS
+(`PRICE_HISTORY_CORS_ORIGINS`, default `http://localhost:4200` — methods
+`GET`/`OPTIONS`), que **não** é controle de segurança: o JWT continua sendo
+validado **localmente na borda do serviço** ([ADR 0007](docs/decisions/0007-validacao-local-de-jwt.md)).
+
+Os **testes de integração**, o **consumidor RabbitMQ** e a **migração** exigem o
+**Docker local** (Postgres + RabbitMQ) e o banco lógico `price_history`
+(criado no primeiro boot do Postgres):
+
+```bash
+npm run docker:up                                # Postgres + RabbitMQ (cria o banco price_history)
+npx nx run price-history-service:db:generate     # drizzle-kit generate (SQL versionado)
+npx nx run price-history-service:db:migrate      # drizzle-kit migrate (aplica no price_history)
 ```
 
 ### Testes e2e (Playwright)
@@ -100,13 +141,16 @@ npx nx e2e web-e2e                # sobe o serve do web e roda o spec de fumaça
 ### Infraestrutura local (Docker)
 
 ```bash
-docker compose -f docker/compose.dev.yml up -d    # Postgres + RabbitMQ
-docker compose -f docker/compose.dev.yml down
+npm run docker:up      # Postgres 16 + RabbitMQ (ou: docker compose -f docker/compose.dev.yml up -d)
+npm run docker:down    # derruba os containers
 ```
 
 No primeiro boot, o script em `docker/postgres/init/` cria um banco lógico com
 papel e senha próprios para cada serviço (`auth`, `shopping_list`,
-`price_history`), conforme a ADR 0001. O Docker Desktop precisa estar rodando.
+`price_history`), conforme a ADR 0001. O RabbitMQ (porta `5672`, management
+`15672`) é o broker do evento entre shopping-list (produtor) e price-history
+(consumidor); ambos leem `RABBITMQ_URL` no `.env`. O Docker Desktop precisa
+estar rodando.
 
 ### Atalhos npm
 

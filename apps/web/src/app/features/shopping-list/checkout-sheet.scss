@@ -1,5 +1,5 @@
-// Sheet de conclusão (guia §4 "Formulário de app"/§5): resumo em grupo curto e
-// a decisão no terço inferior — sem campos, só a confirmação. Só tokens.
+// Sheet de conclusão (guia §4 "Formulário de app"/§5): resumo + campos quando
+// há comprados, decisão no terço inferior. Só tokens.
 .checkout {
   display: flex;
   flex-direction: column;
@@ -10,6 +10,58 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
+}
+
+// Mercado e data obrigatórios (RN-03): mesmos estilos de campo do sheet de
+// compra — mesma gramática visual para formulários dentro de sheets.
+.checkout__fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+}
+
+.field__label {
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-secondary);
+}
+
+.field__required {
+  color: var(--color-danger);
+}
+
+.field__input {
+  width: 100%;
+  min-height: var(--touch-target-min);
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-size-body);
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-xs);
+  box-sizing: border-box;
+  touch-action: manipulation;
+}
+
+.field__input:focus-visible {
+  border-color: var(--color-primary-text);
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 2px;
+  box-shadow: var(--shadow-1);
+}
+
+.field__input--error {
+  border-color: var(--color-danger);
+}
+
+.field__error {
+  font-size: var(--font-size-caption);
+  color: var(--color-danger);
 }
 
 .checkout__lead {

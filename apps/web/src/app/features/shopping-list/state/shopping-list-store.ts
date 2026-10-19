@@ -1,5 +1,6 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import type {
+  CheckoutShoppingListRequest,
   CreateShoppingListItemRequest,
   MarkItemPurchasedRequest,
   ShoppingListItem,
@@ -56,6 +57,7 @@ export class ShoppingListStore {
   private readonly loadErrorState = signal<string | null>(null);
   private readonly mutationErrorState = signal<string | null>(null);
   private readonly pendingUndoState = signal<PendingUndo | null>(null);
+  private readonly concludingState = signal(false);
   private readonly busyState = signal(0);
 
   /** Requisições em andamento por operação — single-flight (AC-26). */
@@ -67,6 +69,10 @@ export class ShoppingListStore {
   readonly loadError = this.loadErrorState.asReadonly();
   readonly mutationError = this.mutationErrorState.asReadonly();
   readonly pendingUndo = this.pendingUndoState.asReadonly();
+
+  /** Conclusão da compra em andamento: o CTA do sheet mostra progresso (AC-20). */
+  readonly concluding = this.concludingState.asReadonly();
+
   readonly saving = computed(() => this.busyState() > 0);
   readonly pendingCount = computed(
     () => this.itemsState().filter((item) => item.purchased === null).length,
@@ -180,14 +186,23 @@ export class ShoppingListStore {
     });
   }
 
-  /** Conclui a compra: só os comprados saem; sem comprados, a lista não muda (AC-19/AC-20). */
-  checkout(): Promise<MutationOutcome> {
+  /**
+   * Conclui a compra: só os comprados saem; com 0 comprados o corpo é omitido e
+   * a lista sai intacta (RN-09). A resposta do POST já é a lista sem os
+   * comprados (RN-19) — aplicar é recarregar, sem um GET extra.
+   */
+  checkout(request: CheckoutShoppingListRequest | null = null): Promise<MutationOutcome> {
     return this.runMutation('checkout', async () => {
+      this.concludingState.set(true);
       try {
-        this.applyList(await firstValueFrom(this.api.checkout()));
+        this.applyList(await firstValueFrom(this.api.checkout(request)));
         return { kind: 'ok' } as MutationOutcome;
       } catch (error) {
+        // O digitado é do formulário, não do store: aqui a falha só vira
+        // mensagem (e releitura quando a rede pode ter aplicado — AC-23).
         return this.failed(error);
+      } finally {
+        this.concludingState.set(false);
       }
     });
   }

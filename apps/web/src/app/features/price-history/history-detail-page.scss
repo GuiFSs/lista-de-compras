@@ -1,0 +1,160 @@
+// Detalhe da compra (guia §4 "Lista / conteúdo"): voltar, data + mercado e os
+// itens comprados, com os 4 estados. Coluna única é do shell; aqui só tokens.
+:host {
+  display: block;
+}
+
+// Voltar é a navegação principal do detalhe (guia §4) e não some em nenhum
+// estado; alvo ≥44px mesmo sendo só texto.
+.page-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-target-min);
+  padding-inline: var(--space-xs);
+  margin-left: calc(var(--space-xs) * -1);
+  margin-bottom: var(--space-xs);
+  color: var(--color-primary-text);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  touch-action: manipulation;
+}
+
+.page-back:active {
+  background-color: var(--color-ripple);
+}
+
+// Bloco de apoio: mercado como título da compra e a data como metadado.
+.detail__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  margin-bottom: var(--space-lg);
+}
+
+.detail__market {
+  font-size: var(--font-size-title);
+  letter-spacing: var(--letter-spacing-title);
+}
+
+.detail__date {
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-muted);
+}
+
+.detail__items {
+  list-style: none;
+}
+
+.detail__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  padding-block: var(--space-sm);
+}
+
+// Divisor hairline entre itens, sem sombra (guia §5).
+.detail__item + .detail__item {
+  border-top: 1px solid var(--color-hairline);
+}
+
+.detail__item-name {
+  font-size: var(--font-size-body);
+}
+
+.detail__item-meta {
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-muted);
+}
+
+// Erro de carga (AC-14): mensagem na área + nova tentativa.
+.load-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  padding-block: var(--space-lg);
+}
+
+.load-error__title {
+  font-size: var(--font-size-title);
+  letter-spacing: var(--letter-spacing-title);
+}
+
+.load-error__message {
+  font-size: var(--font-size-body-sm);
+  color: var(--color-danger);
+}
+
+.load-error .btn-secondary {
+  width: auto;
+  margin-top: var(--space-sm);
+}
+
+// Skeleton na forma do detalhe (AC-13): título + mercado/data + linhas de item.
+.detail-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-block: var(--space-xs);
+}
+
+.detail-skeleton__title {
+  width: 55%;
+  height: var(--space-md);
+  background: var(--color-hairline);
+  border-radius: var(--radius-xs);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.detail-skeleton__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  margin-top: var(--space-md);
+}
+
+.detail-skeleton__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.detail-skeleton__line {
+  height: var(--space-sm);
+  background: var(--color-hairline);
+  border-radius: var(--radius-xs);
+}
+
+.detail-skeleton__line--short {
+  width: 40%;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  padding: var(--space-sm) var(--space-lg);
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-normal);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-full);
+  touch-action: manipulation;
+  transition: background-color var(--motion-fast);
+}
+
+.btn-secondary:active {
+  background-color: var(--color-ripple);
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}

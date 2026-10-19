@@ -17,6 +17,27 @@ export const appRoutes: Routes = [
     component: AuthenticatedShell,
     children: [
       { path: '', component: ShoppingListPage },
+      {
+        path: 'historico',
+        loadComponent: () =>
+          import('./features/price-history/history-page').then(
+            (m) => m.HistoryPage,
+          ),
+      },
+      {
+        path: 'historico/:id',
+        loadComponent: () =>
+          import('./features/price-history/history-detail-page').then(
+            (m) => m.HistoryDetailPage,
+          ),
+      },
+      {
+        path: 'menor-preco',
+        loadComponent: () =>
+          import('./features/price-history/lowest-price-page').then(
+            (m) => m.LowestPricePage,
+          ),
+      },
       { path: '**', component: NotFound },
     ],
   },

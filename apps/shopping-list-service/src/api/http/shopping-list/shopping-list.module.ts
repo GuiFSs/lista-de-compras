@@ -9,16 +9,26 @@ import {
   UnmarkItemPurchasedUseCase,
   UpdateShoppingListItemUseCase,
 } from '../../../application';
+import { OutboxRepository } from '../../../application/ports/outbox-repository.port';
 import { ShoppingListRepository } from '../../../application/ports/shopping-list-repository.port';
+import { MessagingModule } from '../../../infrastructure/messaging/messaging.module';
+import { OutboxRepositoryModule } from '../../../infrastructure/persistence/outbox-repository.module';
 import { ShoppingListRepositoryModule } from '../../../infrastructure/persistence/shopping-list-repository.module';
 import { ShoppingListController } from './shopping-list.controller';
 
 /**
  * Borda HTTP da lista ativa. Prova os casos de uso (framework-free) via
- * `useFactory`, ligando-os ao port `ShoppingListRepository`.
+ * `useFactory`, ligando-os aos ports `ShoppingListRepository` e
+ * `OutboxRepository` (checkout transacional — CD-06). `MessagingModule` entra
+ * para o processo publique o outbox com retry (T-12); o checkout em si não
+ * fala com o broker — broker fora não falha o HTTP.
  */
 @Module({
-  imports: [ShoppingListRepositoryModule],
+  imports: [
+    ShoppingListRepositoryModule,
+    OutboxRepositoryModule,
+    MessagingModule,
+  ],
   controllers: [ShoppingListController],
   providers: [
     {
@@ -65,9 +75,11 @@ import { ShoppingListController } from './shopping-list.controller';
     },
     {
       provide: CheckoutShoppingListUseCase,
-      inject: [ShoppingListRepository],
-      useFactory: (repository: ShoppingListRepository) =>
-        new CheckoutShoppingListUseCase(repository),
+      inject: [ShoppingListRepository, OutboxRepository],
+      useFactory: (
+        repository: ShoppingListRepository,
+        outbox: OutboxRepository,
+      ) => new CheckoutShoppingListUseCase(repository, outbox),
     },
   ],
 })

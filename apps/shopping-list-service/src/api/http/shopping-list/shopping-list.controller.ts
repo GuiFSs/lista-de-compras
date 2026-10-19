@@ -33,6 +33,7 @@ import {
   parseCreateItemCommand,
   parseMarkPurchasedCommand,
   parseUpdateItemCommand,
+  readCheckoutInput,
 } from './shopping-list-request';
 import { toShoppingListResponse } from './shopping-list-response.mapper';
 
@@ -121,8 +122,12 @@ export class ShoppingListController {
 
   @Post('checkout')
   @HttpCode(HttpStatus.OK)
-  async concludeCheckout(): Promise<ShoppingListResponse> {
-    const result = await this.run(() => this.checkout.execute());
+  async concludeCheckout(@Body() body: unknown): Promise<ShoppingListResponse> {
+    // Corpo com market/purchaseDate só é exigido pelo domínio quando há ≥1
+    // comprado (RN-03); com 0 comprados corpo omitido segue aceito (RN-09).
+    const result = await this.run(() =>
+      this.checkout.execute(readCheckoutInput(body)),
+    );
     return toShoppingListResponse(result.items);
   }
 

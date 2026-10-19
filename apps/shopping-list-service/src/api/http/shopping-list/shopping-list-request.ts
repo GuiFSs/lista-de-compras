@@ -5,6 +5,7 @@ import type {
   MarkItemPurchasedCommand,
   UpdateShoppingListItemCommand,
 } from '../../../application';
+import type { CheckoutInput } from '../../../domain/checkout-validation';
 import { isItemUnit } from '../../../domain/item-unit';
 import {
   validateItemFields,
@@ -103,6 +104,17 @@ function readBody(body: unknown): Record<string, unknown> {
   return typeof body === 'object' && body !== null && !Array.isArray(body)
     ? (body as Record<string, unknown>)
     : {};
+}
+
+/**
+ * Corpo do checkout chega cru: com ≥1 comprado o domínio decide o que é
+ * obrigatório (RN-03/RN-04), e com 0 comprados corpo ausente é legítimo
+ * (RN-09) — a borda não valida nada aqui para não exigir mercado/data de uma
+ * conclusão que não gera evento.
+ */
+export function readCheckoutInput(body: unknown): CheckoutInput {
+  const raw = readBody(body);
+  return { market: raw['market'], purchaseDate: raw['purchaseDate'] };
 }
 
 /** `'sum-planned-quantity'` soma; qualquer outro valor (ou ausente) é `'reject'`. */

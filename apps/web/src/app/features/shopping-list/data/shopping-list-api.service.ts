@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import {
+  CheckoutShoppingListRequest,
   CreateShoppingListItemRequest,
   MarkItemPurchasedRequest,
   ShoppingListResponse,
@@ -50,8 +51,14 @@ export class ShoppingListApiService {
     return this.http.delete<ShoppingListResponse>(this.url(`/items/${id}/purchase`));
   }
 
-  checkout(): Observable<ShoppingListResponse> {
-    return this.http.post<ShoppingListResponse>(this.url('/checkout'), null);
+  /**
+   * Conclui a compra. Com ≥1 comprado o corpo leva `market`/`purchaseDate`
+   * (RN-03/RN-04); sem comprados o corpo pode ser omitido (RN-09) — `null`.
+   */
+  checkout(
+    request: CheckoutShoppingListRequest | null = null,
+  ): Observable<ShoppingListResponse> {
+    return this.http.post<ShoppingListResponse>(this.url('/checkout'), request);
   }
 
   private url(path = ''): string {

@@ -12,7 +12,7 @@ import {
 } from '../support/ui';
 
 test.describe('Lista — carga, estados e design', () => {
-  test('abre na Lista: app bar com título, coluna única e bottom nav com Lista ativa e Histórico/Menor preço desabilitadas que não navegam', async ({
+  test('abre na Lista: app bar com título, coluna única e bottom nav com Lista ativa e abas de Histórico/Menor preço que navegam (AC-01/AC-02)', async ({
     page,
   }) => {
     await openShoppingList(page);
@@ -26,17 +26,23 @@ test.describe('Lista — carga, estados e design', () => {
 
     const nav = page.getByRole('navigation', { name: 'Navegação principal' });
     await expect(nav).toBeVisible();
-    await expect(nav.getByRole('link', { name: 'Lista' })).toHaveAttribute('aria-current', 'page');
+    const list = nav.getByRole('link', { name: 'Lista' });
+    await expect(list).toHaveAttribute('aria-current', 'page');
 
-    const history = nav.getByRole('button', { name: /Histórico/ });
-    const cheapest = nav.getByRole('button', { name: /Menor preço/ });
-    await expect(history).toBeDisabled();
-    await expect(cheapest).toBeDisabled();
-    await expect(nav.getByText('em breve')).toHaveCount(2);
+    // Abas antes desabilitadas com "em breve" agora são links para rotas reais.
+    const history = nav.getByRole('link', { name: 'Histórico' });
+    const cheapest = nav.getByRole('link', { name: 'Menor preço' });
+    await expect(history).toHaveAttribute('href', '/historico');
+    await expect(cheapest).toHaveAttribute('href', '/menor-preco');
+    await expect(nav.getByText('em breve')).toHaveCount(0);
 
-    // Abas desabilitadas não navegam: toque real nas coordenadas dos alvos.
+    // Toque real navega para a rota e a aba assume o estado ativo.
     await tapCenter(page, history);
-    await tapCenter(page, cheapest);
+    await expect(page).toHaveURL(/\/historico$/);
+    await expect(history).toHaveAttribute('aria-current', 'page');
+
+    // Voltar pela aba Lista retoma a tela da lista.
+    await tapCenter(page, list);
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('heading', { name: 'Lista de compras' })).toBeVisible();
   });

@@ -65,6 +65,17 @@ export interface MarkItemPurchasedRequest {
 }
 
 /**
+ * Corpo do checkout quando há ≥1 item comprado.
+ * Com 0 comprados o corpo pode ser omitido ou `{}` (sem mercado/data).
+ */
+export interface CheckoutShoppingListRequest {
+  /** Trim; rejeitar vazio/só espaços. */
+  market: string;
+  /** YYYY-MM-DD; ≤ hoje (calendário). */
+  purchaseDate: string;
+}
+
+/**
  * 409 de duplicidade. Usado na criação (fluxo: a PWA pergunta "somar?" e
  * reenvia com `duplicateResolution`) e na edição (conflito terminal no
  * formulário, sem soma — CD-13).

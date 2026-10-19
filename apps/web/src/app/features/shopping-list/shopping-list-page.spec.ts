@@ -53,6 +53,7 @@ class StoreStub {
   );
   readonly load = vi.fn(async () => undefined);
   readonly saving = signal(false);
+  readonly concluding = signal(false);
   readonly mutationError = signal<string | null>(null);
   readonly clearMutationError = vi.fn(() => this.mutationError.set(null));
   readonly removeItem = vi.fn((id: string): Promise<MutationOutcome> => {
@@ -114,6 +115,19 @@ describe('ShoppingListPage', () => {
     const button = buttons.find((candidate) => candidate.textContent?.trim() === text);
     if (!button) throw new Error(`Botão não encontrado: ${text}`);
     return button;
+  }
+
+  /** Digita num campo de sheet disparando o `input` que o componente escuta. */
+  function typeInto(
+    fixture: ComponentFixture<ShoppingListPage>,
+    selector: string,
+    value: string,
+  ): void {
+    const input = root(fixture).querySelector(selector) as HTMLInputElement | null;
+    if (!input) throw new Error(`Campo não encontrado: ${selector}`);
+    input.value = value;
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
   }
 
   it('busca a lista ao entrar e mostra o skeleton na primeira carga (AC-02)', () => {
@@ -715,6 +729,7 @@ describe('ShoppingListPage', () => {
     );
     expect(lines).toEqual(['1 item comprado sai da lista.', '1 item permanece na lista.']);
 
+    typeInto(fixture, '#checkout-market', 'Mercado Z');
     buttonByText(element, 'Concluir compra').click();
     await flush();
     fixture.detectChanges();
@@ -766,6 +781,7 @@ describe('ShoppingListPage', () => {
     fixture.detectChanges();
 
     expect(store.checkout).toHaveBeenCalledTimes(1);
+    expect(store.checkout).toHaveBeenCalledWith(null);
     expect(store.items()).toEqual(before);
     expect(element.querySelectorAll('.item-row__name')).toHaveLength(2);
   });
@@ -783,6 +799,7 @@ describe('ShoppingListPage', () => {
 
     chrome.actions()[0].run();
     fixture.detectChanges();
+    typeInto(fixture, '#checkout-market', 'Mercado Z');
     buttonByText(element, 'Concluir compra').click();
     await flush();
     fixture.detectChanges();
@@ -796,7 +813,7 @@ describe('ShoppingListPage', () => {
     expect(element.querySelectorAll('.btn-primary')).toHaveLength(1);
   });
 
-  it('o resumo da conclusão não pede mercado nem data (AC-21)', () => {
+  it('o resumo da conclusão pede mercado e data com itens comprados (AC-03)', () => {
     store.status.set('loaded');
     store.items.set([PURCHASED, item({ id: 'p', name: 'Café' })]);
     const fixture = mount();
@@ -805,11 +822,48 @@ describe('ShoppingListPage', () => {
     chrome.actions()[0].run();
     fixture.detectChanges();
 
-    const sheet = element.querySelector('.checkout') as HTMLElement;
-    const text = sheet.textContent?.toLowerCase() ?? '';
+    expect(element.querySelector('#checkout-market')).not.toBeNull();
+    expect(element.querySelector('#checkout-date')).not.toBeNull();
+  });
 
+  it('sem itens comprados, o resumo da conclusão não tem campos de mercado/data (RN-09/AC-07)', () => {
+    store.status.set('loaded');
+    store.items.set([item({ id: 'p', name: 'Café' })]);
+    const fixture = mount();
+    const element = root(fixture);
+
+    chrome.actions()[0].run();
+    fixture.detectChanges();
+
+    const sheet = element.querySelector('.checkout') as HTMLElement;
     expect(sheet.querySelectorAll('input, select, textarea')).toHaveLength(0);
-    expect(text).not.toContain('mercado');
-    expect(text).not.toContain('data');
+  });
+
+  it('falha ao concluir mostra o erro em toast e preserva o digitado no sheet (AC-05/AC-15)', async () => {
+    store.status.set('loaded');
+    store.items.set([PURCHASED, item({ id: 'p', name: 'Café' })]);
+    store.checkout.mockImplementation(async (): Promise<MutationOutcome> => {
+      store.mutationError.set('Mercado é obrigatório');
+      return { kind: 'error', message: 'Mercado é obrigatório' };
+    });
+
+    const fixture = mount();
+    const element = root(fixture);
+
+    chrome.actions()[0].run();
+    fixture.detectChanges();
+    typeInto(fixture, '#checkout-market', 'Mercado Z');
+    buttonByText(element, 'Concluir compra').click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(element.querySelector('.toast--error')?.textContent).toContain(
+      'Mercado é obrigatório',
+    );
+    expect(element.querySelector('.checkout')).not.toBeNull();
+    expect((element.querySelector('#checkout-market') as HTMLInputElement).value).toBe(
+      'Mercado Z',
+    );
+    expect(element.querySelectorAll('.item-row__name')).toHaveLength(2);
   });
 });

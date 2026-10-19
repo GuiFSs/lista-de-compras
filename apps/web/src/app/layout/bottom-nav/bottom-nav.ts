@@ -1,6 +1,6 @@
-// Bottom nav (guia §3/§5): as três abas da navegação principal. Só "Lista"
-// tem destino nesta rodada; Histórico e Menor preço ficam desabilitadas com
-// "em breve" e sem rota (CD-05).
+// Bottom nav (guia §3/§5): as três abas da navegação principal, cada uma com
+// rota real. Lista usa match exato; Histórico e Menor preço acompanham também
+// os filhos (ex.: detalhe `/historico/:id` mantém a aba ativa).
 import { Component } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ClockIcon, ListIcon, TagIcon } from '../../ui';
