@@ -3,7 +3,7 @@
 **Fase atual:** **Validação aprovada** (21/21 ACs) — feature concluída no fluxo SDD
 **Gate atual:** plano fechado — `Aprovado pelo usuário em 2026-10-16`; revisão arquitetural **Aprovada com ressalvas**; ADR 0010 **Aceita**; **gate de implementação cumprido** (nenhum AC/T reaberto); **validação aprovada** pelo `feature-validator`
 **Última atualização:** 2026-10-19
-**Próxima ação:** decisão do **usuário** — `push` da branch `feature/price-history` (27+ commits locais), depois **PR + merge** (skill `git-workflow`, aprovação explícita e separada por operação). Após o PR, oferecer a review do `code-reviewer` (parecer via `gh pr comment`).
+**Próxima ação:** **review do `code-reviewer`** no PR **#4** (`https://github.com/GuiFSs/lista-de-compras/pull/4`, parecer via `gh pr comment`, skill `code-review`) — oferecida ao usuário; depois **merge** (VALIDATION aprovada, checks/revisão tratados) com aprovação explícita nova. Aprovações já dadas: push (`cf997bf..b0afeb6`) e criação do PR. Resta aprovada também a atualização de doc deste registro (`STATUS.md`).
 
 ## Artefatos
 
