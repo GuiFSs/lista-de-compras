@@ -49,6 +49,37 @@ export async function tokenValue(page: Page, token: string): Promise<string> {
   );
 }
 
+/** Hex de token (`#abc`/`#aabbcc`) → `rgb(r, g, b)`, o formato computado pelo DOM. */
+function hexToRgb(hex: string): string {
+  const value = hex.replace('#', '');
+  const full =
+    value.length === 3
+      ? value
+          .split('')
+          .map((digit) => digit + digit)
+          .join('')
+      : value;
+  const r = Number.parseInt(full.slice(0, 2), 16);
+  const g = Number.parseInt(full.slice(2, 4), 16);
+  const b = Number.parseInt(full.slice(4, 6), 16);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+/**
+ * O elemento está pintado com a cor do token informado? Compara o `color`
+ * computado (DOM sempre devolve `rgb(...)`) com o hex do token de design — a
+ * prova fica contra o token, não contra uma cor literal repetida no teste.
+ */
+export async function usesTokenColor(
+  page: Page,
+  locator: Locator,
+  token: string,
+): Promise<boolean> {
+  const expected = hexToRgb(await tokenValue(page, token));
+  const computed = await locator.evaluate((element) => getComputedStyle(element).color);
+  return computed === expected;
+}
+
 /** O elemento em foco tem anel visível do reset (`:focus-visible`)? */
 export async function hasVisibleFocusRing(page: Page): Promise<boolean> {
   return page.evaluate(() => {
@@ -70,9 +101,16 @@ export async function storageKeys(page: Page): Promise<string[]> {
 }
 
 /**
- * Linhas da lista ativa. O `main` isola a lista do bottom nav, que também tem
- * `listitem` (Lista/Histórico/Menor preço) e contaminaria a contagem.
+ * Linhas de qualquer lista de conteúdo dentro do `main`. O `main` isola a
+ * lista da bottom nav, que também tem `listitem` (Lista/Histórico/Menor preço)
+ * e contaminaria a contagem. Vale para a lista de compras, o histórico, os
+ * menores preços e os itens do detalhe.
  */
-export function listRows(page: Page): Locator {
+export function contentRows(page: Page): Locator {
   return page.getByRole('main').getByRole('listitem');
+}
+
+/** Linhas da lista de compras — o caso mais usado no suporte. */
+export function listRows(page: Page): Locator {
+  return contentRows(page);
 }

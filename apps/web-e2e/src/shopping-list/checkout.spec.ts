@@ -1,14 +1,9 @@
 import { expect, test } from '@playwright/test';
+import { futureLocal, todayLocal } from '../support/dates';
 import { openShoppingList } from '../support/shopping-list-journey';
 import { listRows, storageKeys } from '../support/ui';
 
-/** Data de calendário local em `YYYY-MM-DD` (RN-04: hoje no fuso desta máquina). */
-function todayLocal(date = new Date()): string {
-  const pad = (value: number): string => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-test.describe('Lista — concluir compra', () => {
+test.describe('Lista — concluir compra (checkout)', () => {
   test('resumo N saem/M permanecem; confirmar remove só os comprados + toast; cancelar mantém a lista', async ({
     page,
   }) => {
@@ -68,6 +63,26 @@ test.describe('Lista — concluir compra', () => {
     await expect(dialog.locator('#checkout-market-error')).toHaveCount(0);
     const today = todayLocal();
     await expect(dialog.locator('#checkout-date')).toHaveValue(today);
+
+    // AC-04/RN-03: data futura é rejeitada no campo (o `novalidate` do form
+    // deixa a regra do produto falar), nada é enviado e o digitado permanece.
+    const date = dialog.locator('#checkout-date');
+    const future = futureLocal(1);
+    await date.fill(future);
+    await dialog.getByRole('button', { name: 'Concluir compra' }).click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('#checkout-date-error')).toHaveText(
+      'Data da compra não pode ser futura',
+    );
+    await expect(date).toHaveAttribute('aria-invalid', 'true');
+    await expect(date).toHaveValue(future);
+    await expect(dialog.locator('#checkout-market')).toHaveValue('Mercado Z');
+    await expect(rows).toHaveCount(3);
+    expect(api.countRequests('POST', '/checkout')).toBe(0);
+
+    // Corrigir a data limpa o erro e a conclusão acontece.
+    await date.fill(today);
+    await expect(dialog.locator('#checkout-date-error')).toHaveCount(0);
     await dialog.getByRole('button', { name: 'Concluir compra' }).click();
 
     await expect(dialog).toHaveCount(0);
@@ -165,6 +180,95 @@ test.describe('Lista — concluir compra', () => {
       'Cancelar',
       'Concluir compra',
     ]);
+    // A confirmação é a única primary visível no sheet (AC-19 "uma primary").
+    await expect(dialog.locator('.btn-primary:visible')).toHaveCount(1);
+  });
+
+  test('falha de rede ao concluir com mercado/data preenchidos: toast persistente, digitado preservado, lista intacta e nova tentativa funciona (AC-15)', async ({
+    page,
+  }) => {
+    const api = await openShoppingList(page, {
+      seeds: [
+        { name: 'Arroz', plannedQuantity: 2, unit: 'unidade' },
+        {
+          name: 'Leite',
+          plannedQuantity: 1,
+          unit: 'L',
+          purchased: { quantity: 1, unit: 'L', unitPrice: 6.5 },
+        },
+      ],
+    });
+
+    const rows = listRows(page);
+    await expect(rows).toHaveCount(2);
+    expect(api.countRequests('POST', '/checkout')).toBe(0);
+
+    // Resumo com mercado e data (hoje) **antes** de derrubar a rede: o POST
+    // precisa acontecer de verdade, senão a validação local seria a "prova".
+    await page.getByRole('button', { name: 'Concluir compra' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Concluir compra' });
+    const today = todayLocal();
+    await dialog.locator('#checkout-market').fill('Mercado Central');
+    await expect(dialog.locator('#checkout-date')).toHaveValue(today);
+
+    api.failNext('POST', '/checkout');
+    await dialog.getByRole('button', { name: 'Concluir compra' }).click();
+
+    // Erro visível e nenhum item "no fantasma": a lista segue como estava.
+    await expect(page.locator('.toast--error')).toContainText('Falha de rede');
+    await expect(rows).toHaveCount(2);
+    await expect(page.getByRole('button', { name: 'Desmarcar Leite' })).toBeVisible();
+
+    // O sheet permanece aberto e o digitado fica preservado para a nova tentativa.
+    await expect(dialog).toBeVisible();
+    await expect(dialog.locator('#checkout-market')).toHaveValue('Mercado Central');
+    expect(api.countRequests('POST', '/checkout')).toBe(1);
+
+    // Nova tentativa (sem falha) conclui: só o comprado sai e o serviço recebeu 1 POST.
+    await dialog.getByRole('button', { name: 'Concluir compra' }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText('Arroz');
+    await expect(page.getByText('Compra concluída')).toBeVisible();
+    expect(api.countRequests('POST', '/checkout')).toBe(2);
+  });
+
+  test('duplo toque em Concluir compra: rótulo Concluindo…, CTA desabilitado e uma única requisição (AC-20)', async ({
+    page,
+  }) => {
+    const api = await openShoppingList(page, {
+      // Atraso para o POST seguir em andamento enquanto o 2º toque chega.
+      delayMs: 600,
+      seeds: [
+        { name: 'Arroz', plannedQuantity: 2, unit: 'unidade' },
+        {
+          name: 'Leite',
+          plannedQuantity: 1,
+          unit: 'L',
+          purchased: { quantity: 1, unit: 'L', unitPrice: 6.5 },
+        },
+      ],
+    });
+
+    const rows = listRows(page);
+    await expect(rows).toHaveCount(2);
+    expect(api.countRequests('POST', '/checkout')).toBe(0);
+
+    await page.getByRole('button', { name: 'Concluir compra' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Concluir compra' });
+    await dialog.locator('#checkout-market').fill('Mercado Central');
+
+    // O duplo toque chega com o 1º envio em andamento: o CTA vira progresso.
+    await dialog.getByRole('button', { name: 'Concluir compra' }).dblclick();
+
+    await expect(dialog.getByRole('button', { name: 'Concluindo…' })).toBeDisabled();
+    expect(api.countRequests('POST', '/checkout')).toBe(1);
+
+    await expect(dialog).toHaveCount(0);
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first()).toContainText('Arroz');
+    await expect(page.getByText('Compra concluída')).toBeVisible();
+    expect(api.countRequests('POST', '/checkout')).toBe(1);
   });
 
   test('adicionar/editar/marcar/excluir e **recarregar a PWA**: estado mantido (GET refeito no serviço; nada em `localStorage`)', async ({
