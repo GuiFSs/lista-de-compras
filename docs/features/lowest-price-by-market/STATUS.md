@@ -1,9 +1,9 @@
 # Estado da feature — Menor preço por mercado
 
-**Fase atual:** Plano **pronto para aprovação** (revisão 3, com o parecer arquitetural aprovado e as ressalvas incorporadas); aguardando apenas a frase canônica do usuário
-**Gate atual:** SPEC aprovada (`Aprovado pelo usuário em 2026-10-19`) e `ARCHITECTURE-REVIEW.md` **Aprovada com ressalvas, nenhuma bloqueante** (R-1…R-6 incorporadas ao plano na revisão 3). O `PLAN.md` está com o **placeholder** `Aprovado pelo usuário em YYYY-MM-DD` — o gate do plano fecha quando o usuário aprovar
+**Fase atual:** **Implementação** — onda 1 (T-03, higiene do spec de integração do `price-history-service`)
+**Gate atual:** SPEC e PLAN aprovados (`Aprovado pelo usuário em 2026-10-19`); `ARCHITECTURE-REVIEW.md` Aprovada com ressalvas (nenhuma bloqueante), R-1…R-6 incorporadas; **ADR 0011 aceita** (T-01). Branch `feature/lowest-price-by-market` criada a partir da `master`; documentação do **PC-0** commitada
 **Última atualização:** 2026-10-19
-**Próxima ação:** obter a **aprovação canônica do plano**; em seguida criar a branch `feature/lowest-price-by-market` a partir da `master` (skill `git-workflow`, passo 2), commitar a documentação (**PC-0**: SPEC+PLAN+parecer+STATUS+`initial-scope.md`; depois T-01 ADR 0011) e iniciar a **onda 1** (T-03 ∥ T-04). Regra de commit do plano: por **ponto de commit** (PC-0…PC-8), não por T isolada quando a suíte estiver vermelha por design (R-3)
+**Próxima ação:** T-03 (`backend-dev` — limpeza determinística do spec de integração, achado da v1) e, depois, T-04 (`backend-dev` — evoluir `libs/contracts`). **Atenção ao R-3:** T-04 **não** é commitada sozinha — suas mudanças ficam no *working tree* até T-05/T-06 fecharem (commit conjunto **PC-2**), porque a evolução do contrato compartilhado deixa consumidores vermelhos **por design**. Nenhum gate de fase (validação, PR) roda dentro dessa janela
 
 ## Origem da demanda
 
@@ -33,23 +33,26 @@ Pedido do usuário em **2026-10-19** (chat), logo após o merge da v1 `price-his
 ## Contexto — v1 integrada
 
 - A feature `price-history` (v1) está **validada e mergeada** em `master` (PR #4, merge commit `017801a`, 2026-10-19). Ver `docs/features/price-history/STATUS.md`.
-- A SPEC da v1 declarou **comparação entre mercados explicitamente fora do escopo inicial** (`docs/features/price-history/SPEC.md` § Fora de escopo). Esta feature **traz o tema para o escopo do produto** — `docs/product/initial-scope.md` pode precisar de atualização (decisão do usuário, a ser confirmada na spec).
+- A SPEC da v1 declarou **comparação entre mercados explicitamente fora do escopo inicial** (`docs/features/price-history/SPEC.md` § Fora de escopo). Esta feature **traz o tema para o escopo do produto** — `docs/product/initial-scope.md` foi atualizado em **2026-10-19** (commit `19404f5`).
 - Contrato hoje (`libs/contracts/src/http/price-history.ts`): `LowestPriceItem { name, nameNormalized, lowestUnitPrice }` — **sem** mercado, data ou quantidade. A mudança cruza `libs/contracts` + `price-history-service` + `apps/web`; provável consulta/rota nova para o drill-down → puxa revisão arquitetural e possivelmente ADR.
 
 ## Artefatos
 
 - Spec: `docs/features/lowest-price-by-market/SPEC.md` — **aprovada** (`Aprovado pelo usuário em 2026-10-19`; 16 ACs, 16 RNs, CD-01…CD-10; nenhuma decisão aberta)
-- Plano: `docs/features/lowest-price-by-market/PLAN.md` — **revisão 3, pronto para aprovação** (17 tarefas `T-01…T-17`, 11 ondas com provas de paralelismo, matriz AC↔E2E 16/16, Playwright em T-16, ADR 0011 em T-01, rework de higiene em T-03, lição em T-17, pontos de commit PC-0…PC-8 e tabela de impacto nos testes da v1); **sem** a frase canônica (aguarda o usuário)
-- ADR: **T-01** cria a **ADR 0011** (nova — decisão do usuário em 2026-10-19) + ponte na ADR 0010 §1
+- Plano: `docs/features/lowest-price-by-market/PLAN.md` — **aprovado** (`Aprovado pelo usuário em 2026-10-19`; revisão 3: 17 tarefas `T-01…T-17`, 11 ondas com provas de paralelismo, matriz AC↔E2E 16/16, Playwright em T-16, rework de higiene em T-03, lição em T-17, pontos de commit PC-0…PC-8)
+- ADR: `docs/decisions/0011-excecao-temporaria-ao-gateway-drill-down-menor-preco-por-mercado.md` — **Aceita** em 2026-10-19 (criada na **T-01**), com ponte na ADR 0010 §1 (a exceção do `price-history-service` passa a cobrir **quatro** operações)
 - Revisão arquitetural: `docs/features/lowest-price-by-market/ARCHITECTURE-REVIEW.md` — **Aprovada com ressalvas (nenhuma bloqueante)** em 2026-10-19; R-1…R-6 incorporadas na revisão 3 do plano
 - Validação: pendente
 
 ## Execução
 
-- Branch: a criar a partir da `master` (`feature/lowest-price-by-market`), após a aprovação canônica do plano (skill `git-workflow`, passo 2)
-- Tarefas concluídas: nenhuma
+- Branch: `feature/lowest-price-by-market` (criada a partir da `master`, depois da aprovação canônica do plano — skill `git-workflow`, passo 2)
+- Commits do **PC-0** (docs): `19404f5` `docs(product)` (initial-scope), `c4f9625` `docs(lowest-price-by-market)` (SPEC + STATUS), `25b744c` `docs(lowest-price-by-market)` (PLAN + parecer), ADR 0011 + este STATUS (`docs(adr)`, T-01)
+- Tarefas concluídas: **T-01** (ADR 0011 + ponte na ADR 0010 §1) e **T-02** (parecer arquitetural, concluída antes do gate do plano)
+- Em andamento: **T-03** (higiene do spec de integração); a seguir T-04 (contratos — vai para o **PC-2**, junto de T-05/T-06)
+- Regra de commit: **por ponto de commit** (PC-0…PC-8), não por T isolada quando a suíte estiver vermelha por design (R-3)
 
 ## Pendências e bloqueios
 
-- **Nenhum bloqueio.** Falta apenas a **aprovação canônica do plano** (frase no `PLAN.md`). O retrabalho de higiene de teste da v1 está **incluído no plano** (T-03; rework do achado de 2026-10-19).
+- **Nenhum bloqueio.** Feature em implementação (onda 1). O retrabalho de higiene de teste da v1 está **incluído no plano** (T-03; rework do achado de 2026-10-19).
 - **Observação de processo (2026-10-19):** o agente `product-spec` teve `edit`/`write` **negados** em `docs/product/**` e aplicou a atualização do `initial-scope.md` via shell, com autorização explícita do usuário na rodada. O orquestrador verificou o diff (2 linhas, exatamente o aprovado). Se a intenção é que esse agente edite escopo de produto, ajustar a permissão dele em `.opencode/agents/product-spec.md`/configuração — caso contrário, o fluxo depende de contorno manual.

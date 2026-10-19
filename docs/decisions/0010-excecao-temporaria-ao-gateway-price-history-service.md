@@ -41,6 +41,15 @@
 - **Validade:** somente **enquanto o gateway não existir**. Qualquer outra
   chamada direta nova (outro serviço, ou operação fora do escopo acima) continua
   exigindo nova decisão registrada — a regra da ADR 0006 permanece.
+  > **Ponte (2026-10-19):** a
+  > [ADR 0011](0011-excecao-temporaria-ao-gateway-drill-down-menor-preco-por-mercado.md)
+  > registrou a **quarta operação** da exceção — o drill-down
+  > `GET /api/price-history/lowest-prices/{item}` (menor preço por mercado, feature
+  > "Menor preço por mercado", RN-15). A exceção do `price-history-service` passa a
+  > cobrir **quatro** operações: as três enumeradas acima (inalteradas) e a nova, na
+  > mesma base `http://localhost:3002`, com o CORS desta ADR §2 e os critérios de
+  > saída desta ADR §3 (mesmo dono do follow-up). As três operações acima **não**
+  > mudam.
 - A ADR 0001 permanece vigente como **regra geral** (o gateway continua sendo o
   destino de todas as demais chamadas e do futuro roteamento).
 - As exceções do auth-service (ADR 0006) e do shopping-list-service (ADR 0009), e
