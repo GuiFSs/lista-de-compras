@@ -1,9 +1,9 @@
 # Estado da feature — Menor preço por mercado
 
-**Fase atual:** **Implementação concluída** (T-01…T-17; PC-0…PC-8) — **próxima fase: Validação**
-**Gate atual:** SPEC e PLAN aprovados (`Aprovado pelo usuário em 2026-10-19`); `ARCHITECTURE-REVIEW.md` Aprovada com ressalvas (nenhuma bloqueante), R-1…R-6 incorporadas; **ADR 0011 aceita** (T-01). Branch `feature/lowest-price-by-market`; **PC-0…PC-8** commitados (último: `3932133`, lição T-17). **Suíte vermelha por design (R-3) encerrada**: serviço, PWA e contrato verdes desde o PC-6. **Gate de UI (ADR 0008) fechado na T-16**: E2E `web-e2e` **72/72 verdes** (0 falhas, 0 skips), sem quebra da v1; matriz AC↔E2E **16/16**
+**Fase atual:** **Validação aprovada** (feature-validator — 16/16 ACs com evidência executável; Superfície de UI = sim, gate ADR 0008 reproduzido: `npx nx e2e web-e2e --skip-nx-cache` → 72/72, filtro da feature → 28/28). Implementação concluída (T-01…T-17; PC-0…PC-8); **próxima fase: decisão de push/PR do usuário** (skill `git-workflow`).
+**Gate atual:** SPEC e PLAN aprovados (`Aprovado pelo usuário em 2026-10-19`); `ARCHITECTURE-REVIEW.md` Aprovada com ressalvas (nenhuma bloqueante), R-1…R-6 incorporadas; **ADR 0011 aceita** (T-01); **VALIDATION.md aprovada** (16/16 ACs). Branch `feature/lowest-price-by-market`; PC-0…PC-8 commitados (último: `d8e62cc` + lição `3932133`). Suítes verdes: price-history-service 146/146, web 316/316, shopping-list-service 206/206, E2E web-e2e 72/72 (filtro 28/28). Sem AC/T reaberto.
 **Última atualização:** 2026-10-20
-**Próxima ação:** **`feature-validator`** — validar a feature contra os 16 ACs da SPEC e produzir `VALIDATION.md` (o gate final antes do push/PR, que seguem exigindo aprovação explícita do usuário). Pendências não bloqueantes: follow-up do banco de teste dedicado (R-4, na lição) e budget do `lowest-price-page.scss` (4,26 kB > 4 kB, pré-existente de `74b0e58`)
+**Próxima ação:** **decisão do usuário** — push da branch `feature/lowest-price-by-market`, abertura de PR e, após aprovação, merge na `master` (skill `git-workflow`). Pendências não bloqueantes: follow-up do banco de teste dedicado (R-4) e budget do `lowest-price-page.scss` (4,26 kB > 4 kB, pré-existente do PC-5). Nenhuma pendência de comportamento/contrato/arquitetura.
 
 ## Origem da demanda
 
@@ -42,7 +42,7 @@ Pedido do usuário em **2026-10-19** (chat), logo após o merge da v1 `price-his
 - Plano: `docs/features/lowest-price-by-market/PLAN.md` — **aprovado** (`Aprovado pelo usuário em 2026-10-19`; revisão 3: 17 tarefas `T-01…T-17`, 11 ondas com provas de paralelismo, matriz AC↔E2E 16/16, Playwright em T-16, rework de higiene em T-03, lição em T-17, pontos de commit PC-0…PC-8)
 - ADR: `docs/decisions/0011-excecao-temporaria-ao-gateway-drill-down-menor-preco-por-mercado.md` — **Aceita** em 2026-10-19 (criada na **T-01**), com ponte na ADR 0010 §1 (a exceção do `price-history-service` passa a cobrir **quatro** operações)
 - Revisão arquitetural: `docs/features/lowest-price-by-market/ARCHITECTURE-REVIEW.md` — **Aprovada com ressalvas (nenhuma bloqueante)** em 2026-10-19; R-1…R-6 incorporadas na revisão 3 do plano
-- Validação: pendente
+- Validação: `docs/features/lowest-price-by-market/VALIDATION.md` — **aprovada** (16/16 ACs) em 2026-10-20 (feature-validator)
 
 ## Execução
 
@@ -107,6 +107,21 @@ Matriz AC ↔ E2E (16/16, não um E2E por AC):
 **Hermeticidade:** todas as rotas do `price-history` (`/api/price-history/**`) são interceptadas pelo fake tipado por `@lista/contracts`; nenhum Docker/DB/JWT real. **Sem quebra da v1:** as jornadas de auth, lista, histórico e checkout seguem verdes (72/72 na suíte completa).
 
 **Correção de premissa registrada no handoff (não é decisão de comportamento):** o serviço normaliza **removendo acentos** (`normalizeItemName('Café') = 'cafe'`), então o `nameNormalized` é `cafe` e o link real da lista é `/menor-preco/cafe` — coerente com a linha AC-05 da matriz do PLAN. A URL acentuada continua provada, porém por navegação direta (R-1/R-2). Nenhum comportamento da spec foi escolhido.
+
+## Últimos handoffs
+
+### feature-validator — Validação final (`VALIDATION.md`, 2026-10-20)
+
+```text
+Tarefa: Validação final da feature lowest-price-by-market
+Estado: aprovada — 16/16 ACs com evidência executável
+Arquivos alterados: docs/features/lowest-price-by-market/VALIDATION.md (novo); docs/features/lowest-price-by-market/STATUS.md (fase/gate/próxima ação/handoff). Nenhum código alterado.
+ACs cobertos: AC-01…AC-16 — todos com cenário Playwright citado (matriz AC↔E2E do PLAN 16/16) e corrida real reproduzida (72/72, filtro 28/28), mais evidência unit/integração complementar (price-history-service 146/146, web 316/316, shopping-list-service 206/206). Nenhum AC backend-only nesta feature (AC-15 tem perna de backend adicional).
+Testes executados: npx nx test web (30/316), npx nx test shopping-list-service (20/206), npx nx test price-history-service (23/146), npx nx e2e web-e2e (72/72, 39.7s), filtro "[Mm]enor preço" (28/28, 19.8s), lint 4 projetos (0), build web (verde, aviso de budget pré-existente), grep de cor hardcoded (0), docker exec psql (0/0), git ls-files (.env apenas .env.example). Todos verdes.
+Decisões registradas: VALIDATION.md aprovada; checklists de documentação e de design completas; contratos/ADR 0011 (Aceita + ponte ADR 0010 §1)/revisão arquitetural/README/.env.example/lição T-17/segurança transversal conferidos. Limitação R-2 retirada do PLAN (2a55d05) ratificada; 404→não encontrado (R-5) confirmado; suíte vermelha por design (R-3) encerrada.
+Pendências: follow-up do banco de teste dedicado (R-4) e budget do lowest-price-page.scss (4,26 kB > 4 kB, pré-existente do PC-5) — não bloqueantes, não mudam comportamento/contrato/arquitetura. Nenhum AC a reabrir.
+Próximo passo recomendado: decisão do usuário — push da branch feature/lowest-price-by-market, abertura de PR e, após aprovação, merge na master (skill git-workflow). Push/PR/merge permanecem decisão do usuário.
+```
 
 ## Pendências e bloqueios
 
