@@ -56,6 +56,7 @@ describe('PriceHistoryApiService', () => {
           [
             { path: 'login', component: StubComponent },
             { path: 'historico', component: StubComponent },
+            { path: 'menor-preco/:item', component: StubComponent },
           ],
           withDisabledInitialNavigation(),
         ),
@@ -178,6 +179,30 @@ describe('PriceHistoryApiService', () => {
     const req = http.expectOne(url('/purchases'));
     expect(req.request.headers.has('Authorization')).toBe(false);
     req.flush({ purchases: [] });
+  });
+
+  it('401 no drill-down do item encerra a sessão e volta ao login (AC-15)', async () => {
+    await router.navigate(['/menor-preco/cafe']);
+    const navigateSpy = vi.spyOn(router, 'navigate');
+    let error: unknown;
+
+    api
+      .getLowestPricesByItem('cafe')
+      .subscribe({ error: (value: unknown) => (error = value) });
+
+    const req = http.expectOne(`${BASE_URL}/lowest-prices/cafe`);
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${token}`);
+    req.flush(
+      { statusCode: 401, message: 'Não autorizado' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+
+    expect(error).toBeInstanceOf(HttpErrorResponse);
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    expect(session.hasValidSession()).toBe(false);
+    expect(navigateSpy).toHaveBeenCalledWith(['/login'], {
+      queryParams: { returnUrl: '/menor-preco/cafe' },
+    });
   });
 
   it('401 no histórico encerra a sessão e volta ao login (AC-18)', async () => {

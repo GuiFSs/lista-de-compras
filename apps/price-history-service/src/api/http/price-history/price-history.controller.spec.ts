@@ -402,6 +402,28 @@ describe('Borda HTTP do histórico — integração via inject (T-10)', () => {
       });
     });
 
+    it('200 — `q` casando itens em dois mercados preserva os grupos em A→Z (AC-09)', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `${LOWEST_ROUTE}?q=e`,
+        headers: auth(),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json<LowestPricesResponse>();
+      // `e` casa `cafe` (Mercado Alfa) e `leite` (Mercado Zebra): o filtro não
+      // pode achatar o agrupamento nem reordenar os mercados.
+      expect(body.markets.map((group) => group.market)).toEqual([
+        'Mercado Alfa',
+        'Mercado Zebra',
+      ]);
+      expect(
+        body.markets.map((group) =>
+          group.items.map((item) => item.nameNormalized),
+        ),
+      ).toEqual([['cafe'], ['leite']]);
+    });
+
     it('200 — `q` sem resultado devolve lista vazia (empty de busca, AC-09)', async () => {
       const res = await app.inject({
         method: 'GET',

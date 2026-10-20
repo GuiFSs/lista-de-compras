@@ -86,6 +86,24 @@ describe('ListLowestPricesUseCase (RN-05/RN-07; AC-01, AC-02, AC-09)', () => {
     ]);
   });
 
+  it('filtro `a` casa itens em dois mercados e preserva os grupos em A→Z (AC-09, AC-02)', async () => {
+    const useCase = new ListLowestPricesUseCase(repository());
+
+    // `a` casa arroz (Atacadão) e cafe (Zaffari): o filtro não pode achatar o
+    // agrupamento nem reordenar os mercados.
+    const result = await useCase.execute('a');
+
+    expect(result.markets.map((group) => group.market)).toEqual([
+      'Atacadão',
+      'Zaffari',
+    ]);
+    expect(
+      result.markets.map((group) =>
+        group.items.map((item) => item.nameNormalized),
+      ),
+    ).toEqual([['arroz'], ['cafe']]);
+  });
+
   it('filtro não deixa grupo vazio: mercado sem item filtrado desaparece (AC-02, AC-09)', async () => {
     const useCase = new ListLowestPricesUseCase(repository());
 

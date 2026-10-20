@@ -252,6 +252,83 @@ describe('LowestPricePage', () => {
     expect(element.querySelectorAll('.market__title')).toHaveLength(2);
   });
 
+  it('um item com histórico em dois registros credita o mercado/data/quantidade do vencedor (AC-03)', () => {
+    // O serviço decide o vencedor (RN-02/RN-12); aqui a prova é que a tela exibe
+    // exatamente a linha que ele creditou — R$ 7,50 — e não a compra mais cara.
+    store.lowestPrices.set(
+      lowestPricesState({
+        status: 'loaded',
+        data: [
+          group('Atacadão', [
+            item({
+              name: 'Café',
+              nameNormalized: 'cafe',
+              lowestUnitPrice: 7.5,
+              market: 'Atacadão',
+              purchaseDate: '2026-10-12',
+              quantity: 2,
+              unit: 'pacote',
+            }),
+          ]),
+        ],
+      }),
+    );
+    const fixture = mount();
+    const row = query<HTMLElement>(fixture, '.prices__item');
+
+    expect(textOf(row, '.prices__value')).toBe('R$ 7,50');
+    expect(textOf(row, '.prices__meta')).toBe('Atacadão · 12/10/2026 · 2 pacote');
+  });
+
+  it('não exibe cabeçalho de mercado para grupo sem item (AC-02/CD-09)', () => {
+    // O contrato do serviço já garante "só grupo com ≥1 item" (CD-09); a tela
+    // não pode inventar cabeçalho vazio se receber um grupo degenerado.
+    store.lowestPrices.set(
+      lowestPricesState({
+        status: 'loaded',
+        data: [
+          group('Atacadão', [item({ name: 'Arroz', nameNormalized: 'arroz' })]),
+          group('Mercado Central', []),
+        ],
+      }),
+    );
+    const fixture = mount();
+    const element = root(fixture);
+
+    const markets = Array.from(element.querySelectorAll('.market'));
+    for (const market of markets) {
+      expect(market.querySelectorAll('.prices__item').length).toBeGreaterThan(0);
+    }
+    // O grupo degenerado não produz cabeçalho: só "Atacadão" tem título.
+    expect(
+      Array.from(element.querySelectorAll('.market__title')).map((title) =>
+        title.textContent?.trim(),
+      ),
+    ).toEqual(['Atacadão']);
+  });
+
+  it('a linha do item e a CTA têm alvo de toque ≥44px pelo token (AC-16)', () => {
+    store.lowestPrices.set(
+      lowestPricesState({
+        status: 'loaded',
+        data: [group('Mercado Central', [item()])],
+      }),
+    );
+    const fixture = mount();
+    const link = query<HTMLElement>(fixture, '.prices__link');
+
+    // O jsdom devolve o valor declarado (não resolve `var()`): é o token de 44px.
+    expect(getComputedStyle(link).minHeight).toBe('var(--touch-target-min)');
+  });
+
+  it('no empty de lista a CTA primary também tem alvo ≥44px (AC-16)', () => {
+    store.lowestPrices.set(lowestPricesState({ status: 'loaded' }));
+    const fixture = mount();
+    const cta = query<HTMLElement>(fixture, '.empty--list .btn-primary');
+
+    expect(getComputedStyle(cta).minHeight).toBe('var(--touch-target-min)');
+  });
+
   it('cada linha traz nome, menor preço e mercado · data · quantidade com a unidade (AC-01/AC-03/CD-08)', () => {
     store.lowestPrices.set(
       lowestPricesState({

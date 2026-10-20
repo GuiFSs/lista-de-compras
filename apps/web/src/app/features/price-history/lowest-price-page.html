@@ -67,6 +67,9 @@
 
 <div class="markets">
   @for (group of groups(); track group.market) {
+  <!-- CD-09: só cabeçalho de mercado com ao menos um item. O serviço já garante
+       isso, mas a tela não inventa grupo vazio se receber um. -->
+  @if (group.items.length > 0) {
   <section
     class="market"
     [attr.aria-label]="'Menores preços em ' + group.market"
@@ -96,6 +99,7 @@
       }
     </ul>
   </section>
+  }
   }
 </div>
 }

@@ -147,6 +147,35 @@ describe('aggregateLowestPricesByItem (RN-06; AC-06, AC-07, AC-08)', () => {
     expect(result.markets[0]).toMatchObject({ quantity: 5 });
   });
 
+  it('desempate por id é determinístico entre ordens de entrada das compras (RN-04/AC-07)', () => {
+    // Três compras do mesmo item no mesmo mercado com o mesmo preço e a mesma
+    // data: só o menor id pode vencer, qualquer que seja a ordem recebida do
+    // repositório — a saída é a mesma entre cargas (AC-04, aplicada à linha).
+    const winner = purchase([{ name: 'Café', unitPrice: 8, quantity: 2 }], {
+      id: uuid(1),
+      purchaseDate: '2026-10-01',
+      market: 'Atacadão',
+    });
+    const middle = purchase([{ name: 'Café', unitPrice: 8, quantity: 4 }], {
+      id: uuid(5),
+      purchaseDate: '2026-10-01',
+      market: 'Atacadão',
+    });
+    const last = purchase([{ name: 'Café', unitPrice: 8, quantity: 6 }], {
+      id: uuid(9),
+      purchaseDate: '2026-10-01',
+      market: 'Atacadão',
+    });
+
+    const forwards = aggregateLowestPricesByItem([winner, middle, last], 'cafe');
+    const backwards = aggregateLowestPricesByItem([last, middle, winner], 'cafe');
+    const shuffled = aggregateLowestPricesByItem([middle, last, winner], 'cafe');
+
+    expect(forwards.markets[0]).toMatchObject({ quantity: 2 });
+    expect(backwards).toEqual(forwards);
+    expect(shuffled).toEqual(forwards);
+  });
+
   it('item em um único mercado gera uma única linha (AC-08)', () => {
     const result = aggregateLowestPricesByItem(
       [

@@ -260,4 +260,99 @@ describe('LowestPriceByMarketPage', () => {
       '1 mercado',
     );
   });
+
+  it('o voltar aparece em todos os estados, não só no sucesso (AC-05)', () => {
+    const states: readonly ItemLowestPricesState[] = [
+      { status: 'loading', data: null, error: null, selectedItem: 'cafe' },
+      { status: 'notFound', data: null, error: null, selectedItem: 'cafe' },
+      {
+        status: 'error',
+        data: null,
+        error: 'Falha de rede',
+        selectedItem: 'cafe',
+      },
+      {
+        status: 'loaded',
+        data: itemByMarket(),
+        error: null,
+        selectedItem: 'cafe',
+      },
+    ];
+
+    for (const state of states) {
+      TestBed.resetTestingModule();
+      store = new StoreStub();
+      store.itemLowestPrices.set(state);
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: PriceHistoryStore, useValue: store },
+          provideRouter([{ path: 'menor-preco', component: Blank }]),
+          provideLocationMocks(),
+          {
+            provide: ActivatedRoute,
+            useValue: { paramMap: convertToParamMap({ item: 'cafe' }) },
+          },
+        ],
+      });
+
+      const fixture = mount();
+      const back = root(fixture).querySelector(
+        'a.page-back',
+      ) as HTMLAnchorElement | null;
+      expect(back, `voltar ausente no estado ${state.status}`).not.toBeNull();
+      expect(back?.getAttribute('aria-label')).toBe(
+        'Voltar para os menores preços',
+      );
+      expect(back?.getAttribute('href')).toBe('/menor-preco');
+    }
+  });
+
+  it('cada linha de mercado tem alvo de toque ≥44px pelo token (AC-16)', () => {
+    store.itemLowestPrices.set({
+      status: 'loaded',
+      data: itemByMarket(),
+      error: null,
+      selectedItem: 'cafe',
+    });
+    const fixture = mount();
+
+    // O jsdom devolve o valor declarado (não resolve `var()`): é o token de 44px.
+    const line = root(fixture).querySelector('.markets__line') as HTMLElement;
+    expect(getComputedStyle(line).minHeight).toBe('var(--touch-target-min)');
+  });
+
+  it('uma única CTA primary: só no não encontrado (AC-16)', () => {
+    store.itemLowestPrices.set({
+      status: 'loaded',
+      data: itemByMarket(),
+      error: null,
+      selectedItem: 'cafe',
+    });
+    const loaded = mount();
+    // Tela cheia não concorre com CTA primary: o voltar é a navegação.
+    expect(root(loaded).querySelectorAll('.btn-primary')).toHaveLength(0);
+
+    TestBed.resetTestingModule();
+    store = new StoreStub();
+    store.itemLowestPrices.set({
+      status: 'notFound',
+      data: null,
+      error: null,
+      selectedItem: 'cafe',
+    });
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: PriceHistoryStore, useValue: store },
+        provideRouter([{ path: 'menor-preco', component: Blank }]),
+        provideLocationMocks(),
+        {
+          provide: ActivatedRoute,
+          useValue: { paramMap: convertToParamMap({ item: 'cafe' }) },
+        },
+      ],
+    });
+    const notFound = mount();
+
+    expect(root(notFound).querySelectorAll('.btn-primary')).toHaveLength(1);
+  });
 });
