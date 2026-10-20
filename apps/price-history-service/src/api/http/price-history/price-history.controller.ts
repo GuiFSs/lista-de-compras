@@ -9,11 +9,13 @@ import {
   Query,
 } from '@nestjs/common';
 import type {
+  LowestPriceByMarketResponse,
   LowestPricesResponse,
   PurchaseDetailResponse,
   PurchaseListResponse,
 } from '@lista/contracts';
 import {
+  GetLowestPricesByItemUseCase,
   GetPurchaseUseCase,
   ListLowestPricesUseCase,
   ListPurchasesUseCase,
@@ -21,6 +23,7 @@ import {
 import {
   INTERNAL_ERROR_MESSAGE,
   canonicalError,
+  itemNotFound,
   purchaseNotFound,
 } from './price-history-errors';
 
@@ -37,6 +40,7 @@ export class PriceHistoryController {
     private readonly listPurchases: ListPurchasesUseCase,
     private readonly getPurchase: GetPurchaseUseCase,
     private readonly listLowestPrices: ListLowestPricesUseCase,
+    private readonly getLowestPricesByItem: GetLowestPricesByItemUseCase,
   ) {}
 
   /** GET /purchases — 200 `PurchaseListResponse` (RN-08). */
@@ -55,11 +59,29 @@ export class PriceHistoryController {
     return purchase;
   }
 
-  /** GET /lowest-prices?q=... — 200 `LowestPricesResponse` (RN-07). */
+  /** GET /lowest-prices?q=... — 200 `LowestPricesResponse` agrupada (RN-05/RN-07). */
   @Get('lowest-prices')
   lowest(@Query('q') rawQuery: unknown): Promise<LowestPricesResponse> {
     const query = parseSearchQuery(rawQuery);
     return this.safely(() => this.listLowestPrices.execute(query));
+  }
+
+  /**
+   * GET /lowest-prices/:item — 200 `LowestPriceByMarketResponse`; item sem
+   * histórico → 404 canônico. O parâmetro já chega percent-decoded pelo router
+   * e segue cru: a normalização é do caso de uso (R-1), não da borda.
+   */
+  @Get('lowest-prices/:item')
+  async byItem(
+    @Param('item') item: string,
+  ): Promise<LowestPriceByMarketResponse> {
+    const lowestPrices = await this.safely(() =>
+      this.getLowestPricesByItem.execute(item),
+    );
+    if (lowestPrices === null) {
+      throw itemNotFound();
+    }
+    return lowestPrices;
   }
 
   /** Falha de infra vira 500 canônico; o detalhe só vai para o log (contrato). */
@@ -75,7 +97,10 @@ export class PriceHistoryController {
         error instanceof Error ? (error.stack ?? error.message) : String(error),
       );
       throw new InternalServerErrorException(
-        canonicalError(HttpStatus.INTERNAL_SERVER_ERROR, INTERNAL_ERROR_MESSAGE),
+        canonicalError(
+          HttpStatus.INTERNAL_SERVER_ERROR,
+          INTERNAL_ERROR_MESSAGE,
+        ),
       );
     }
   }

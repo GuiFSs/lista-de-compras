@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import {
+  GetLowestPricesByItemUseCase,
   GetPurchaseUseCase,
   ListLowestPricesUseCase,
   ListPurchasesUseCase,
@@ -35,6 +36,12 @@ import { PriceHistoryController } from './price-history.controller';
       inject: [PurchaseRepository],
       useFactory: (repository: PurchaseRepository) =>
         new ListLowestPricesUseCase(repository),
+    },
+    {
+      provide: GetLowestPricesByItemUseCase,
+      inject: [PurchaseRepository],
+      useFactory: (repository: PurchaseRepository) =>
+        new GetLowestPricesByItemUseCase(repository),
     },
   ],
 })
