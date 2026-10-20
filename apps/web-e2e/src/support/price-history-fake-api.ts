@@ -1,25 +1,28 @@
 // Contrato do price-history-service servido em memória para as jornadas de UI
-// (PLAN T-22): o E2E é hermético — nada de Docker, banco, broker ou JWT real. Os
-// tipos vêm de `@lista/contracts` para a paridade com o serviço ser verificada
-// pelo compilador, não por texto solto no teste.
+// (PLAN T-22/T-16): o E2E é hermético — nada de Docker, banco, broker ou JWT
+// real. Os tipos vêm de `@lista/contracts` para a paridade com o serviço ser
+// verificada pelo compilador, não por texto solto no teste.
 import type { Page, Route } from '@playwright/test';
 import {
   ItemUnit,
+  LowestPriceByMarketLine,
+  LowestPriceByMarketResponse,
   LowestPriceItem,
+  LowestPriceMarketGroup,
   LowestPricesResponse,
   PurchaseDetailResponse,
   PurchaseListItem,
   PurchaseListResponse,
 } from '@lista/contracts';
 
-/** Prefixo do contrato consumido pela PWA (ADR 0010). */
+/** Prefixo do contrato consumido pela PWA (ADR 0010/0011). */
 const API_PREFIX = '/api/price-history';
 
 /**
  * Casa a base `/api/price-history` **e** todos os sub-caminhos
- * (`/purchases`, `/purchases/:id`, `/lowest-prices`). Um glob terminado no
- * prefixo seria ancorado no fim da URL e deixaria as operações sem
- * interceptação.
+ * (`/purchases`, `/purchases/:id`, `/lowest-prices`, `/lowest-prices/:item`). Um
+ * glob terminado no prefixo seria ancorado no fim da URL e deixaria as operações
+ * sem interceptação.
  */
 export const PRICE_HISTORY_ROUTE = /\/api\/price-history(?:\/|$)/;
 
@@ -47,24 +50,35 @@ export interface SeedPurchase {
 }
 
 /**
- * Item agregado de menor preço — agregação, menor preço e nome de exibição são
- * do serviço (RN-06/RN-07), então o fake recebe o resultado pronto, como o
- * contrato HTTP o define.
+ * Compra vencedora de um item, como o serviço a devolve na linha da lista
+ * principal (RN-02/RN-03/RN-04). O fake não recalcula nada: a agregação é do
+ * serviço (RN-12) e tem prova unitária; aqui o resultado entra pronto.
  */
 export type SeedLowestPrice = LowestPriceItem;
+
+/** Resposta do drill-down: uma linha por mercado (RN-06/RN-12), já ordenada. */
+export type SeedLowestPriceByItem = LowestPriceByMarketResponse;
 
 export interface PriceHistoryFakeApiOptions {
   /** Já na ordem do serviço (mais recente primeiro — RN-08). */
   purchases?: readonly SeedPurchase[];
-  /** Já na ordem do serviço (nome normalizado asc — RN-07). */
-  lowestPrices?: readonly SeedLowestPrice[];
+  /** Já agrupada e ordenada pelo serviço (RN-05): mercados A→Z, itens A→Z. */
+  lowestPrices?: readonly LowestPriceMarketGroup[];
+  /**
+   * Drill-down por item, com a chave = o segmento `{item}` **decodificado**, do
+   * mesmo jeito que ele chega após `decodeURIComponent` na borda. O `{item}` da
+   * rota é `encodeURIComponent(nameNormalized)` (`caf%C3%A9`, `leite%2Fa%C3%A7%C3%BAcar`);
+   * o fake decodifica o segmento antes de procurar aqui, como o Fastify faz
+   * (round-trip R-2). Ex.: chave `'café'` para `/menor-preco/caf%C3%A9`.
+   */
+  lowestPricesByItem?: Readonly<Record<string, SeedLowestPriceByItem>>;
   /** Atraso por resposta (ms) — permite observar o skeleton (AC-13). */
   delayMs?: number;
   /** Já nasce respondendo 401 em tudo — jornada de sessão inválida (AC-18). */
   unauthorized?: boolean;
 }
 
-/** Requisição que chegou à API falsa, na ordem — prova do contrato (ADR 0010). */
+/** Requisição que chegou à API falsa, na ordem — prova do contrato (ADR 0010/0011). */
 export interface RecordedRequest {
   method: string;
   /** URL completa — prova a base `http://localhost:3002` (AC-21). */
@@ -119,14 +133,15 @@ function toDetail(purchase: SeedPurchase): PurchaseDetailResponse {
 
 /**
  * Serviço de histórico em memória. Exige `Authorization: Bearer` em toda
- * operação (o interceptor da PWA anexa o token — ADR 0007/0010), devolve a
- * lista na ordem semeada (a ordenação é do serviço — RN-08) e **filtra** a
- * busca dos menores preços pela mesma normalização do serviço (RN-06/RN-07),
- * para a jornada de busca exercitar o `q` de verdade em vez de um filtro local.
+ * operação (o interceptor da PWA anexa o token — ADR 0007/0010/0011), devolve a
+ * lista na ordem semeada (a ordenação é do serviço — RN-08) e **filtra** a busca
+ * dos menores preços pela mesma normalização do serviço (RN-05/RN-10) sobre os
+ * grupos recebidos, mantendo o agrupamento/ordenação como o serviço os entrega.
  */
 export class PriceHistoryFakeApi {
   private readonly purchases: SeedPurchase[] = [];
-  private readonly lowestPrices: SeedLowestPrice[] = [];
+  private readonly lowestPrices: LowestPriceMarketGroup[] = [];
+  private readonly lowestPricesByItem: Record<string, SeedLowestPriceByItem> = {};
   private readonly recorded: RecordedRequest[] = [];
   private readonly failures: PendingFailure[] = [];
   private readonly delayMs: number;
@@ -138,6 +153,7 @@ export class PriceHistoryFakeApi {
     this.unauthorized = options.unauthorized ?? false;
     this.purchases.push(...(options.purchases ?? []));
     this.lowestPrices.push(...(options.lowestPrices ?? []));
+    Object.assign(this.lowestPricesByItem, options.lowestPricesByItem ?? {});
   }
 
   async mount(page: Page): Promise<void> {
@@ -222,10 +238,14 @@ export class PriceHistoryFakeApi {
       return;
     }
 
-    const segments = path
+    // O router decodifica **por segmento** antes de chegar aqui; por isso o
+    // `pathname` do navegador já traz a barra de `leite%2Fa%C3%A7%C3%BAcar`
+    // decodificada como `leite/açúcar` (round-trip R-2).
+    const rawSegments = path
       .slice(path.indexOf(API_PREFIX) + API_PREFIX.length)
       .split('/')
       .filter((segment) => segment !== '');
+    const segments = rawSegments.map((segment) => decodeURIComponent(segment));
 
     const handled = await this.dispatch(route, method, segments);
     if (handled) return;
@@ -233,7 +253,7 @@ export class PriceHistoryFakeApi {
     await route.fallback();
   }
 
-  /** Roteia as 3 operações do contrato; `false` = caminho desconhecido. */
+  /** Roteia as 4 operações do contrato; `false` = caminho desconhecido. */
   private async dispatch(route: Route, method: string, segments: string[]): Promise<boolean> {
     if (method === 'GET' && segments.length === 1 && segments[0] === 'purchases') {
       const body: PurchaseListResponse = {
@@ -258,17 +278,46 @@ export class PriceHistoryFakeApi {
       return true;
     }
 
+    // `lowest-prices/{item}` é sub-recurso: só casa com 2 segmentos (a rota
+    // `?q=` acima fica em 1). O `{item}` chega aqui já decodificado e é
+    // **normalizado** antes da busca, como o caso de uso do serviço faz (R-1):
+    // `caf%C3%A9` → `café` → `cafe`, `leite%2Fa%C3%A7%C3%BAcar` → `leite/acucar`.
+    if (method === 'GET' && segments.length === 2 && segments[0] === 'lowest-prices') {
+      const item = normalizeName(segments[1]);
+      const response = this.lowestPricesByItem[item];
+      if (response === undefined) {
+        await this.fulfill(route, 404, {
+          statusCode: 404,
+          message: 'Item não encontrado no histórico',
+        });
+        return true;
+      }
+      await this.fulfill(route, 200, cloneByItem(response));
+      return true;
+    }
+
     return false;
   }
 
-  /** Busca do serviço (RN-07): substring do termo normalizado no nome normalizado. */
+  /**
+   * Busca do serviço (RN-10): substring do termo normalizado no nome normalizado,
+   * dentro de cada grupo, preservando a ordem recebida. Grupo sem item que casa
+   * sai do resultado — o serviço só devolve grupos não vazios (CD-09).
+   */
   private lowestPricesResponse(term: string): LowestPricesResponse {
     const normalizedTerm = normalizeName(term);
-    const items =
+    const markets =
       normalizedTerm === ''
         ? this.lowestPrices
-        : this.lowestPrices.filter((item) => item.nameNormalized.includes(normalizedTerm));
-    return { items: items.map((item) => ({ ...item })) };
+        : this.lowestPrices
+            .map((group) => ({
+              market: group.market,
+              items: group.items.filter((item) =>
+                item.nameNormalized.includes(normalizedTerm),
+              ),
+            }))
+            .filter((group) => group.items.length > 0);
+    return { markets: markets.map(cloneGroup) };
   }
 
   private async fulfill(route: Route, status: number, body: unknown): Promise<void> {
@@ -279,4 +328,16 @@ export class PriceHistoryFakeApi {
       body: JSON.stringify(body),
     });
   }
+}
+
+function cloneGroup(group: LowestPriceMarketGroup): LowestPriceMarketGroup {
+  return { market: group.market, items: group.items.map((item) => ({ ...item })) };
+}
+
+function cloneByItem(response: SeedLowestPriceByItem): LowestPriceByMarketResponse {
+  return {
+    name: response.name,
+    nameNormalized: response.nameNormalized,
+    markets: response.markets.map((line) => ({ ...line }) satisfies LowestPriceByMarketLine),
+  };
 }
