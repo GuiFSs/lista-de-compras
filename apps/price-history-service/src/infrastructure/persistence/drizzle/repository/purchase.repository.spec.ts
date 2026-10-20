@@ -5,11 +5,24 @@
 // `numeric(12,*)` e ordenação/count da listagem (RN-08).
 //
 // Pré-requisitos (PLAN T-06): `npm run docker:up` e
-// `npx nx run price-history-service:db:migrate`. As tabelas são truncadas a
-// cada caso — banco lógico `price_history`, local e de dono exclusivo deste
-// serviço (ADR 0001).
+// `npx nx run price-history-service:db:migrate`.
+//
+// ATENÇÃO — esta suíte APAGA TODAS as linhas de `purchases` e `purchase_items`
+// do banco de DEV `price_history` (truncate em cada caso) para não deixar
+// resíduo. O banco local vale como descartável enquanto ela roda; um banco de
+// TESTE dedicado é follow-up registrado (PLAN R-4). Até lá, não aponte este
+// serviço para um banco com dados que precise preservar.
 import { eq, sql } from 'drizzle-orm';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { PriceHistoryPurchase } from '../../../../domain/purchase';
 import { PriceHistoryDb, createDb } from '../client';
 import { purchaseItems, purchases } from '../schema';
@@ -75,6 +88,14 @@ async function countRows(
   return rows[0].value;
 }
 
+/**
+ * Limpeza única usada antes e depois de cada caso: o `cascade` alcança
+ * `purchase_items` pela FK, então uma tabela basta.
+ */
+async function truncatePurchases(db: PriceHistoryDb): Promise<void> {
+  await db.execute(sql`truncate table ${purchases} cascade`);
+}
+
 describe('DrizzlePurchaseRepository (Postgres real)', () => {
   let db: PriceHistoryDb;
   let repository: DrizzlePurchaseRepository;
@@ -89,11 +110,24 @@ describe('DrizzlePurchaseRepository (Postgres real)', () => {
   });
 
   afterAll(async () => {
+    // Guard de higiene (T-03): a suíte não pode sobreviver a si mesma deixando
+    // linhas em `purchases`/`purchase_items`. As contagens são lidas antes de
+    // fechar o Pool e assertadas depois, para que uma falha aqui não deixe a
+    // conexão pendurada.
+    const remaining = {
+      purchases: await countRows(db, purchases),
+      items: await countRows(db, purchaseItems),
+    };
     await db.$client.end();
+    expect(remaining).toEqual({ purchases: 0, items: 0 });
   });
 
   beforeEach(async () => {
-    await db.execute(sql`truncate table ${purchases} cascade`);
+    await truncatePurchases(db);
+  });
+
+  afterEach(async () => {
+    await truncatePurchases(db);
   });
 
   it('insere compra nova e o detalhe faz round-trip completo', async () => {
@@ -216,7 +250,12 @@ describe('DrizzlePurchaseRepository (Postgres real)', () => {
   it('linha com unit fora do domínio falha explícita no mapeamento', async () => {
     const purchase = buildPurchase();
     await repository.insert(purchase);
-    await db.update(purchaseItems).set({ unit: 'invalida' });
+    // `where` escopado à compra deste caso: um `update` sem filtro sujava a
+    // tabela inteira do banco de dev e quebrava as consultas seguintes.
+    await db
+      .update(purchaseItems)
+      .set({ unit: 'invalida' })
+      .where(eq(purchaseItems.purchaseId, purchase.id));
 
     await expect(repository.findById(purchase.id)).rejects.toThrow(
       'purchase_items.unit inválido',
