@@ -1,9 +1,9 @@
 # Estado da feature — Menor preço por mercado
 
-**Fase atual:** **Implementação** — **T-01…T-15 concluídas** (código do serviço e da PWA completos e auditados); falta o **gate de UI**
-**Gate atual:** SPEC e PLAN aprovados (`Aprovado pelo usuário em 2026-10-19`); `ARCHITECTURE-REVIEW.md` Aprovada com ressalvas (nenhuma bloqueante), R-1…R-6 incorporadas; **ADR 0011 aceita** (T-01). Branch `feature/lowest-price-by-market`; **PC-0…PC-6** commitados (último: `e560123`, T-14 + T-15). **Suíte vermelha por design (R-3) encerrada**: serviço, PWA e contrato verdes no PC-6
+**Fase atual:** **Implementação concluída** (T-01…T-17; PC-0…PC-8) — **próxima fase: Validação**
+**Gate atual:** SPEC e PLAN aprovados (`Aprovado pelo usuário em 2026-10-19`); `ARCHITECTURE-REVIEW.md` Aprovada com ressalvas (nenhuma bloqueante), R-1…R-6 incorporadas; **ADR 0011 aceita** (T-01). Branch `feature/lowest-price-by-market`; **PC-0…PC-8** commitados (último: `3932133`, lição T-17). **Suíte vermelha por design (R-3) encerrada**: serviço, PWA e contrato verdes desde o PC-6. **Gate de UI (ADR 0008) fechado na T-16**: E2E `web-e2e` **72/72 verdes** (0 falhas, 0 skips), sem quebra da v1; matriz AC↔E2E **16/16**
 **Última atualização:** 2026-10-20
-**Próxima ação:** **T-16** (`test-engineer`) — jornadas Playwright em `apps/web-e2e` (fake/fixtures nos dois shapes novos + rota do item; `lowest-price.spec.ts` atualizado e `lowest-price-by-market.spec.ts` novo), **gate de UI do ADR 0008**; decide de ponta a ponta o round-trip do nome com `/` (**R-2**) e o 404 como *não encontrado* (**R-5**). Depois: **T-17** (lição, PC-8) e `feature-validator`. Pendência não bloqueante: aviso de budget do `lowest-price-page.scss` (4,26 kB > 4 kB, pré-existente de `74b0e58`) — seguir como follow-up registrado
+**Próxima ação:** **`feature-validator`** — validar a feature contra os 16 ACs da SPEC e produzir `VALIDATION.md` (o gate final antes do push/PR, que seguem exigindo aprovação explícita do usuário). Pendências não bloqueantes: follow-up do banco de teste dedicado (R-4, na lição) e budget do `lowest-price-page.scss` (4,26 kB > 4 kB, pré-existente de `74b0e58`)
 
 ## Origem da demanda
 
@@ -62,9 +62,56 @@ Pedido do usuário em **2026-10-19** (chat), logo após o merge da v1 `price-his
 - `docker exec … psql -c "select (select count(*) from purchases) …, (select count(*) from purchase_items) …"` → **0 / 0** (higiene da T-03 confirmada)
 - **T-15 — falsificação (obrigatória na tarefa):** removido o guard CD-09 do template → `lowest-price-page.spec.ts > "não exibe cabeçalho de mercado para grupo sem item (AC-02/CD-09)"` **falhou** (`AssertionError: expected 0 to be greater than 0`); guard reposto → verde; `git diff` do arquivo com apenas as +4 linhas intencionais
 
+### Evidência T-16 (E2E Playwright + gate de UI, 2026-10-20)
+
+Comandos reais (branch `feature/lowest-price-by-market`, PC-7):
+
+- **Suíte completa:** `npx nx e2e web-e2e --skip-nx-cache` → **72 passed (37.5s)**, 0 failed, 0 skipped. `Successfully ran target e2e for project web-e2e and 5 tasks it depends on`.
+- **Filtro da feature:** `npx nx e2e web-e2e --skip-nx-cache -- --grep "[Mm]enor preço"` → **28 passed (17.4s)**, 0 failed, 0 skipped.
+
+Arquivos E2E tocados (somente `apps/web-e2e/**`):
+
+- `support/price-history-fake-api.ts` — fake serve os **dois shapes** (`{ markets }` agrupado e `{ markets: [{ market, items[] }] }`), a **rota do item** `GET …/lowest-prices/{item}` e **normaliza o parâmetro decodificado** (espelha o caso de uso, R-1); 404/401 canônicos; `lowestPricesByItem` seeds.
+- `support/price-history-fixtures.ts` — fixtures agrupadas, de drill-down e de busca; item com `/` (`leite/acucar`, com `nameNormalized` **sem acento** como o serviço — `normalizeItemName` remove diacríticos) e empate; constantes de segmento percent-encoded (`CAFE_ITEM_PARAM`, `LEITE_ACUCAR_*`).
+- `price-history/lowest-price.spec.ts` (atualizado) — agrupamento, metadados/empate, busca, empty, skeleton, erro+retry, tab-repeat da busca.
+- `price-history/lowest-price-by-market.spec.ts` (**novo**) — drill-down: toque com URL `/menor-preco/cafe`, R-1 (`/menor-preco/caf%C3%A9` resolve), 3 mercados A→Z, menor no mesmo mercado, 1 mercado, voltar/entrada pela nav preservando a busca, R-2 (`leite%2Fa%C3%A7%C3%BAcar`), 404→não encontrado, skeleton/erro+retry, URL percent-encoded + `Authorization` (ADR 0011), 401, 360px.
+- `price-history/nav.spec.ts` — **revisado, sem alteração** (AC-21/ADR 0010 intactos e verdes).
+
+Matriz AC ↔ E2E (16/16, não um E2E por AC):
+
+| AC | Arquivo:linha |
+| --- | --- |
+| AC-01 | `lowest-price.spec.ts:15` |
+| AC-02 | `lowest-price.spec.ts:42` |
+| AC-03 | `lowest-price.spec.ts:15` |
+| AC-04 | `lowest-price.spec.ts:65` |
+| AC-05 | `lowest-price-by-market.spec.ts:30` |
+| AC-06 | `lowest-price-by-market.spec.ts:75` |
+| AC-07 | `lowest-price-by-market.spec.ts:103` |
+| AC-08 | `lowest-price-by-market.spec.ts:117` |
+| AC-09 | `lowest-price.spec.ts:89` |
+| AC-10 | `lowest-price.spec.ts:144` |
+| AC-11 | `lowest-price-by-market.spec.ts:142,175`; `lowest-price.spec.ts:214` |
+| AC-12 | `lowest-price-by-market.spec.ts:268` |
+| AC-13 | `lowest-price.spec.ts:125`; `lowest-price-by-market.spec.ts:288` |
+| AC-14 | `lowest-price.spec.ts:161,184`; `lowest-price-by-market.spec.ts:288` |
+| AC-15 | `lowest-price-by-market.spec.ts:352` |
+| AC-16 | `lowest-price-by-market.spec.ts:373`; `lowest-price.spec.ts:144` |
+
+**Veredito R-2 (round-trip do nome com `/`):** **provado de ponta a ponta nos cinco pontos** exigidos pelo critério de fechamento do PLAN — domínio (`domain/lowest-prices.spec.ts`, barra preservada em `leite/acucar`), Fastify (`price-history.controller.spec.ts`, 200 em `…/leite%2Fa%C3%A7%C3%BAcar`), PWA (`price-history-api.service.spec.ts`, URL codificada) e rota (`app.routes.spec.ts`, segmento único), mais a jornada E2E (`lowest-price-by-market.spec.ts`). O link da lista carrega `encodeURIComponent(nameNormalized)` (`leite%2Facucar`), resolve como segmento único e a tela mostra `Leite/Açúcar` — **sem 404**; a navegação direta por `/menor-preco/leite%2Fa%C3%A7%C3%BAcar` (nome cru acentuado) também resolve.
+**Consequência (critério do próprio PLAN):** a limitação da § Riscos e a nota da § Perguntas resolvidas **foram retiradas** em **2026-10-20** (commit `2a55d05`), ficando só a nota "coberto por teste"; a § Contratos também foi ajustada ("R-2 refutado"). A edição foi feita pelo **`tech-planner`** (dono do plano — o orquestrador não tem escrita em `PLAN.md`). **Não houve mudança de escopo:** a decisão aprovada pelo usuário permanece a mesma; o plano cumpriu o seu próprio critério de fechamento. Os 45+/-37 linhas do diff tocaram **só** os pontos do critério (nenhuma tarefa `T-*`, matriz AC↔E2E ou outro risco alterado — 17 tarefas e as decisões do usuário conferidas após o diff).
+**Correção de premissa:** o `nameNormalized` real é **sem acento** (`Café` → `NFKD` + remoção de diacríticos → `cafe`), então o link da lista é `/menor-preco/cafe` — coerente com a linha AC-05 da matriz do PLAN. A URL acentuada `/menor-preco/caf%C3%A9` continua provada, por navegação direta (encode → decode → normalize no caso de uso, R-1).
+
+**Veredito R-5 (404 → não encontrado, não erro+retry):** **confirmado.** `/menor-preco/item-inexistente` mostra `.empty--not-found` ("Nenhum preço por mercado encontrado") com voltar, e **não** há `role=alert` nem botão "Tentar novamente" — o 404 vira `notFound` no store, não `error`.
+
+**Hermeticidade:** todas as rotas do `price-history` (`/api/price-history/**`) são interceptadas pelo fake tipado por `@lista/contracts`; nenhum Docker/DB/JWT real. **Sem quebra da v1:** as jornadas de auth, lista, histórico e checkout seguem verdes (72/72 na suíte completa).
+
+**Correção de premissa registrada no handoff (não é decisão de comportamento):** o serviço normaliza **removendo acentos** (`normalizeItemName('Café') = 'cafe'`), então o `nameNormalized` é `cafe` e o link real da lista é `/menor-preco/cafe` — coerente com a linha AC-05 da matriz do PLAN. A URL acentuada continua provada, porém por navegação direta (R-1/R-2). Nenhum comportamento da spec foi escolhido.
+
 ## Pendências e bloqueios
 
-- **Nenhum bloqueio.** Implementação concluída (T-01…T-15); falta o gate de UI (**T-16**) e a lição (**T-17**). O retrabalho de higiene de teste da v1 foi **incluído no plano** e entregue (T-03).
-- **Follow-up registrado (R-4):** banco de **teste** dedicado para o `price-history-service` — hoje a suíte de integração trunca o banco de **dev** `price_history` (higiene determinística da T-03 garante `0/0` ao fim). Registrado como pendência de ambiente na lição **T-17**.
-- **Follow-up não bloqueante:** `lowest-price-page.scss` estoura o budget em 262 bytes (4,26 kB > 4 kB) — PRÉ-EXISTENTE do PC-5 (`74b0e58`), não introduzido pelas auditorias. Ajustar budget ou enxugar o estilo como follow-up, sem abrir reabertura de T-12.
+- **Nenhum bloqueio de código.** Implementação, gate de UI e lição **fechados** (T-01…T-17; PC-0…PC-8). Falta apenas a **validação final** (`feature-validator` → `VALIDATION.md`). O retrabalho de higiene de teste da v1 foi incluído no plano e entregue (T-03).
+- **Feito (2026-10-20):** retirada da limitação **R-2** do `PLAN.md` (`2a55d05`) — critério de fechamento cumprido; edição do `tech-planner`. **Feito:** lição **T-17** (`3932133`, PC-8).
+- **Follow-up registrado (R-4):** banco de **teste** dedicado para o `price-history-service` — hoje a suíte de integração trunca o banco de **dev** `price_history` (higiene determinística da T-03 garante `0/0` ao fim). Registrado na lição T-17 como pendência de ambiente.
+- **Follow-up não bloqueante:** `lowest-price-page.scss` estoura o budget em 262 bytes (4,26 kB > 4 kB) — PRÉ-EXISTENTE do PC-5 (`74b0e58`), não introduzido pelas auditorias nem pelo E2E. Ajustar budget ou enxugar o estilo como follow-up, sem abrir reabertura de T-12.
 - **Observação de processo (2026-10-19):** o agente `product-spec` teve `edit`/`write` **negados** em `docs/product/**` e aplicou a atualização do `initial-scope.md` via shell, com autorização explícita do usuário na rodada. O orquestrador verificou o diff (2 linhas, exatamente o aprovado). Se a intenção é que esse agente edite escopo de produto, ajustar a permissão dele em `.opencode/agents/product-spec.md`/configuração — caso contrário, o fluxo depende de contorno manual.
