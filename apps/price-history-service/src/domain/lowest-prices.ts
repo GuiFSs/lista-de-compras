@@ -6,14 +6,18 @@ import type {
 import { compareMarketNames } from './market-order';
 
 /** Candidato a menor preço de um grupo, com a compra de origem para o desempate. */
-interface PriceCandidate {
+export interface PriceCandidate {
   readonly item: PriceHistoryPurchaseItem;
   readonly purchaseId: string;
   readonly market: string;
   readonly purchaseDate: string;
 }
 
-function isBetterPrice(
+/**
+ * Cadeia única de vencedor (RN-02/RN-03/RN-04), compartilhada com o drill-down
+ * por item × mercado. Exportada para não duplicar a regra de desempate.
+ */
+export function isBetterPrice(
   candidate: PriceCandidate,
   current: PriceCandidate,
 ): boolean {

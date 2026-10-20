@@ -33,4 +33,14 @@ export abstract class PurchaseRepository {
 
   /** Compras com itens — insumo de `aggregateLowestPrices` (menor preço/busca). */
   abstract findAllWithItems(): Promise<PriceHistoryPurchase[]>;
+
+  /**
+   * Compras que contêm o item, cada uma **apenas** com os itens cujo
+   * `nameNormalized` casa com o parâmetro — insumo do drill-down por mercado
+   * (RN-06). Mantém a ordem estável de `findAllWithItems` (`purchaseDate` desc,
+   * empate por `createdAt` desc).
+   */
+  abstract findAllWithItemsByName(
+    nameNormalized: string,
+  ): Promise<PriceHistoryPurchase[]>;
 }

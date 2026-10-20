@@ -2,7 +2,8 @@
 //
 // Prova o que só o banco garante: idempotência por PK `completionId`
 // (RN-11/AC-16), cascade da FK de itens, round-trip numérico de
-// `numeric(12,*)` e ordenação/count da listagem (RN-08).
+// `numeric(12,*)`, ordenação/count da listagem (RN-08) e o filtro por
+// `name_normalized` do drill-down (T-08).
 //
 // Pré-requisitos (PLAN T-06): `npm run docker:up` e
 // `npx nx run price-history-service:db:migrate`.
@@ -235,6 +236,80 @@ describe('DrizzlePurchaseRepository (Postgres real)', () => {
     ]);
     expect(loaded[0].items).toEqual(second.items);
     expect(sortedItems(loaded[1])).toEqual(sortedItems(first));
+  });
+
+  it('findAllWithItemsByName devolve só as compras do item, só com os itens que casam e na ordem estável (AC-06)', async () => {
+    const sameDateEarlier = buildPurchase({
+      createdAt: '2026-10-01T10:00:00.000Z',
+    });
+    const newest = buildPurchase({
+      id: OTHER_COMPLETION_ID,
+      market: 'Atacadão',
+      purchaseDate: '2026-10-05',
+      createdAt: '2026-10-05T09:00:00.000Z',
+      items: [
+        {
+          name: 'Café',
+          nameNormalized: 'cafe',
+          quantity: 2,
+          unit: 'unidade',
+          unitPrice: 8.5,
+        },
+      ],
+    });
+    const sameDateLater = buildPurchase({
+      id: '33333333-3333-4333-8333-333333333333',
+      purchaseDate: '2026-10-01',
+      createdAt: '2026-10-01T18:00:00.000Z',
+      items: [
+        {
+          name: 'CAFÉ',
+          nameNormalized: 'cafe',
+          quantity: 1,
+          unit: 'unidade',
+          unitPrice: 10.5,
+        },
+      ],
+    });
+    const withoutItem = buildPurchase({
+      id: '44444444-4444-4444-8444-444444444444',
+      purchaseDate: '2026-10-09',
+      createdAt: '2026-10-09T08:00:00.000Z',
+      items: [
+        {
+          name: 'Feijão',
+          nameNormalized: 'feijao',
+          quantity: 1,
+          unit: 'pacote',
+          unitPrice: 8,
+        },
+      ],
+    });
+    await repository.insert(sameDateEarlier);
+    await repository.insert(newest);
+    await repository.insert(sameDateLater);
+    await repository.insert(withoutItem);
+
+    const loaded = await repository.findAllWithItemsByName('cafe');
+
+    expect(loaded.map((purchase) => purchase.id)).toEqual([
+      newest.id,
+      sameDateLater.id,
+      sameDateEarlier.id,
+    ]);
+    // `sameDateEarlier` também tem arroz, mas o drill-down só recebe o item consultado.
+    expect(loaded[2].items.map((item) => item.nameNormalized)).toEqual([
+      'cafe',
+    ]);
+    expect(loaded[0].items).toEqual(newest.items);
+  });
+
+  it('findAllWithItemsByName sem histórico do item devolve []', async () => {
+    await repository.insert(buildPurchase());
+
+    await expect(
+      repository.findAllWithItemsByName('batata'),
+    ).resolves.toEqual([]);
   });
 
   it('deletar a compra em cascata remove os itens (FK)', async () => {
