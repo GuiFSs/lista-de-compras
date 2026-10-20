@@ -2,6 +2,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type {
+  LowestPriceByMarketResponse,
+  LowestPriceMarketGroup,
   LowestPricesResponse,
   PurchaseDetailResponse,
   PurchaseListResponse,
@@ -10,6 +12,68 @@ import { PriceHistoryStore } from './price-history-store';
 
 const BASE_URL = 'http://localhost:3002/api/price-history';
 const url = (path = ''): string => `${BASE_URL}${path}`;
+
+function coffeeGroup(): LowestPriceMarketGroup {
+  return {
+    market: 'Mercado Central',
+    items: [
+      {
+        name: 'Café',
+        nameNormalized: 'cafe',
+        lowestUnitPrice: 7.5,
+        market: 'Mercado Central',
+        purchaseDate: '2026-10-15',
+        quantity: 2,
+        unit: 'pacote',
+      },
+    ],
+  };
+}
+
+function lowestPrices(): LowestPricesResponse {
+  return {
+    markets: [
+      {
+        market: 'Atacadão',
+        items: [
+          {
+            name: 'Arroz',
+            nameNormalized: 'arroz',
+            lowestUnitPrice: 21.9,
+            market: 'Atacadão',
+            purchaseDate: '2026-10-02',
+            quantity: 5,
+            unit: 'kg',
+          },
+        ],
+      },
+      coffeeGroup(),
+    ],
+  };
+}
+
+function itemPrices(): LowestPriceByMarketResponse {
+  return {
+    name: 'Café',
+    nameNormalized: 'cafe',
+    markets: [
+      {
+        market: 'Atacadão',
+        lowestUnitPrice: 6.9,
+        purchaseDate: '2026-10-12',
+        quantity: 1,
+        unit: 'pacote',
+      },
+      {
+        market: 'Mercado Central',
+        lowestUnitPrice: 7.5,
+        purchaseDate: '2026-10-15',
+        quantity: 2,
+        unit: 'pacote',
+      },
+    ],
+  };
+}
 
 function purchase(overrides: Partial<PurchaseDetailResponse> = {}): PurchaseDetailResponse {
   return {
@@ -194,13 +258,8 @@ describe('PriceHistoryStore', () => {
   });
 
   describe('menores preços', () => {
-    it('aplica os itens do serviço sem agregar ou calcular no cliente (AC-08/AC-10)', async () => {
-      const response: LowestPricesResponse = {
-        items: [
-          { name: 'Café', nameNormalized: 'cafe', lowestUnitPrice: 7.5 },
-          { name: 'Arroz', nameNormalized: 'arroz', lowestUnitPrice: 21.9 },
-        ],
-      };
+    it('aplica os grupos do serviço sem agrupar, reordenar ou calcular no cliente (AC-01/AC-02)', async () => {
+      const response = lowestPrices();
 
       const load = store.loadLowestPrices();
       expect(store.lowestPrices().status).toBe('loading');
@@ -209,26 +268,25 @@ describe('PriceHistoryStore', () => {
 
       expect(store.lowestPrices().status).toBe('loaded');
       expect(store.lowestPrices().error).toBeNull();
-      // Agregação, min e nome de exibição são do serviço (RN-06/RN-07): os itens
-      // chegam idênticos, com o menor preço pronto (R$ 7,50 — AC-10).
-      expect(store.lowestPrices().data).toEqual(response.items);
-      expect(store.lowestPrices().data[0].lowestUnitPrice).toBe(7.5);
+      // Mercados e itens chegam prontos do serviço (RN-05/RN-12): a PWA só
+      // aplica a resposta, mantendo ordem e grupos.
+      expect(store.lowestPrices().data).toEqual(response.markets);
+      expect(store.lowestPrices().data[0].market).toBe('Atacadão');
+      expect(store.lowestPrices().data[1].items[0].lowestUnitPrice).toBe(7.5);
     });
 
     it('busca vai ao serviço como q e registra o termo (AC-09)', async () => {
       const load = store.loadLowestPrices('cafe');
       expect(store.lowestPrices().query).toBe('cafe');
 
-      const response: LowestPricesResponse = {
-        items: [{ name: 'Café', nameNormalized: 'cafe', lowestUnitPrice: 7.5 }],
-      };
+      const response: LowestPricesResponse = { markets: [coffeeGroup()] };
       http.expectOne(url('/lowest-prices?q=cafe')).flush(response);
       await load;
 
       expect(store.lowestPrices().status).toBe('loaded');
-      // "busca `cafe` acha `cafe`" é normalização do serviço (RN-06): aqui só
+      // "busca `cafe` acha `café`" é normalização do serviço (RN-10): aqui só
       // repassamos a resposta — nenhum filtro de nome no cliente.
-      expect(store.lowestPrices().data).toEqual(response.items);
+      expect(store.lowestPrices().data).toEqual(response.markets);
     });
 
     it('erro + repetir sem termo refaz a MESMA busca (AC-14)', async () => {
@@ -246,12 +304,12 @@ describe('PriceHistoryStore', () => {
       expect(store.lowestPrices().query).toBe('cafe');
 
       const retry = store.loadLowestPrices();
-      http.expectOne(url('/lowest-prices?q=cafe')).flush({ items: [] });
+      http.expectOne(url('/lowest-prices?q=cafe')).flush({ markets: [] });
       await retry;
 
       expect(store.lowestPrices().status).toBe('loaded');
       expect(store.lowestPrices().query).toBe('cafe');
-      // Vazio chega como `loaded`: a tela escolhe o empty de busca (AC-12).
+      // Vazio chega como `loaded`: a tela escolhe o empty de busca (AC-09).
       expect(store.lowestPrices().data).toEqual([]);
     });
 
@@ -259,19 +317,147 @@ describe('PriceHistoryStore', () => {
       const first = store.loadLowestPrices('c');
       const second = store.loadLowestPrices('cafe');
 
-      const cafe: LowestPricesResponse = {
-        items: [{ name: 'Café', nameNormalized: 'cafe', lowestUnitPrice: 7.5 }],
-      };
+      const cafe: LowestPricesResponse = { markets: [coffeeGroup()] };
       http.expectOne(url('/lowest-prices?q=cafe')).flush(cafe);
       await second;
 
       http
         .expectOne(url('/lowest-prices?q=c'))
-        .flush({ items: [{ name: 'Cuscuz', nameNormalized: 'cuscuz', lowestUnitPrice: 5 }] });
+        .flush({ markets: [{ market: 'Rede Norte', items: [] }] });
       await first;
 
       expect(store.lowestPrices().query).toBe('cafe');
-      expect(store.lowestPrices().data).toEqual(cafe.items);
+      expect(store.lowestPrices().data).toEqual(cafe.markets);
+    });
+
+    it('abrir o item não zera busca nem lista; voltar repete a mesma consulta (CD-10/AC-11)', async () => {
+      const loaded = store.loadLowestPrices('cafe');
+      const response: LowestPricesResponse = { markets: [coffeeGroup()] };
+      http.expectOne(url('/lowest-prices?q=cafe')).flush(response);
+      await loaded;
+
+      const detail = store.loadItemLowestPrices('cafe');
+      http.expectOne(url('/lowest-prices/cafe')).flush(itemPrices());
+      await detail;
+
+      // A seção da lista vive no store (root): navegar ao drill-down não a
+      // invalida nem dispara um novo GET completo ao voltar (AC-11).
+      expect(store.lowestPrices().query).toBe('cafe');
+      expect(store.lowestPrices().status).toBe('loaded');
+      expect(store.lowestPrices().data).toEqual(response.markets);
+
+      const back = store.loadLowestPrices();
+      http.expectOne(url('/lowest-prices?q=cafe')).flush(response);
+      await back;
+
+      expect(store.lowestPrices().query).toBe('cafe');
+      expect(store.lowestPrices().data).toEqual(response.markets);
+    });
+  });
+
+  describe('menores preços do item (drill-down)', () => {
+    it('sem seleção, repetir não faz chamada', async () => {
+      await store.loadItemLowestPrices();
+
+      expect(store.itemLowestPrices().selectedItem).toBeNull();
+      expect(store.itemLowestPrices().status).toBe('loading');
+    });
+
+    it('seleciona o item e aplica as linhas por mercado do serviço (AC-05/AC-06)', async () => {
+      const load = store.loadItemLowestPrices('cafe');
+      expect(store.itemLowestPrices().status).toBe('loading');
+      expect(store.itemLowestPrices().selectedItem).toBe('cafe');
+
+      const response = itemPrices();
+      http.expectOne(url('/lowest-prices/cafe')).flush(response);
+      await load;
+
+      expect(store.itemLowestPrices().status).toBe('loaded');
+      expect(store.itemLowestPrices().error).toBeNull();
+      // Uma linha por mercado, A→Z, como o serviço entregou (RN-06/RN-12).
+      expect(store.itemLowestPrices().data).toEqual(response);
+      expect(store.itemLowestPrices().data?.markets[0].market).toBe('Atacadão');
+    });
+
+    it('404 vira notFound (não error) e mantém o item para o voltar (AC-12/R-5)', async () => {
+      const failing = store.loadItemLowestPrices('item-inexistente');
+      http
+        .expectOne(url('/lowest-prices/item-inexistente'))
+        .flush(
+          { statusCode: 404, message: 'Item não encontrado no histórico' },
+          { status: 404, statusText: 'Not Found' },
+        );
+      await failing;
+
+      expect(store.itemLowestPrices().status).toBe('notFound');
+      expect(store.itemLowestPrices().error).toBeNull();
+      expect(store.itemLowestPrices().data).toBeNull();
+      expect(store.itemLowestPrices().selectedItem).toBe('item-inexistente');
+    });
+
+    it('demais erros viram error e o retry sem argumento refaz o MESMO item (AC-14/R-5)', async () => {
+      const failing = store.loadItemLowestPrices('cafe');
+      http
+        .expectOne(url('/lowest-prices/cafe'))
+        .flush(
+          { statusCode: 500, message: 'Erro interno' },
+          { status: 500, statusText: 'Internal Server Error' },
+        );
+      await failing;
+
+      expect(store.itemLowestPrices().status).toBe('error');
+      expect(store.itemLowestPrices().error).toBe('Erro interno');
+
+      const retry = store.loadItemLowestPrices();
+      http.expectOne(url('/lowest-prices/cafe')).flush(itemPrices());
+      await retry;
+
+      expect(store.itemLowestPrices().status).toBe('loaded');
+      expect(store.itemLowestPrices().error).toBeNull();
+      expect(store.itemLowestPrices().data).toEqual(itemPrices());
+    });
+
+    it('resposta atrasada de outro item não sobrescreve a seleção', async () => {
+      const first = store.loadItemLowestPrices('cafe');
+      const second = store.loadItemLowestPrices('arroz');
+      expect(store.itemLowestPrices().selectedItem).toBe('arroz');
+
+      const arroz: LowestPriceByMarketResponse = {
+        name: 'Arroz',
+        nameNormalized: 'arroz',
+        markets: [
+          {
+            market: 'Atacadão',
+            lowestUnitPrice: 21.9,
+            purchaseDate: '2026-10-02',
+            quantity: 5,
+            unit: 'kg',
+          },
+        ],
+      };
+      http.expectOne(url('/lowest-prices/arroz')).flush(arroz);
+      await second;
+
+      http.expectOne(url('/lowest-prices/cafe')).flush(itemPrices());
+      await first;
+
+      expect(store.itemLowestPrices().selectedItem).toBe('arroz');
+      expect(store.itemLowestPrices().data).toEqual(arroz);
+    });
+
+    it('401 chega como erro de carga; o redirect ao login é do interceptor (AC-15)', async () => {
+      const failing = store.loadItemLowestPrices('cafe');
+      http
+        .expectOne(url('/lowest-prices/cafe'))
+        .flush(
+          { statusCode: 401, message: 'Não autorizado' },
+          { status: 401, statusText: 'Unauthorized' },
+        );
+      await failing;
+
+      expect(store.itemLowestPrices().status).toBe('error');
+      expect(store.itemLowestPrices().error).toBe('Não autorizado');
+      expect(store.itemLowestPrices().selectedItem).toBe('cafe');
     });
   });
 });

@@ -3,20 +3,25 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { Subject, debounceTime } from 'rxjs';
 import { ShellChromeService } from '../../layout/shell-chrome';
-import { formatUnitPrice } from './purchase-format';
+import {
+  formatPurchaseDate,
+  formatQuantityWithUnit,
+  formatUnitPrice,
+} from './purchase-format';
 import { PriceHistoryStore } from './state';
 
-/** Skeleton na forma das linhas nome+preço (AC-13), nunca spinner sozinho. */
-const SKELETON_ROWS: readonly number[] = [0, 1, 2];
+/** Skeleton na forma dos grupos (cabeçalho + linhas), nunca spinner sozinho. */
+const SKELETON_GROUPS: readonly number[] = [0, 1];
+const SKELETON_ROWS: readonly number[] = [0, 1];
 
 /** Pausa da busca: um GET por pausa de digitação, não um por tecla (AC-09). */
 const SEARCH_DEBOUNCE_MS = 300;
 
 /**
- * Tela Menor preço (AC-08…AC-10): cada item distinto com o menor preço por
- * unidade já pago. Busca (`q`), agregação e nome de exibição são do serviço
- * (RN-06/RN-07) — a tela envia o termo e apresenta a resposta sem filtro nem
- * reordenação no cliente.
+ * Tela Menor preço (AC-01…AC-11/AC-13/AC-14): cada item distinto com o menor
+ * preço por unidade já pago, no grupo do mercado da compra vencedora. Grupos,
+ * ordem, metadados e busca chegam prontos do serviço (RN-05/RN-12): a tela só
+ * apresenta a resposta, sem agrupar, filtrar nem reordenar no cliente.
  */
 @Component({
   selector: 'app-lowest-price-page',
@@ -32,34 +37,55 @@ export class LowestPricePage {
   private readonly searchTerms = new Subject<string>();
 
   protected readonly status = computed(() => this.store.lowestPrices().status);
-  protected readonly items = computed(() => this.store.lowestPrices().data);
-  protected readonly loadError = computed(() => this.store.lowestPrices().error);
+  protected readonly groups = computed(() => this.store.lowestPrices().data);
+  protected readonly loadError = computed(
+    () => this.store.lowestPrices().error,
+  );
   protected readonly query = computed(() => this.store.lowestPrices().query);
 
   protected readonly searchTerm = signal('');
 
+  /** Skeleton só sem dados: voltar do drill-down não pisca a lista (AC-13). */
+  protected readonly showSkeleton = computed(
+    () => this.status() === 'loading' && this.groups().length === 0,
+  );
+
+  protected readonly skeletonGroups = SKELETON_GROUPS;
   protected readonly skeletonRows = SKELETON_ROWS;
+  protected readonly formatDate = formatPurchaseDate;
+  protected readonly formatQuantityWithUnit = formatQuantityWithUnit;
   protected readonly formatUnitPrice = formatUnitPrice;
 
   /** Apoio do topo (guia §4): quanto a busca retornou, com o termo quando há. */
   protected readonly summary = computed(() => {
-    const count = this.items().length;
+    const count = this.groups().reduce(
+      (total, group) => total + group.items.length,
+      0,
+    );
     const label = count === 1 ? '1 item' : `${count} itens`;
     const term = this.query();
     return term === '' ? label : `${label} para "${term}"`;
   });
 
   constructor() {
-    this.chrome.contribute({ title: 'Menor preço', actions: [] }, this.destroyRef);
+    this.chrome.contribute(
+      { title: 'Menor preço', actions: [] },
+      this.destroyRef,
+    );
 
     // Sem distinctUntilChanged: repetir um termo (digitar, apagar, digitar de
     // novo) refaz o GET de propósito; o trim já corta os vazios redundantes.
     this.searchTerms
-      .pipe(debounceTime(SEARCH_DEBOUNCE_MS), takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        debounceTime(SEARCH_DEBOUNCE_MS),
+        takeUntilDestroyed(this.destroyRef),
+      )
       .subscribe((term) => void this.store.loadLowestPrices(term));
 
-    // Toda entrada na tela parte da lista completa: o campo nasce limpo (AC-08).
-    void this.store.loadLowestPrices('');
+    // CD-10: ao entrar, repete a última busca (o store preserva termo e lista)
+    // em vez de recarregar a lista completa e descartar o filtro.
+    this.searchTerm.set(this.query());
+    void this.store.loadLowestPrices(this.query());
   }
 
   protected onSearchInput(event: Event): void {

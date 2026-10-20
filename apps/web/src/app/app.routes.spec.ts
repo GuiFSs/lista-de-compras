@@ -10,6 +10,7 @@ import { authGuard } from './core/auth';
 import { NotFound } from './features/not-found/not-found';
 import { HistoryDetailPage } from './features/price-history/history-detail-page';
 import { HistoryPage } from './features/price-history/history-page';
+import { LowestPriceByMarketPage } from './features/price-history/lowest-price-by-market-page';
 import { LowestPricePage } from './features/price-history/lowest-price-page';
 import { ShoppingListPage } from './features/shopping-list/shopping-list-page';
 import { AuthenticatedShell } from './layout/authenticated-shell/authenticated-shell';
@@ -21,7 +22,9 @@ function shellRoute(): Route {
 }
 
 function childRoute(path: string): Route {
-  const route = (shellRoute().children ?? []).find((candidate) => candidate.path === path);
+  const route = (shellRoute().children ?? []).find(
+    (candidate) => candidate.path === path,
+  );
   if (!route) throw new Error(`Rota "${path}" não registrada no shell`);
   return route;
 }
@@ -29,7 +32,8 @@ function childRoute(path: string): Route {
 /** Resolve o `loadComponent` lazy (executa o `import()` do chunk da tela). */
 async function resolveComponent(route: Route): Promise<unknown> {
   const load = route.loadComponent;
-  if (typeof load !== 'function') throw new Error(`Rota "${route.path}" não é lazy`);
+  if (typeof load !== 'function')
+    throw new Error(`Rota "${route.path}" não é lazy`);
   const component: unknown = await load();
   return component;
 }
@@ -45,8 +49,15 @@ describe('appRoutes — navegação da feature (AC-01/AC-02/RN-12)', () => {
 
   it('registra Histórico, detalhe e Menor preço entregando a tela real', async () => {
     expect(await resolveComponent(childRoute('historico'))).toBe(HistoryPage);
-    expect(await resolveComponent(childRoute('historico/:id'))).toBe(HistoryDetailPage);
-    expect(await resolveComponent(childRoute('menor-preco'))).toBe(LowestPricePage);
+    expect(await resolveComponent(childRoute('historico/:id'))).toBe(
+      HistoryDetailPage,
+    );
+    expect(await resolveComponent(childRoute('menor-preco'))).toBe(
+      LowestPricePage,
+    );
+    expect(await resolveComponent(childRoute('menor-preco/:item'))).toBe(
+      LowestPriceByMarketPage,
+    );
   });
 
   it('deixa o curinga por último, depois das rotas reais', () => {

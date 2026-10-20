@@ -1,7 +1,9 @@
 export { PriceHistoryStore } from './price-history-store';
 export type {
+  ItemLowestPricesState,
+  ItemLowestPricesStatus,
   LoadableState,
   LowestPricesState,
-  PurchaseDetailState,
   PriceHistoryStatus,
+  PurchaseDetailState,
 } from './price-history-store';
