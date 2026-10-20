@@ -235,11 +235,11 @@ rotas exigem JWT (guard global, ADR 0007) — 401 uniforme
   `purchaseNotFound()`.
 - **Rota nova e o caminho existente:** `lowest-prices/{item}` é sub-recurso de
   `lowest-prices`; não há conflito com `lowest-prices?q=`.
-- **Limitação conhecida do parâmetro (Pergunta 1, decidida em 2026-10-19):** o
-  caminho carrega o `nameNormalized` **literal percent-encoded**
-  (`encodeURIComponent`); nome de item contendo `/` **não** é representável e cai
-  em 404 embora exista — risco registrado em § Riscos (não bloqueante), com
-  mitigação futura fora desta feature.
+- **Parâmetro do drill-down (Pergunta 1, decidida em 2026-10-19; R-2 refutado):**
+  o caminho carrega o `nameNormalized` **literal percent-encoded**
+  (`encodeURIComponent`); nome de item contendo `/` **é** representável via `%2F`
+  e resolve normalmente — **coberto por teste** (domínio, Fastify, URL/rota da PWA
+  e E2E; ver § Riscos).
 - CORS **inalterado** (`PRICE_HISTORY_CORS_ORIGINS`, `methods: ['GET','OPTIONS']`,
   `allowedHeaders: ['Content-Type','Authorization']`).
 
@@ -468,25 +468,31 @@ evidência de integração adicional).
   (`completionId`), que é o registro cujos mercado/data/quantidade são
   creditados; usar `purchase_items.id` exigiria expor a coluna no domínio sem
   ganho de produto. Registrado como decisão.
-- **Parâmetro `:item` — hipótese a refutar por teste (R-2), não bloqueante.**
-  **Decidido pelo usuário em 2026-10-19** (Pergunta 1): o caminho carrega o
-  **`nameNormalized` literal percent-encoded** (`encodeURIComponent`), sem "slug"
-  com hífens e sem transformação nova — `/menor-preco/batata`,
-  `/menor-preco/caf%C3%A9`. A hipótese de limitação ("nome com `/` não é
-  representável no caminho → 404 embora o item exista") é **provavelmente falsa**
-  conforme o parecer (§ Ressalvas R-2): `encodeURIComponent` codifica `/` como
+- **Parâmetro `:item` — hipótese refutada por teste (R-2): coberto por teste,
+  não é limitação.** **Decidido pelo usuário em 2026-10-19** (Pergunta 1) e
+  **inalterado**: o caminho carrega o **`nameNormalized` literal
+  percent-encoded** (`encodeURIComponent`), sem "slug" com hífens e sem
+  transformação nova — `/menor-preco/batata`, `/menor-preco/caf%C3%A9`. A
+  hipótese de limitação ("nome com `/` não é representável no caminho → 404
+  embora o item exista") foi **refutada**: `encodeURIComponent` codifica `/` como
   `%2F` e o router da PWA e o Fastify decodificam **por segmento**, não por
-  caminho. **A hipótese fica em aberto até a evidência:** spec de round-trip nas
-  tarefas **T-05** (domínio: `nameNormalized` de `Leite/Açúcar` preservado),
-  **T-11** (URL gerada `…/leite%2Fa%C3%A7%C3%BAcar`), **T-10** (200 no Fastify
-  para o caminho codificado), **T-13** (rota resolve `leite/açúcar`) e jornada
-  **T-16**. **Critério de fechamento:** se o round-trip passar em todos os
-  pontos, a limitação é **retirada** desta § Riscos e da nota da § Perguntas
-  resolvidas no fechamento da feature (`VALIDATION.md`/handoff de T-16 registram
-  a retirada), ficando só a nota "coberto por teste"; se **qualquer** round-trip
-  falhar, a limitação permanece como risco e a **mitigação futura** (rota por
-  identificador opaco, ex.: `/menor-preco/:id`, ou segmento base64url) vira
-  follow-up com ADR própria — **sem** mudança de escopo nesta feature.
+  caminho. **O round-trip do nome com `/` está provado de ponta a ponta** nos
+  cinco pontos, com evidência executável: **domínio**
+  (`lowest-prices.spec.ts` — barra preservada, `Leite/Açúcar` → `leite/acucar`),
+  **Fastify** (`price-history.controller.spec.ts` — 200 para
+  `…/leite%2Fa%C3%A7%C3%BAcar`), **PWA/URL**
+  (`price-history-api.service.spec.ts` — URL `…/leite%2Fa%C3%A7%C3%BAcar`),
+  **rota** (`app.routes.spec.ts` — segmento único resolve) e **jornada E2E**
+  (`lowest-price-by-market.spec.ts` — navegação `leite%2Fa%C3%A7%C3%BAcar`;
+  suíte verde 72/72). **Nota (normalização):** `normalizeItemName` remove acentos
+  (NFKD + remoção de diacríticos), então o `nameNormalized` de `Café` é `cafe` —
+  o **link da lista é `/menor-preco/cafe`** (coerente com a linha **AC-05** da
+  matriz AC ↔ E2E); a forma acentuada `/menor-preco/caf%C3%A9` também resolve, por
+  navegação direta (encode → decode → normalize no caso de uso — R-1). A
+  limitação e a mitigação futura (rota por identificador opaco, ex.:
+  `/menor-preco/:id`, ou segmento base64url) **saíram desta § Riscos**: o critério
+  de fechamento do parecer foi cumprido e `VALIDATION.md`/handoff de **T-16**
+  registram a retirada — **sem** mudança de escopo nesta feature.
 - **CD-10 no store (estado de sessão).** **Decidido pelo usuário em 2026-10-19**
   (Pergunta 4): preservar busca/lista implica que a tela Menor preço **não**
   volta à lista completa a cada entrada (comportamento da v1) enquanto o store
@@ -734,9 +740,11 @@ plano (parecer T-02 já sem ressalva bloqueante) → branch
   literal percent-encoded (`encodeURIComponent`) — **decidido pelo usuário em
   2026-10-19** (Pergunta 1, CD-07/RN-09; ex.: `/menor-preco/batata`,
   `/menor-preco/caf%C3%A9`); 404 canônico PT quando não resolve para nenhum
-  item (RN-08/AC-12); nome de exibição canônico vem na resposta. A hipótese de
-  limitação para nome com `/` está em § Riscos como **hipótese a refutar por
-  teste** (R-2 do parecer).
+  item (RN-08/AC-12); nome de exibição canônico vem na resposta. O round-trip do
+  nome com `/` está **coberto por teste** (R-2 refutado — domínio, Fastify, URL e
+  rota da PWA e E2E; § Riscos). **Nota:** o link da lista usa `nameNormalized`
+  **sem acento** (`Café` → `/menor-preco/cafe`); a forma acentuada
+  (`/menor-preco/caf%C3%A9`) também resolve por navegação direta.
 - **Normalização do `{item}` no caso de uso (R-1 do parecer):**
   `GetLowestPricesByItemUseCase` aplica `normalizeItemName` ao parâmetro (mesma
   regra da busca — `domain/lowest-price-search.ts`); a borda só recebe o segmento
@@ -778,10 +786,12 @@ efeito no plano/tarefas.
    (comentário do tipo + README), T-11 (`encodeURIComponent` no serviço de dados,
    spec com `caf%C3%A9`), T-12 (link com `encodeURIComponent(nameNormalized)`),
    T-13 (`:item` chega decodificado pelo router e é repassado cru ao store),
-   T-16 (E2E assere a URL `/menor-preco/caf%C3%A9`). **Limitação aceita e
-   documentada:** item com `/` no nome não é representável no caminho (risco
-   registrado em § Riscos, com mitigação futura fora desta feature) —
-   **não bloqueante, sem mudança de escopo**.
+   T-16 (E2E assere a URL `/menor-preco/caf%C3%A9`). **Coberto por teste
+   (R-2 refutado):** item com `/` no nome **é** representável no caminho
+   percent-encoded — round-trip provado de ponta a ponta em domínio, Fastify, URL
+   e rota da PWA e jornada E2E; a limitação **saiu** de § Riscos e a mitigação
+   futura **não** é pendência desta nem de outra feature — **sem mudança de
+   escopo**.
 2. **Ordenação A→Z de mercado** — **Resposta:** por **nome normalizado**
    (caixa/acentos ignorados), **desempate pelo texto cru**. **Efeito:** T-05
    (comparador `market-order.ts` + spec `Atacadão` antes de `Zaffari`), T-07
@@ -797,13 +807,11 @@ efeito no plano/tarefas.
    pela rota nova não descarta a busca), T-16 (jornada de nav preservando a
    busca).
 
-> **Nota condicional (R-2 do parecer):** a limitação do nome com `/` é uma
-> **hipótese a refutar**, não uma decisão. Se os testes de round-trip (T-05, T-10,
-> T-11, T-13, T-16) passarem, o texto desta seção é ajustado no fechamento da
-> feature (a limitação sai e fica só a nota "coberto por teste"); se algum falhar,
-> permanece como risco com a mitigação futura já descrita em § Riscos —
-> identificador opaco (`/menor-preco/:id`) ou segmento base64url, em feature
-> própria com ADR.
+> **Nota (R-2 do parecer — fechado):** a hipótese de limitação do nome com `/`
+> foi **refutada por teste** — o round-trip está **coberto por teste** nos cinco
+> pontos (domínio, Fastify, URL e rota da PWA e jornada E2E), e a retirada desta
+> nota condicional está registrada em `VALIDATION.md`/handoff de T-16. Não há
+> mitigação futura pendente nem follow-up de ADR.
 
 ## Gate do plano
 
