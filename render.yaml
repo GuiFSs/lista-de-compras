@@ -1,0 +1,73 @@
+services:
+  - type: web
+    name: auth-service
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install --legacy-peer-deps && npx nx build auth-service
+    startCommand: node dist/apps/auth-service/main.js
+    envVars:
+      - key: AUTH_API_PORT
+        value: "10000"
+      - key: AUTH_DATABASE_URL
+        sync: false
+      - key: AUTH_JWT_ISSUER
+        value: auth-service
+      - key: AUTH_JWT_PRIVATE_KEY_B64
+        sync: false
+      - key: AUTH_JWT_PUBLIC_KEY_B64
+        sync: false
+      - key: AUTH_CORS_ORIGINS
+        sync: false
+      - key: AUTH_SEED_USERNAME
+        value: lista
+      - key: AUTH_SEED_PASSWORD
+        sync: false
+      - key: AUTH_PASSWORD_HASH_COST
+        value: "12"
+      - key: AUTH_RATE_LIMIT_MAX_FAILURES
+        value: "5"
+      - key: AUTH_RATE_LIMIT_WINDOW_MS
+        value: "60000"
+
+  - type: web
+    name: shopping-list-service
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install --legacy-peer-deps && npx nx build shopping-list-service
+    startCommand: node dist/apps/shopping-list-service/main.js
+    envVars:
+      - key: API_PORT
+        value: "10000"
+      - key: DATABASE_URL
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: AUTH_JWT_ISSUER
+        value: auth-service
+      - key: AUTH_JWT_PUBLIC_KEY_B64
+        sync: false
+      - key: SHOPPING_LIST_CORS_ORIGINS
+        sync: false
+
+  - type: web
+    name: price-history-service
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install --legacy-peer-deps && npx nx build price-history-service
+    startCommand: node dist/apps/price-history-service/main.js
+    envVars:
+      - key: PRICE_HISTORY_API_PORT
+        value: "10000"
+      - key: PRICE_HISTORY_DATABASE_URL
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: AUTH_JWT_ISSUER
+        value: auth-service
+      - key: AUTH_JWT_PUBLIC_KEY_B64
+        sync: false
+      - key: PRICE_HISTORY_CORS_ORIGINS
+        sync: false

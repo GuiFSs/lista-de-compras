@@ -62,3 +62,4 @@ vite.config.*.timestamp*
 # ambiente local (nunca versionar)
 .env
 .env.local
+.neon
