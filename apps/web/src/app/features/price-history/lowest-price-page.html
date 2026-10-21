@@ -1,7 +1,7 @@
 <!-- Tipo de tela: lista/conteúdo com busca (guia §4/§5). O título "Menor
-     preço" fica na app bar; aqui o campo rótulo-visível, o apoio, as linhas
-     nome+R$ e os 4 estados por seção de resultados. Sem filtro no cliente: o
-     que aparece é exatamente a resposta do serviço (RN-06/RN-07). -->
+     preço" fica na app bar; aqui o campo rótulo-visível, o apoio, os grupos por
+     mercado e os 4 estados. Grupos, ordem e metadados vêm do serviço
+     (RN-05/RN-12): nada de agrupar, filtrar ou reordenar no cliente. -->
 <div class="search">
   <label class="search__label" for="lowest-price-search">Buscar item</label>
   <input
@@ -15,65 +15,91 @@
   />
 </div>
 
-@switch (status()) {
-  @case ('loading') {
-    <div class="prices-skeleton" role="status" aria-busy="true">
-      <span class="visually-hidden">Carregando os menores preços…</span>
-      @for (row of skeletonRows; track row) {
-        <span class="prices-skeleton__row" aria-hidden="true">
-          <span class="prices-skeleton__line"></span>
-          <span class="prices-skeleton__line prices-skeleton__line--short"></span>
-        </span>
-      }
-    </div>
-  }
-
-  @case ('error') {
-    <div class="load-error" role="alert">
-      <h2 class="load-error__title">Não foi possível carregar os menores preços</h2>
-      <p class="load-error__message">{{ loadError() }}</p>
-      <button type="button" class="btn-secondary" (click)="retry()">Tentar novamente</button>
-    </div>
-  }
-
-  @default {
-    @if (items().length === 0) {
-      @if (query() === '') {
-        <!-- Lista vazia (AC-12): sem compras no histórico, o próximo passo é
-             comprar na Lista. -->
-        <div class="empty empty--list">
-          <p class="empty__sticker" aria-hidden="true">🏷️</p>
-          <h2 class="empty__title">Nenhum preço registrado ainda</h2>
-          <p class="empty__text">
-            Ao concluir uma compra na Lista, o menor preço de cada item aparece aqui.
-          </p>
-          <a class="btn-primary empty__cta" routerLink="/">Ir para a lista</a>
-        </div>
-      } @else {
-        <!-- Busca sem resultado (AC-09): estado próprio, com saída para a
-             lista completa. -->
-        <div class="empty empty--search">
-          <p class="empty__sticker" aria-hidden="true">🔎</p>
-          <h2 class="empty__title">Nenhum item para "{{ query() }}"</h2>
-          <p class="empty__text">
-            Confira a grafia ou tente outra palavra — a busca ignora acentos.
-          </p>
-          <button type="button" class="btn-primary empty__cta" (click)="clearSearch()">
-            Limpar busca
-          </button>
-        </div>
-      }
-    } @else {
-      <p class="summary">{{ summary() }}</p>
-
-      <ul class="prices" role="list">
-        @for (item of items(); track item.nameNormalized) {
-          <li class="prices__item">
-            <span class="prices__name">{{ item.name }}</span>
-            <span class="prices__value">{{ formatUnitPrice(item.lowestUnitPrice) }}</span>
-          </li>
-        }
-      </ul>
+@if (showSkeleton()) {
+<div class="prices-skeleton" role="status" aria-busy="true">
+  <span class="visually-hidden">Carregando os menores preços…</span>
+  @for (group of skeletonGroups; track group) {
+  <div class="prices-skeleton__group" aria-hidden="true">
+    <span class="prices-skeleton__header"></span>
+    @for (row of skeletonRows; track row) {
+    <span class="prices-skeleton__row">
+      <span class="prices-skeleton__line"></span>
+      <span class="prices-skeleton__line prices-skeleton__line--short"></span>
+    </span>
     }
+  </div>
   }
+</div>
+} @else if (status() === 'error') {
+<div class="load-error" role="alert">
+  <h2 class="load-error__title">Não foi possível carregar os menores preços</h2>
+  <p class="load-error__message">{{ loadError() }}</p>
+  <button type="button" class="btn-secondary" (click)="retry()">
+    Tentar novamente
+  </button>
+</div>
+} @else if (groups().length === 0) { @if (query() === '') {
+<!-- Lista vazia (AC-10): sem compras no histórico, o próximo passo é
+         comprar na Lista. -->
+<div class="empty empty--list">
+  <p class="empty__sticker" aria-hidden="true">🏷️</p>
+  <h2 class="empty__title">Nenhum preço registrado ainda</h2>
+  <p class="empty__text">
+    Ao concluir uma compra na Lista, o menor preço de cada item aparece aqui.
+  </p>
+  <a class="btn-primary empty__cta" routerLink="/">Ir para a lista</a>
+</div>
+} @else {
+<!-- Busca sem resultado (AC-09): estado próprio, com saída para a lista
+         completa. -->
+<div class="empty empty--search">
+  <p class="empty__sticker" aria-hidden="true">🔎</p>
+  <h2 class="empty__title">Nenhum item para "{{ query() }}"</h2>
+  <p class="empty__text">
+    Confira a grafia ou tente outra palavra — a busca ignora acentos.
+  </p>
+  <button type="button" class="btn-primary empty__cta" (click)="clearSearch()">
+    Limpar busca
+  </button>
+</div>
+} } @else {
+<p class="summary">{{ summary() }}</p>
+
+<div class="markets">
+  @for (group of groups(); track group.market) {
+  <!-- CD-09: só cabeçalho de mercado com ao menos um item. O serviço já garante
+       isso, mas a tela não inventa grupo vazio se receber um. -->
+  @if (group.items.length > 0) {
+  <section
+    class="market"
+    [attr.aria-label]="'Menores preços em ' + group.market"
+  >
+    <h2 class="market__title">{{ group.market }}</h2>
+
+    <ul class="prices" role="list">
+      @for (item of group.items; track item.nameNormalized) {
+      <li class="prices__item">
+        <!-- Array de comandos: o router percent-encoda o segmento como
+                   `encodeURIComponent` (café → caf%C3%A9, leite/açúcar →
+                   leite%2Fa%C3%A7%C3%BAcar). -->
+        <a
+          class="prices__link"
+          [routerLink]="['/menor-preco', item.nameNormalized]"
+        >
+          <span class="prices__name">{{ item.name }}</span>
+          <span class="prices__value"
+            >{{ formatUnitPrice(item.lowestUnitPrice) }}</span
+          >
+          <span class="prices__meta">
+            {{ item.market }} · {{ formatDate(item.purchaseDate) }} · {{
+            formatQuantityWithUnit(item.quantity, item.unit) }}
+          </span>
+        </a>
+      </li>
+      }
+    </ul>
+  </section>
+  }
+  }
+</div>
 }

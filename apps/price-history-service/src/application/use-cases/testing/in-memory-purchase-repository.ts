@@ -9,6 +9,16 @@ function compareDesc(left: string, right: string): number {
   return left < right ? 1 : -1;
 }
 
+function comparePurchases(
+  left: Pick<PriceHistoryPurchase, 'purchaseDate' | 'createdAt'>,
+  right: Pick<PriceHistoryPurchase, 'purchaseDate' | 'createdAt'>,
+): number {
+  return (
+    compareDesc(left.purchaseDate, right.purchaseDate) ||
+    compareDesc(left.createdAt, right.createdAt)
+  );
+}
+
 /**
  * Repositório em memória para os specs de caso de uso: imita o contrato do
  * adaptador Drizzle (idempotência por id, ordenação da listagem por
@@ -41,11 +51,7 @@ export class InMemoryPurchaseRepository extends PurchaseRepository {
         itemCount: purchase.items.length,
         createdAt: purchase.createdAt,
       }))
-      .sort(
-        (left, right) =>
-          compareDesc(left.purchaseDate, right.purchaseDate) ||
-          compareDesc(left.createdAt, right.createdAt),
-      );
+      .sort(comparePurchases);
   }
 
   async findById(id: string): Promise<PriceHistoryPurchase | null> {
@@ -53,11 +59,21 @@ export class InMemoryPurchaseRepository extends PurchaseRepository {
   }
 
   async findAllWithItems(): Promise<PriceHistoryPurchase[]> {
-    return [...this.purchases.values()].sort(
-      (left, right) =>
-        compareDesc(left.purchaseDate, right.purchaseDate) ||
-        compareDesc(left.createdAt, right.createdAt),
-    );
+    return [...this.purchases.values()].sort(comparePurchases);
+  }
+
+  async findAllWithItemsByName(
+    nameNormalized: string,
+  ): Promise<PriceHistoryPurchase[]> {
+    return [...this.purchases.values()]
+      .sort(comparePurchases)
+      .map((purchase) => ({
+        ...purchase,
+        items: purchase.items.filter(
+          (item) => item.nameNormalized === nameNormalized,
+        ),
+      }))
+      .filter((purchase) => purchase.items.length > 0);
   }
 
   /** Leitura direta para asserções. */

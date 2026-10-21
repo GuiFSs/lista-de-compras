@@ -121,6 +121,40 @@ export class DrizzlePurchaseRepository implements PurchaseRepository {
     );
   }
 
+  async findAllWithItemsByName(
+    nameNormalized: string,
+  ): Promise<PriceHistoryPurchase[]> {
+    // `where` usa o índice existente `purchase_items_name_normalized_idx`;
+    // itens por id para o domínio receber ordem determinística (como em
+    // `findById`).
+    const rows = await this.db
+      .select({ purchase: purchases, item: purchaseItems })
+      .from(purchases)
+      .innerJoin(purchaseItems, eq(purchaseItems.purchaseId, purchases.id))
+      .where(eq(purchaseItems.nameNormalized, nameNormalized))
+      .orderBy(
+        desc(purchases.purchaseDate),
+        desc(purchases.createdAt),
+        asc(purchaseItems.id),
+      );
+
+    const purchasesByName = new Map<
+      string,
+      { purchase: PurchaseRow; items: PriceHistoryPurchaseItem[] }
+    >();
+    for (const row of rows) {
+      const entry = purchasesByName.get(row.purchase.id) ?? {
+        purchase: row.purchase,
+        items: [],
+      };
+      entry.items.push(this.toDomainItem(row.item));
+      purchasesByName.set(row.purchase.id, entry);
+    }
+    return [...purchasesByName.values()].map(({ purchase, items }) =>
+      this.toDomain(purchase, items),
+    );
+  }
+
   private toDomain(
     row: PurchaseRow,
     items: PriceHistoryPurchaseItem[],

@@ -1,0 +1,69 @@
+<!-- Tela de detalhe: `/menor-preco/:item` (guia §4 "Lista / conteúdo", detalhe).
+     App bar com o nome do item, voltar visível em todos os estados, uma linha por
+     mercado em A→Z (RN-06/RN-12). O estado `notFound` do store cobre o 404 e o
+     caso de resposta vazia (nunca tela em branco). -->
+<a
+  class="page-back"
+  routerLink="/menor-preco"
+  aria-label="Voltar para os menores preços"
+  >Voltar</a
+>
+
+@switch (status()) { @case ('loading') {
+<div class="detail-skeleton" role="status" aria-busy="true">
+  <span class="visually-hidden">Carregando os preços por mercado…</span>
+  @for (row of skeletonRows; track row) {
+  <span class="detail-skeleton__row" aria-hidden="true">
+    <span class="detail-skeleton__line"></span>
+    <span class="detail-skeleton__line detail-skeleton__line--short"></span>
+    <span class="detail-skeleton__line detail-skeleton__line--caption"></span>
+  </span>
+  }
+</div>
+} @case ('error') {
+<div class="load-error" role="alert">
+  <h2 class="load-error__title">
+    Não foi possível carregar os preços por mercado
+  </h2>
+  @if (loadError()) {
+  <p class="load-error__message">{{ loadError() }}</p>
+  }
+  <button type="button" class="btn-secondary" (click)="retry()">
+    Tentar novamente
+  </button>
+</div>
+} @default { @if (showNotFound()) {
+<div class="empty empty--not-found">
+  <p class="empty__sticker" aria-hidden="true">🏷️</p>
+  <h2 class="empty__title">Nenhum preço por mercado encontrado</h2>
+  <p class="empty__text">
+    Esse item ainda não tem preços registrados no histórico.
+  </p>
+  <a class="btn-primary empty__cta" routerLink="/menor-preco"
+    >Voltar para os menores preços</a
+  >
+</div>
+} @else { @if (item(); as response) {
+<header class="detail__header">
+  <h2 class="detail__market">{{ response.name }}</h2>
+  <p class="detail__date">
+    {{ response.markets.length === 1 ? '1 mercado' : response.markets.length + '
+    mercados' }}
+  </p>
+</header>
+
+<ul class="markets" role="list" aria-label="Menores preços por mercado">
+  @for (line of response.markets; track line.market) {
+  <li class="markets__line">
+    <span class="markets__market">{{ line.market }}</span>
+    <span class="markets__value"
+      >{{ formatUnitPrice(line.lowestUnitPrice) }}</span
+    >
+    <span class="markets__meta">
+      {{ formatDate(line.purchaseDate) }} · {{
+      formatQuantityWithUnit(line.quantity, line.unit) }}
+    </span>
+  </li>
+  }
+</ul>
+} } } }

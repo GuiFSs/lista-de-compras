@@ -1,6 +1,8 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import type {
-  LowestPriceItem,
+  LowestPriceByMarketResponse,
+  LowestPriceMarketGroup,
   PurchaseDetailResponse,
   PurchaseListItem,
 } from '@lista/contracts';
@@ -9,6 +11,9 @@ import { apiErrorMessage } from '../../shopping-list/data';
 import { PriceHistoryApiService } from '../data';
 
 export type PriceHistoryStatus = 'loading' | 'loaded' | 'error';
+
+/** `notFound` separa "item sem histórico" (404, AC-12) de falha de carga (AC-14). */
+export type ItemLowestPricesStatus = PriceHistoryStatus | 'notFound';
 
 /** Carga de uma seção: status, dado e erro lidos do mesmo snapshot. */
 export interface LoadableState<T> {
@@ -22,18 +27,28 @@ export interface PurchaseDetailState extends LoadableState<PurchaseDetailRespons
   selectedId: string | null;
 }
 
-export interface LowestPricesState extends LoadableState<readonly LowestPriceItem[]> {
+export interface LowestPricesState extends LoadableState<readonly LowestPriceMarketGroup[]> {
   /** Última busca enviada ao serviço (`''` = lista completa). */
   query: string;
 }
 
+export interface ItemLowestPricesState {
+  status: ItemLowestPricesStatus;
+  data: LowestPriceByMarketResponse | null;
+  /** Só preenchido em `error`; `notFound` tem copy própria na tela. */
+  error: string | null;
+  /** Item aberto; segue em erro/notFound para o retry saber o que refazer. */
+  selectedItem: string | null;
+}
+
 /**
- * Espelho do histórico no PWA. Ordenação, agregação de menor preço e busca são
- * do serviço (RN-06…RN-08): aqui só aplicamos a resposta, sem cálculo de
- * domínio no cliente. Cada `load*` é repetível — repetir refaz o GET (retry do
- * "Tentar novamente", AC-14) e uma resposta atrasada de outra carga é
- * descartada (a última vence). O 401 é do interceptor de auth: logout +
- * volta ao login (AC-18).
+ * Espelho do histórico no PWA. Agrupamento, ordenação, agregação de menor preço
+ * e busca são do serviço (RN-05/RN-12): aqui só aplicamos a resposta, sem
+ * cálculo de domínio no cliente. Cada `load*` é repetível — repetir refaz o GET
+ * (retry do "Tentar novamente", AC-14) e uma resposta atrasada de outra carga é
+ * descartada (a última vence). O 401 é do interceptor de auth: logout + volta
+ * ao login (AC-18). `query` e lista ficam no store (root), então sobrevivem à
+ * ida e volta do drill-down (CD-10/AC-11).
  */
 @Injectable({ providedIn: 'root' })
 export class PriceHistoryStore {
@@ -56,16 +71,24 @@ export class PriceHistoryStore {
     error: null,
     query: '',
   });
+  private readonly itemLowestPricesState = signal<ItemLowestPricesState>({
+    status: 'loading',
+    data: null,
+    error: null,
+    selectedItem: null,
+  });
 
   // Sequência por seção: busca enquanto digita gera cargas sobrepostas e só
   // a resposta da última pode aplicar estado.
   private purchasesLoadSeq = 0;
   private detailLoadSeq = 0;
   private lowestLoadSeq = 0;
+  private itemLoadSeq = 0;
 
   readonly purchases = this.purchasesState.asReadonly();
   readonly detail = this.detailState.asReadonly();
   readonly lowestPrices = this.lowestPricesState.asReadonly();
+  readonly itemLowestPrices = this.itemLowestPricesState.asReadonly();
 
   /** Carga inicial da lista; repetir refaz o GET ("Tentar novamente", AC-14). */
   async loadPurchases(): Promise<void> {
@@ -144,7 +167,7 @@ export class PriceHistoryStore {
       if (load !== this.lowestLoadSeq) return;
       this.lowestPricesState.set({
         status: 'loaded',
-        data: response.items,
+        data: response.markets,
         error: null,
         query: term,
       });
@@ -155,6 +178,51 @@ export class PriceHistoryStore {
         status: 'error',
         error: apiErrorMessage(error),
       }));
+    }
+  }
+
+  /**
+   * Abre o item do drill-down. Sem `item`, repete o último selecionado (retry
+   * do "Tentar novamente", AC-14). `404` vira `notFound` (AC-12); os demais
+   * erros viram `error` retomável (R-5).
+   */
+  async loadItemLowestPrices(item?: string): Promise<void> {
+    const target = item ?? this.itemLowestPricesState().selectedItem;
+    if (!target) return;
+
+    const load = ++this.itemLoadSeq;
+    this.itemLowestPricesState.set({
+      status: 'loading',
+      data: null,
+      error: null,
+      selectedItem: target,
+    });
+    try {
+      const response = await firstValueFrom(this.api.getLowestPricesByItem(target));
+      if (load !== this.itemLoadSeq) return;
+      this.itemLowestPricesState.set({
+        status: 'loaded',
+        data: response,
+        error: null,
+        selectedItem: target,
+      });
+    } catch (error) {
+      if (load !== this.itemLoadSeq) return;
+      if (error instanceof HttpErrorResponse && error.status === 404) {
+        this.itemLowestPricesState.set({
+          status: 'notFound',
+          data: null,
+          error: null,
+          selectedItem: target,
+        });
+        return;
+      }
+      this.itemLowestPricesState.set({
+        status: 'error',
+        data: null,
+        error: apiErrorMessage(error),
+        selectedItem: target,
+      });
     }
   }
 }

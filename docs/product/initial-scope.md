@@ -36,7 +36,8 @@ Permitir que uma família mantenha uma lista de compras compartilhada e consulte
 - A primeira consulta de histórico mostrará somente o menor preço já pago por item.
 - O histórico terá uma tela para rever cada compra concluída, incluindo data, mercado e itens comprados.
 - A consulta de menor preço permitirá pesquisar por nome de item e também listar todos os itens comprados com o menor preço de cada um.
-- Evoluções como média, último preço, tendência e comparação entre mercados ficam fora do escopo inicial.
+- A consulta de menor preço mostrará, para cada item, o mercado, a data e a quantidade da compra que ostenta esse menor preço, agrupando a lista por mercado; e permitirá abrir o item para ver o seu menor preço em cada mercado (comparação entre mercados — feature `lowest-price-by-market`, `docs/features/lowest-price-by-market/SPEC.md`, 2026-10-19). Na v1 (`price-history`), a comparação entre mercados estava declarada fora do escopo inicial.
+- Evoluções como média, último preço e tendência ficam fora do escopo inicial.
 
 ## Autenticação
 

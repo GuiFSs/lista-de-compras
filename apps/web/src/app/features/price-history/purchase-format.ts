@@ -1,3 +1,5 @@
+import type { ItemUnit } from '@lista/contracts';
+
 /**
  * Formatação das compras do histórico. `purchaseDate` chega do serviço como
  * `YYYY-MM-DD` (data de calendário, sem fuso) e preço é sempre R$ (ADR 0002).
@@ -13,6 +15,14 @@ export function formatPurchaseDate(value: string): string {
 /** Quantidade com vírgula decimal, sem zeros à direita (mesma regra da lista). */
 export function formatQuantity(value: number): string {
   return String(value).replace('.', ',');
+}
+
+/** Quantidade com a unidade, como o serviço registrou: "2 kg", "3 unidade". */
+export function formatQuantityWithUnit(
+  quantity: number,
+  unit: ItemUnit,
+): string {
+  return `${formatQuantity(quantity)} ${unit}`;
 }
 
 /** Preço por unidade em R$, sempre com centavos. */

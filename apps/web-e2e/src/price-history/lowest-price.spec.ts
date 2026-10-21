@@ -1,40 +1,45 @@
 import { expect, test } from '@playwright/test';
-import { CAFE_PRICES, CAFE_LOWEST, LOWEST_PRICES, PURCHASES, TWO_CAFE_PURCHASES } from '../support/price-history-fixtures';
+import {
+  CAFE_LOWEST,
+  CAFE_PRICES,
+  EMPATE_LOWEST,
+  LOWEST_PRICES,
+  PURCHASES,
+  SEARCH_LOWEST,
+  TWO_CAFE_PURCHASES,
+} from '../support/price-history-fixtures';
 import { openPriceHistory } from '../support/price-history-journey';
 import { contentRows } from '../support/ui';
 
 test.describe('Menor preço — lista, busca e estados', () => {
-  test('lista cada item distinto com o MENOR preço por unidade; café/cafe como um único item (AC-08/AC-10)', async ({
+  test('lista agrupada: cada linha traz o menor preço por unidade e mercado · data · quantidade com a unidade da compra vencedora (AC-01/AC-03)', async ({
     page,
   }) => {
     await openPriceHistory(page, '/menor-preco', {
       priceHistory: { purchases: TWO_CAFE_PURCHASES, lowestPrices: CAFE_LOWEST },
     });
 
-    // AC-08: dois registros do mesmo café (com e sem acento) → **um** único item.
-    await expect(page.locator('.prices__name')).toHaveText(['Café']);
-    // AC-10: a tela exibe o **menor** preço já agregado pelo serviço.
-    await expect(page.locator('.prices__value')).toHaveText(['R$ 7,50']);
+    // AC-03: dois registros do mesmo café (com e sem acento) → **um** único item,
+    // no grupo do mercado da compra vencedora (Feira do bairro) e com o **menor**
+    // preço já agregado pelo serviço (R$ 7,50), não a média nem o último preço.
+    const groups = page.locator('.market');
+    await expect(groups).toHaveCount(1);
+    await expect(groups.first().locator('.market__title')).toHaveText('Feira do bairro');
+
+    const rows = contentRows(page);
+    await expect(rows).toHaveCount(1);
+    await expect(rows.first().locator('.prices__name')).toHaveText('Café');
+    await expect(rows.first().locator('.prices__value')).toHaveText('R$ 7,50');
+    // AC-01/CD-08: metadados da compra vencedora, com a unidade (não o total).
+    await expect(rows.first().locator('.prices__meta')).toHaveText(
+      'Feira do bairro · 10/10/2026 · 1 pacote',
+    );
     await expect(
       page.getByText(`R$ ${CAFE_PRICES.highest.toFixed(2).replace('.', ',')}`),
     ).toHaveCount(0);
-
-    // Os dois registros de origem têm preços de verdade diferentes — o menor
-    // não é média nem o último preço (AC-10).
-    const nav = page.getByRole('navigation', { name: 'Navegação principal' });
-    await nav.getByRole('link', { name: 'Histórico' }).click();
-    await expect(page).toHaveURL(/\/historico$/);
-    await expect(contentRows(page)).toHaveCount(2);
-
-    await page.getByRole('link', { name: /28\/09\/2026/ }).click();
-    await expect(page.locator('.detail__item-meta')).toHaveText('1 pacote · R$ 10,00');
-    await page.getByRole('link', { name: 'Voltar para o histórico' }).click();
-
-    await page.getByRole('link', { name: /10\/10\/2026/ }).click();
-    await expect(page.locator('.detail__item-meta')).toHaveText('1 pacote · R$ 7,50');
   });
 
-  test('a lista completa mostra cada item com o menor preço na ordem do serviço (AC-08)', async ({
+  test('mercados A→Z (caixa/acentos ignorados) e itens A→Z dentro do grupo; item de vários mercados aparece uma vez; mercado sem item vencedor não gera cabeçalho (AC-02/CD-09)', async ({
     page,
   }) => {
     await openPriceHistory(page, '/menor-preco', {
@@ -42,26 +47,62 @@ test.describe('Menor preço — lista, busca e estados', () => {
     });
 
     await expect(page.locator('.summary')).toHaveText('2 itens');
-    // Ordem do serviço (RN-07): nome normalizado asc.
-    await expect(page.locator('.prices__name')).toHaveText(['Arroz', 'Café']);
-    await expect(page.locator('.prices__value')).toHaveText(['R$ 25,90', 'R$ 7,50']);
+
+    // CD-09: nenhum grupo sem item vira cabeçalho; e os títulos são exatamente os
+    // grupos com ao menos um item, em ordem A→Z (Feira do bairro < Mercado Central).
+    const titles = page.locator('.market__title');
+    await expect(titles).toHaveText(['Feira do bairro', 'Mercado Central']);
+
+    // Itens no grupo do mercado correto e em A→Z por nome normalizado.
+    const groups = page.locator('.market');
+    await expect(groups.nth(0).locator('.prices__name')).toHaveText(['Café']);
+    await expect(groups.nth(1).locator('.prices__name')).toHaveText(['Arroz']);
+    await expect(groups.nth(1).locator('.prices__meta')).toHaveText(
+      'Mercado Central · 17/10/2026 · 2 unidade',
+    );
   });
 
-  test('busca por nome: `cafe` acha `café` (envia o q), sem resultado mostra empty de busca e Limpar busca volta à lista (AC-09)', async ({
+  test('empate de preço credita a compra mais recente; recarregar a tela mantém o mesmo grupo e os mesmos mercado/data/quantidade (AC-04)', async ({
+    page,
+  }) => {
+    await openPriceHistory(page, '/menor-preco', {
+      priceHistory: { purchases: PURCHASES, lowestPrices: EMPATE_LOWEST },
+    });
+
+    const row = contentRows(page).first();
+    await expect(row.locator('.prices__name')).toHaveText('Tomate');
+    await expect(row.locator('.prices__value')).toHaveText('R$ 4,99');
+    // A compra mais recente (17/10) credita mercado/data/quantidade; a de 01/10
+    // não aparece em nenhum lugar.
+    await expect(row.locator('.prices__meta')).toHaveText(
+      'Mercado Central · 17/10/2026 · 3 kg',
+    );
+
+    // Determinismo entre cargas: recarregar repete o mesmo grupo e metadados.
+    await page.reload();
+    await expect(page.locator('.market__title')).toHaveText(['Mercado Central']);
+    await expect(contentRows(page).first().locator('.prices__meta')).toHaveText(
+      'Mercado Central · 17/10/2026 · 3 kg',
+    );
+  });
+
+  test('busca `cafe` acha `café` e mantém o agrupamento; busca sem resultado mostra o empty de busca com Limpar busca (AC-09)', async ({
     page,
   }) => {
     const journey = await openPriceHistory(page, '/menor-preco', {
-      priceHistory: { purchases: PURCHASES, lowestPrices: LOWEST_PRICES },
+      priceHistory: { purchases: PURCHASES, lowestPrices: SEARCH_LOWEST },
     });
 
     const rows = contentRows(page);
-    await expect(rows).toHaveCount(2);
+    await expect(rows).toHaveCount(3);
 
     // Busca sem acento encontra o item com acento — o termo vai na query `q`.
     const search = page.locator('#lowest-price-search');
     await search.fill('cafe');
     await expect(rows).toHaveCount(1);
     await expect(rows.first().locator('.prices__name')).toHaveText('Café');
+    // O resultado filtrado mantém o agrupamento (só o grupo com item que casa).
+    await expect(page.locator('.market__title')).toHaveText(['Feira do bairro']);
     await expect(page.locator('.summary')).toHaveText('1 item para "cafe"');
 
     const searches = journey.priceHistory
@@ -77,11 +118,11 @@ test.describe('Menor preço — lista, busca e estados', () => {
 
     // "Limpar busca" volta à lista completa, sem debounce.
     await page.getByRole('button', { name: 'Limpar busca' }).click();
-    await expect(rows).toHaveCount(2);
+    await expect(rows).toHaveCount(3);
     await expect(search).toHaveValue('');
   });
 
-  test('primeira carga mostra skeleton na forma das linhas nome+preço (AC-13)', async ({ page }) => {
+  test('primeira carga mostra skeleton na forma dos grupos (AC-13)', async ({ page }) => {
     await openPriceHistory(page, '/menor-preco', {
       priceHistory: { lowestPrices: LOWEST_PRICES, delayMs: 1500 },
     });
@@ -90,15 +131,17 @@ test.describe('Menor preço — lista, busca e estados', () => {
     await expect(skeleton).toBeVisible();
     await expect(skeleton).toHaveAttribute('role', 'status');
     await expect(skeleton).toHaveAttribute('aria-busy', 'true');
-    // Forma do conteúdo: uma linha de skeleton por linha de preço.
-    await expect(skeleton.locator('.prices-skeleton__row')).toHaveCount(3);
+    // Forma do conteúdo: grupos com cabeçalho de mercado + linhas de preço.
+    await expect(skeleton.locator('.prices-skeleton__group')).toHaveCount(2);
+    await expect(skeleton.locator('.prices-skeleton__header')).toHaveCount(2);
+    await expect(skeleton.locator('.prices-skeleton__row')).toHaveCount(4);
     await expect(page.locator('.spinner')).toHaveCount(0);
 
     await expect(skeleton).toHaveCount(0);
     await expect(contentRows(page)).toHaveCount(2);
   });
 
-  test('sem preços, o Menor preço mostra empty state rico com uma única primary (AC-12/AC-19)', async ({
+  test('sem preços, o Menor preço mostra empty state rico com uma única primary (AC-10/AC-16)', async ({
     page,
   }) => {
     await openPriceHistory(page, '/menor-preco', { priceHistory: { lowestPrices: [] } });
@@ -142,9 +185,9 @@ test.describe('Menor preço — lista, busca e estados', () => {
     page,
   }) => {
     const journey = await openPriceHistory(page, '/menor-preco', {
-      priceHistory: { lowestPrices: LOWEST_PRICES },
+      priceHistory: { lowestPrices: SEARCH_LOWEST },
     });
-    await expect(contentRows(page)).toHaveCount(2);
+    await expect(contentRows(page)).toHaveCount(3);
 
     // A carga inicial passa; a falha é da busca por `cafe`.
     journey.priceHistory.failNext('GET', '/lowest-prices');
@@ -166,5 +209,44 @@ test.describe('Menor preço — lista, busca e estados', () => {
           request.path === '/api/price-history/lowest-prices' && request.query === 'cafe',
       );
     expect(searches.length).toBe(2);
+  });
+
+  test('entrar na tela pela aba Menor preço repete a última busca em vez de recarregar a lista completa (CD-10/AC-11)', async ({
+    page,
+  }) => {
+    const journey = await openPriceHistory(page, '/menor-preco', {
+      priceHistory: { purchases: PURCHASES, lowestPrices: SEARCH_LOWEST },
+    });
+    await expect(contentRows(page)).toHaveCount(3);
+
+    // Filtra por `cafe` e sai para outra aba.
+    await page.locator('#lowest-price-search').fill('cafe');
+    await expect(contentRows(page)).toHaveCount(1);
+    const nav = page.getByRole('navigation', { name: 'Navegação principal' });
+    await nav.getByRole('link', { name: 'Histórico' }).click();
+    await expect(page).toHaveURL(/\/historico$/);
+
+    const searchesBefore = journey.priceHistory
+      .requests()
+      .filter((request) => request.path === '/api/price-history/lowest-prices').length;
+
+    // Volta pela aba: a tela sincroniza o campo com o store e repete a MESMA
+    // busca (não a lista completa), preservando o termo e a lista filtrada.
+    await nav.getByRole('link', { name: 'Menor preço' }).click();
+    await expect(page).toHaveURL(/\/menor-preco$/);
+    await expect(page.locator('#lowest-price-search')).toHaveValue('cafe');
+    await expect(contentRows(page)).toHaveCount(1);
+    await expect(contentRows(page).first().locator('.prices__name')).toHaveText('Café');
+
+    const lastSearch = journey.priceHistory
+      .requests()
+      .filter((request) => request.path === '/api/price-history/lowest-prices')
+      .at(-1);
+    expect(lastSearch?.query).toBe('cafe');
+    expect(
+      journey.priceHistory
+        .requests()
+        .filter((request) => request.path === '/api/price-history/lowest-prices').length,
+    ).toBe(searchesBefore + 1);
   });
 });

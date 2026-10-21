@@ -5,7 +5,8 @@ import { normalizeItemName } from './item-name';
  * Busca por nome na lista de menores preços (RN-07b; AC-09): casamento por
  * substring sob a mesma normalização do agrupamento — `cafe` encontra `café`.
  * A consulta é tratada como texto digitado; aparada e normalizada aqui para o
- * caller não precisar repetir a regra.
+ * caller não precisar repetir a regra. Não reordena: a ordenação/agrupamento é
+ * do `groupByMarket`, aplicada depois pelo caso de uso.
  */
 export function filterLowestPrices(
   items: readonly LowestPriceItem[],

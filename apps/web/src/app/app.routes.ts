@@ -38,6 +38,13 @@ export const appRoutes: Routes = [
             (m) => m.LowestPricePage,
           ),
       },
+      {
+        path: 'menor-preco/:item',
+        loadComponent: () =>
+          import('./features/price-history/lowest-price-by-market-page').then(
+            (m) => m.LowestPriceByMarketPage,
+          ),
+      },
       { path: '**', component: NotFound },
     ],
   },

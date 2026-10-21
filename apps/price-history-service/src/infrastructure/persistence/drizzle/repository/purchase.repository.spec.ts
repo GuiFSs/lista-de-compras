@@ -2,14 +2,28 @@
 //
 // Prova o que só o banco garante: idempotência por PK `completionId`
 // (RN-11/AC-16), cascade da FK de itens, round-trip numérico de
-// `numeric(12,*)` e ordenação/count da listagem (RN-08).
+// `numeric(12,*)`, ordenação/count da listagem (RN-08) e o filtro por
+// `name_normalized` do drill-down (T-08).
 //
 // Pré-requisitos (PLAN T-06): `npm run docker:up` e
-// `npx nx run price-history-service:db:migrate`. As tabelas são truncadas a
-// cada caso — banco lógico `price_history`, local e de dono exclusivo deste
-// serviço (ADR 0001).
+// `npx nx run price-history-service:db:migrate`.
+//
+// ATENÇÃO — esta suíte APAGA TODAS as linhas de `purchases` e `purchase_items`
+// do banco de DEV `price_history` (truncate em cada caso) para não deixar
+// resíduo. O banco local vale como descartável enquanto ela roda; um banco de
+// TESTE dedicado é follow-up registrado (PLAN R-4). Até lá, não aponte este
+// serviço para um banco com dados que precise preservar.
 import { eq, sql } from 'drizzle-orm';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { PriceHistoryPurchase } from '../../../../domain/purchase';
 import { PriceHistoryDb, createDb } from '../client';
 import { purchaseItems, purchases } from '../schema';
@@ -75,6 +89,14 @@ async function countRows(
   return rows[0].value;
 }
 
+/**
+ * Limpeza única usada antes e depois de cada caso: o `cascade` alcança
+ * `purchase_items` pela FK, então uma tabela basta.
+ */
+async function truncatePurchases(db: PriceHistoryDb): Promise<void> {
+  await db.execute(sql`truncate table ${purchases} cascade`);
+}
+
 describe('DrizzlePurchaseRepository (Postgres real)', () => {
   let db: PriceHistoryDb;
   let repository: DrizzlePurchaseRepository;
@@ -89,11 +111,24 @@ describe('DrizzlePurchaseRepository (Postgres real)', () => {
   });
 
   afterAll(async () => {
+    // Guard de higiene (T-03): a suíte não pode sobreviver a si mesma deixando
+    // linhas em `purchases`/`purchase_items`. As contagens são lidas antes de
+    // fechar o Pool e assertadas depois, para que uma falha aqui não deixe a
+    // conexão pendurada.
+    const remaining = {
+      purchases: await countRows(db, purchases),
+      items: await countRows(db, purchaseItems),
+    };
     await db.$client.end();
+    expect(remaining).toEqual({ purchases: 0, items: 0 });
   });
 
   beforeEach(async () => {
-    await db.execute(sql`truncate table ${purchases} cascade`);
+    await truncatePurchases(db);
+  });
+
+  afterEach(async () => {
+    await truncatePurchases(db);
   });
 
   it('insere compra nova e o detalhe faz round-trip completo', async () => {
@@ -203,6 +238,80 @@ describe('DrizzlePurchaseRepository (Postgres real)', () => {
     expect(sortedItems(loaded[1])).toEqual(sortedItems(first));
   });
 
+  it('findAllWithItemsByName devolve só as compras do item, só com os itens que casam e na ordem estável (AC-06)', async () => {
+    const sameDateEarlier = buildPurchase({
+      createdAt: '2026-10-01T10:00:00.000Z',
+    });
+    const newest = buildPurchase({
+      id: OTHER_COMPLETION_ID,
+      market: 'Atacadão',
+      purchaseDate: '2026-10-05',
+      createdAt: '2026-10-05T09:00:00.000Z',
+      items: [
+        {
+          name: 'Café',
+          nameNormalized: 'cafe',
+          quantity: 2,
+          unit: 'unidade',
+          unitPrice: 8.5,
+        },
+      ],
+    });
+    const sameDateLater = buildPurchase({
+      id: '33333333-3333-4333-8333-333333333333',
+      purchaseDate: '2026-10-01',
+      createdAt: '2026-10-01T18:00:00.000Z',
+      items: [
+        {
+          name: 'CAFÉ',
+          nameNormalized: 'cafe',
+          quantity: 1,
+          unit: 'unidade',
+          unitPrice: 10.5,
+        },
+      ],
+    });
+    const withoutItem = buildPurchase({
+      id: '44444444-4444-4444-8444-444444444444',
+      purchaseDate: '2026-10-09',
+      createdAt: '2026-10-09T08:00:00.000Z',
+      items: [
+        {
+          name: 'Feijão',
+          nameNormalized: 'feijao',
+          quantity: 1,
+          unit: 'pacote',
+          unitPrice: 8,
+        },
+      ],
+    });
+    await repository.insert(sameDateEarlier);
+    await repository.insert(newest);
+    await repository.insert(sameDateLater);
+    await repository.insert(withoutItem);
+
+    const loaded = await repository.findAllWithItemsByName('cafe');
+
+    expect(loaded.map((purchase) => purchase.id)).toEqual([
+      newest.id,
+      sameDateLater.id,
+      sameDateEarlier.id,
+    ]);
+    // `sameDateEarlier` também tem arroz, mas o drill-down só recebe o item consultado.
+    expect(loaded[2].items.map((item) => item.nameNormalized)).toEqual([
+      'cafe',
+    ]);
+    expect(loaded[0].items).toEqual(newest.items);
+  });
+
+  it('findAllWithItemsByName sem histórico do item devolve []', async () => {
+    await repository.insert(buildPurchase());
+
+    await expect(
+      repository.findAllWithItemsByName('batata'),
+    ).resolves.toEqual([]);
+  });
+
   it('deletar a compra em cascata remove os itens (FK)', async () => {
     const purchase = buildPurchase();
     await repository.insert(purchase);
@@ -216,7 +325,12 @@ describe('DrizzlePurchaseRepository (Postgres real)', () => {
   it('linha com unit fora do domínio falha explícita no mapeamento', async () => {
     const purchase = buildPurchase();
     await repository.insert(purchase);
-    await db.update(purchaseItems).set({ unit: 'invalida' });
+    // `where` escopado à compra deste caso: um `update` sem filtro sujava a
+    // tabela inteira do banco de dev e quebrava as consultas seguintes.
+    await db
+      .update(purchaseItems)
+      .set({ unit: 'invalida' })
+      .where(eq(purchaseItems.purchaseId, purchase.id));
 
     await expect(repository.findById(purchase.id)).rejects.toThrow(
       'purchase_items.unit inválido',

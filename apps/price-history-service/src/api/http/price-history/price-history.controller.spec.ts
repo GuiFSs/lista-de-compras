@@ -1,13 +1,17 @@
-// Testes de integração da borda HTTP do histórico (T-08), via Fastify `inject`.
+// Testes de integração da borda HTTP do histórico (T-10), via Fastify `inject`.
 //
-// Cobertura exigida pela T-08 (PLAN.md "Estratégia de testes" + ACs):
-// - 200 de listagem/detalhe/menores preços nos shapes de `@lista/contracts`
-//   (AC-06, AC-08…AC-11);
-// - 404 canônico de detalhe inexistente (AC-11);
-// - `?q=` com a mesma normalização do domínio (`cafe` encontra `café`) e
-//   busca sem resultado vazia (AC-09);
-// - 401 uniforme em todas as rotas sem/com token inválido (AC-18, ADR 0007);
-// - CORS da PWA em `localhost:4200` (AC-21, ADR 0010);
+// Cobertura exigida pela T-10 (PLAN.md "Estratégia de testes" + ACs):
+// - 200 da lista agrupada por mercado e do drill-down do item nos shapes de
+//   `@lista/contracts` (AC-01, AC-02, AC-05, AC-06);
+// - `q` com a mesma normalização do domínio (`cafe` encontra `café`) mantendo o
+//   agrupamento (AC-09);
+// - `{item}` repassado cru pelo controller e normalizado pelo caso de uso:
+//   `/lowest-prices/Caf%C3%A9` resolve `café` (R-1); nome com `/` faz
+//   round-trip percent-encoded (R-2);
+// - invariante `items[].market === markets[].market` no corpo serializado (R-6b);
+// - 404 canônico PT para item sem histórico (AC-12);
+// - 401 uniforme nas duas rotas sem/com token inválido (AC-15, ADR 0007);
+// - CORS da PWA em `localhost:4200` (ADR 0010);
 // - 500 canônico sem detalhe interno no corpo (detalhe só no log).
 //
 // O harness troca o port `PurchaseRepository` pelo repositório em memória
@@ -22,15 +26,13 @@ import {
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type {
   ApiErrorResponse,
+  LowestPriceByMarketResponse,
   LowestPricesResponse,
   PurchaseDetailResponse,
   PurchaseListResponse,
 } from '@lista/contracts';
 import { AppModule } from '../../../app/app.module';
-import {
-  PRICE_HISTORY_ROUTE,
-  configureApp,
-} from '../../../app/configure-app';
+import { PRICE_HISTORY_ROUTE, configureApp } from '../../../app/configure-app';
 import {
   PurchaseRepository,
   PurchaseSummary,
@@ -48,16 +50,18 @@ const LOWEST_ROUTE = `${PRICE_HISTORY_ROUTE}/lowest-prices`;
 
 const OLDER_ID = uuid(1);
 const NEWER_ID = uuid(2);
+const SLASH_ITEM_ID = uuid(3);
 const UNKNOWN_ID = uuid(99);
 
 const AUTHORIZATION_MESSAGE = 'Não autorizado';
-const NOT_FOUND_MESSAGE = 'Compra não encontrada';
+const PURCHASE_NOT_FOUND_MESSAGE = 'Compra não encontrada';
+const ITEM_NOT_FOUND_MESSAGE = 'Item não encontrado no histórico';
 const INTERNAL_ERROR_MESSAGE = 'Erro interno';
 const FAILURE_DETAIL = 'falha simulada do banco price_history (0xDEADBEEF)';
 
 /**
  * Duas compras de mercados/datas distintos; `café` aparece nos dois com preços
- * diferentes para provar a agregação de menor preço na borda (AC-08/AC-10).
+ * diferentes para provar a agregação por mercado na borda (AC-01…AC-03).
  */
 function seedPurchases(): PriceHistoryPurchase[] {
   return [
@@ -115,6 +119,12 @@ class ResettablePurchaseRepository extends PurchaseRepository {
   override findAllWithItems(): Promise<PriceHistoryPurchase[]> {
     return this.current.findAllWithItems();
   }
+
+  override findAllWithItemsByName(
+    nameNormalized: string,
+  ): Promise<PriceHistoryPurchase[]> {
+    return this.current.findAllWithItemsByName(nameNormalized);
+  }
 }
 
 /** Repositório que lança — prova o 500 canônico sem vazar o detalhe. */
@@ -138,15 +148,20 @@ class FailingPurchaseRepository extends PurchaseRepository {
   override async findAllWithItems(): Promise<PriceHistoryPurchase[]> {
     return this.fail();
   }
+
+  override async findAllWithItemsByName(): Promise<PriceHistoryPurchase[]> {
+    return this.fail();
+  }
 }
 
 const PROTECTED_ROUTES = [
   PURCHASES_ROUTE,
   `${PURCHASES_ROUTE}/${UNKNOWN_ID}`,
   `${LOWEST_ROUTE}?q=cafe`,
+  `${LOWEST_ROUTE}/cafe`,
 ];
 
-describe('Borda HTTP do histórico — integração via inject (T-08)', () => {
+describe('Borda HTTP do histórico — integração via inject (T-10)', () => {
   let app: NestFastifyApplication;
   let repository: ResettablePurchaseRepository;
   let token: string;
@@ -280,13 +295,16 @@ describe('Borda HTTP do histórico — integração via inject (T-08)', () => {
 
       expect(res.statusCode).toBe(404);
       const body = res.json<ApiErrorResponse>();
-      expect(body).toEqual({ statusCode: 404, message: NOT_FOUND_MESSAGE });
+      expect(body).toEqual({
+        statusCode: 404,
+        message: PURCHASE_NOT_FOUND_MESSAGE,
+      });
       expect(Object.keys(body).sort()).toEqual(['message', 'statusCode']);
     });
   });
 
-  describe('GET /api/price-history/lowest-prices (AC-08…AC-10)', () => {
-    it('200 — sem `q` devolve todos os itens agregados, com o menor preço', async () => {
+  describe('GET /api/price-history/lowest-prices (AC-01, AC-02, AC-09)', () => {
+    it('200 — sem `q` devolve os itens agrupados por mercado, com o menor preço e a compra vencedora', async () => {
       const res = await app.inject({
         method: 'GET',
         url: LOWEST_ROUTE,
@@ -295,15 +313,68 @@ describe('Borda HTTP do histórico — integração via inject (T-08)', () => {
 
       expect(res.statusCode).toBe(200);
       const body = res.json<LowestPricesResponse>();
-      // Ordenação estável por `nameNormalized` asc (contrato T-02).
-      expect(body.items).toEqual([
-        { name: 'Arroz', nameNormalized: 'arroz', lowestUnitPrice: 4.2 },
-        { name: 'Café', nameNormalized: 'cafe', lowestUnitPrice: 7.5 },
-        { name: 'Leite', nameNormalized: 'leite', lowestUnitPrice: 5.5 },
-      ]);
+      expect(body).toEqual({
+        markets: [
+          {
+            market: 'Mercado Alfa',
+            items: [
+              {
+                name: 'Arroz',
+                nameNormalized: 'arroz',
+                lowestUnitPrice: 4.2,
+                market: 'Mercado Alfa',
+                purchaseDate: '2026-10-14',
+                quantity: 2,
+                unit: 'kg',
+              },
+              {
+                name: 'Café',
+                nameNormalized: 'cafe',
+                lowestUnitPrice: 7.5,
+                market: 'Mercado Alfa',
+                purchaseDate: '2026-10-14',
+                quantity: 1,
+                unit: 'pacote',
+              },
+            ],
+          },
+          {
+            market: 'Mercado Zebra',
+            items: [
+              {
+                name: 'Leite',
+                nameNormalized: 'leite',
+                lowestUnitPrice: 5.5,
+                market: 'Mercado Zebra',
+                purchaseDate: '2026-10-12',
+                quantity: 1,
+                unit: 'unidade',
+              },
+            ],
+          },
+        ],
+      });
     });
 
-    it('200 — `q=cafe` encontra o registrado como `café` (AC-09)', async () => {
+    it('200 — invariante no corpo serializado: o mercado de cada linha é o do grupo (R-6b)', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: LOWEST_ROUTE,
+        headers: auth(),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const serialized = JSON.parse(res.body) as LowestPricesResponse;
+      expect(serialized.markets.length).toBeGreaterThan(0);
+      for (const group of serialized.markets) {
+        expect(group.items.length).toBeGreaterThan(0);
+        for (const item of group.items) {
+          expect(item.market).toBe(group.market);
+        }
+      }
+    });
+
+    it('200 — `q=cafe` encontra o registrado como `café` e mantém o agrupamento (AC-09)', async () => {
       const res = await app.inject({
         method: 'GET',
         url: `${LOWEST_ROUTE}?q=cafe`,
@@ -311,9 +382,46 @@ describe('Borda HTTP do histórico — integração via inject (T-08)', () => {
       });
 
       expect(res.statusCode).toBe(200);
-      expect(res.json<LowestPricesResponse>().items).toEqual([
-        { name: 'Café', nameNormalized: 'cafe', lowestUnitPrice: 7.5 },
+      expect(res.json<LowestPricesResponse>()).toEqual({
+        markets: [
+          {
+            market: 'Mercado Alfa',
+            items: [
+              {
+                name: 'Café',
+                nameNormalized: 'cafe',
+                lowestUnitPrice: 7.5,
+                market: 'Mercado Alfa',
+                purchaseDate: '2026-10-14',
+                quantity: 1,
+                unit: 'pacote',
+              },
+            ],
+          },
+        ],
+      });
+    });
+
+    it('200 — `q` casando itens em dois mercados preserva os grupos em A→Z (AC-09)', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `${LOWEST_ROUTE}?q=e`,
+        headers: auth(),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json<LowestPricesResponse>();
+      // `e` casa `cafe` (Mercado Alfa) e `leite` (Mercado Zebra): o filtro não
+      // pode achatar o agrupamento nem reordenar os mercados.
+      expect(body.markets.map((group) => group.market)).toEqual([
+        'Mercado Alfa',
+        'Mercado Zebra',
       ]);
+      expect(
+        body.markets.map((group) =>
+          group.items.map((item) => item.nameNormalized),
+        ),
+      ).toEqual([['cafe'], ['leite']]);
     });
 
     it('200 — `q` sem resultado devolve lista vazia (empty de busca, AC-09)', async () => {
@@ -324,7 +432,7 @@ describe('Borda HTTP do histórico — integração via inject (T-08)', () => {
       });
 
       expect(res.statusCode).toBe(200);
-      expect(res.json<LowestPricesResponse>()).toEqual({ items: [] });
+      expect(res.json<LowestPricesResponse>()).toEqual({ markets: [] });
     });
 
     it('200 — `q` vazia devolve a lista completa (RN-07a)', async () => {
@@ -335,7 +443,8 @@ describe('Borda HTTP do histórico — integração via inject (T-08)', () => {
       });
 
       expect(res.statusCode).toBe(200);
-      expect(res.json<LowestPricesResponse>().items).toHaveLength(3);
+      const body = res.json<LowestPricesResponse>();
+      expect(body.markets.flatMap((group) => group.items)).toHaveLength(3);
     });
 
     it('200 — `q` repetida usa o primeiro termo (normalização da borda)', async () => {
@@ -346,13 +455,112 @@ describe('Borda HTTP do histórico — integração via inject (T-08)', () => {
       });
 
       expect(res.statusCode).toBe(200);
-      expect(res.json<LowestPricesResponse>().items.map((i) => i.nameNormalized)).toEqual([
-        'cafe',
-      ]);
+      const names = res
+        .json<LowestPricesResponse>()
+        .markets.flatMap((group) => group.items)
+        .map((item) => item.nameNormalized);
+      expect(names).toEqual(['cafe']);
     });
   });
 
-  describe('401 — guard global de JWT (ADR 0007 / AC-18)', () => {
+  describe('GET /api/price-history/lowest-prices/:item (AC-05, AC-06, AC-12)', () => {
+    it('200 — uma linha por mercado, em A→Z, com o nome canônico do vencedor', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `${LOWEST_ROUTE}/cafe`,
+        headers: auth(),
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json<LowestPriceByMarketResponse>()).toEqual({
+        name: 'Café',
+        nameNormalized: 'cafe',
+        markets: [
+          {
+            market: 'Mercado Alfa',
+            lowestUnitPrice: 7.5,
+            purchaseDate: '2026-10-14',
+            quantity: 1,
+            unit: 'pacote',
+          },
+          {
+            market: 'Mercado Zebra',
+            lowestUnitPrice: 10,
+            purchaseDate: '2026-10-12',
+            quantity: 1,
+            unit: 'pacote',
+          },
+        ],
+      });
+    });
+
+    it('200 — `Caf%C3%A9` chega cru à borda e é normalizado pelo caso de uso (R-1)', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `${LOWEST_ROUTE}/Caf%C3%A9`,
+        headers: auth(),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json<LowestPriceByMarketResponse>();
+      expect(body.name).toBe('Café');
+      expect(body.nameNormalized).toBe('cafe');
+      expect(body.markets.map((line) => line.market)).toEqual([
+        'Mercado Alfa',
+        'Mercado Zebra',
+      ]);
+    });
+
+    it('200 — nome com `/` faz round-trip percent-encoded (R-2)', async () => {
+      repository.reset([
+        makePurchase([{ name: 'Leite/Açúcar', unitPrice: 4.5, unit: 'L' }], {
+          id: SLASH_ITEM_ID,
+          market: 'Mercado Central',
+          purchaseDate: '2026-10-15',
+        }),
+      ]);
+
+      const res = await app.inject({
+        method: 'GET',
+        url: `${LOWEST_ROUTE}/leite%2Fa%C3%A7%C3%BAcar`,
+        headers: auth(),
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json<LowestPriceByMarketResponse>()).toEqual({
+        name: 'Leite/Açúcar',
+        nameNormalized: 'leite/acucar',
+        markets: [
+          {
+            market: 'Mercado Central',
+            lowestUnitPrice: 4.5,
+            purchaseDate: '2026-10-15',
+            quantity: 1,
+            unit: 'L',
+          },
+        ],
+      });
+    });
+
+    it('404 — item sem histórico usa o envelope canônico PT (AC-12)', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: `${LOWEST_ROUTE}/banana`,
+        headers: auth(),
+      });
+
+      expect(res.statusCode).toBe(404);
+      const body = res.json<ApiErrorResponse>();
+      expect(body).toEqual({
+        statusCode: 404,
+        message: ITEM_NOT_FOUND_MESSAGE,
+      });
+      expect(Object.keys(body).sort()).toEqual(['message', 'statusCode']);
+      expect(JSON.stringify(body)).not.toContain('banana');
+    });
+  });
+
+  describe('401 — guard global de JWT (ADR 0007 / AC-15)', () => {
     it.each(PROTECTED_ROUTES)(
       'sem token responde 401 uniforme — %s',
       async (url) => {
@@ -442,7 +650,7 @@ describe('Borda HTTP do histórico — integração via inject (T-08)', () => {
   });
 });
 
-describe('Borda HTTP do histórico — 500 canônico (T-08)', () => {
+describe('Borda HTTP do histórico — 500 canônico (T-10)', () => {
   let app: NestFastifyApplication;
   let token: string;
   const capturedLogs: unknown[][] = [];

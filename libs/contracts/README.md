@@ -186,14 +186,16 @@ O mesmo corpo vale nos **dois** contextos, mas com semânticas diferentes:
 Operações de **histórico de compras** e **menor preço** do
 `price-history-service`, porta `PRICE_HISTORY_API_PORT=3002`, prefixo global
 `api`. A PWA chama o serviço **diretamente** em `http://localhost:3002`
-(exceção temporária à ADR 0001, registrada na ADR 0010). Tipos em
+(exceção temporária à ADR 0001 registrada na **ADR 0010**; a operação nova do
+drill-down foi registrada na **ADR 0011**). Tipos em
 `src/http/price-history.ts`, re-exportados por `@lista/contracts`.
 
 **Todas** as rotas exigem JWT (guard global, ADR 0007) — **401** uniforme
 `{ "statusCode": 401, "message": "Não autorizado" }`.
 
-**CORS (ADR 0010):** `@fastify/cors` com `PRICE_HISTORY_CORS_ORIGINS` (default
-`http://localhost:4200`), `methods: ['GET','OPTIONS']`,
+**CORS (ADR 0010, inalterado pela ADR 0011):** `@fastify/cors` com
+`PRICE_HISTORY_CORS_ORIGINS` (default `http://localhost:4200`),
+`methods: ['GET','OPTIONS']`,
 `allowedHeaders: ['Content-Type','Authorization']`.
 
 ### Operações
@@ -202,20 +204,81 @@ Operações de **histórico de compras** e **menor preço** do
 | --- | --- | --- | --- | --- |
 | Listar compras | `GET /api/price-history/purchases` | — | **200** `PurchaseListResponse` | 401, 500 |
 | Detalhe | `GET /api/price-history/purchases/{id}` | — | **200** `PurchaseDetailResponse` | **404**, 401, 500 |
-| Menores preços | `GET /api/price-history/lowest-prices` | query opcional `q` | **200** `LowestPricesResponse` | 401, 500 |
+| Menores preços (agrupados por mercado) | `GET /api/price-history/lowest-prices` | query opcional `q` | **200** `LowestPricesResponse` | 401, 500 |
+| Menores preços do item por mercado | `GET /api/price-history/lowest-prices/{item}` | `{item}` = `nameNormalized` percent-encoded | **200** `LowestPriceByMarketResponse` | **404**, 401, 500 |
 
-Tipos principais:
+- `q` continua sendo filtro de nome (substring normalizada); `q` vazio ou só
+  espaços = lista completa.
+- **`{item}`** carrega o `nameNormalized` do item codificado com
+  `encodeURIComponent` (ex.: `café` → `caf%C3%A9`); o cliente **não** normaliza
+  nem cria slug — o serviço aplica a mesma normalização da busca, então um valor
+  sem normalizar (ex.: `Caf%C3%A9`) também resolve. A resposta traz o nome de
+  exibição canônico.
+
+Tipos das operações inalteradas:
 
 - `PurchaseListItem` / `PurchaseListResponse` — lista (mais recente primeiro);
   `id` = `completionId`.
 - `PurchaseDetailResponse` / `PurchaseItem` — detalhe com itens (`unit`:
   `ItemUnit`; `unitPrice` em R$).
-- `LowestPriceItem` / `LowestPricesResponse` — agregação por
-  `nameNormalized`; ordenação estável asc; busca `q` filtra por substring
-  normalizada.
+
+### Lista principal — `LowestPricesResponse` (agrupada por mercado)
+
+```json
+{
+  "markets": [
+    {
+      "market": "Atacadão",
+      "items": [
+        {
+          "name": "Café",
+          "nameNormalized": "cafe",
+          "lowestUnitPrice": 12.5,
+          "market": "Atacadão",
+          "purchaseDate": "2026-10-01",
+          "quantity": 2,
+          "unit": "kg"
+        }
+      ]
+    }
+  ]
+}
+```
+
+- `markets` em **A→Z** e `items` em **A→Z** por `nameNormalized`; só existem
+  grupos com ao menos um item. Agrupamento, ordenação e desempate chegam prontos
+  do serviço — o cliente não recalcula nem reordena.
+- `lowestUnitPrice` é o menor preço **por unidade** em R$ (nunca o total);
+  `market`, `purchaseDate`, `quantity` e `unit` vêm da compra vencedora, e
+  `item.market` é igual ao `market` do grupo.
+
+### Drill-down — `LowestPriceByMarketResponse`
+
+```json
+{
+  "name": "Café",
+  "nameNormalized": "cafe",
+  "markets": [
+    {
+      "market": "Atacadão",
+      "lowestUnitPrice": 12.5,
+      "purchaseDate": "2026-10-01",
+      "quantity": 2,
+      "unit": "kg"
+    }
+  ]
+}
+```
+
+- Uma linha por mercado em que o item tem compras, em **A→Z**, com o menor
+  preço **por unidade** daquele mercado e a data/quantidade da compra vencedora
+  naquele mercado — já agregado e ordenado pelo serviço.
+- `name` é o nome de exibição canônico, vindo do serviço (não do parâmetro da
+  rota).
 
 Envelope de erro: mesmo `ApiErrorResponse` (`statusCode` + `message` PT).
-404 de detalhe: compra inexistente.
+404 de detalhe: compra inexistente. 404 do drill-down: parâmetro que não
+resolve para nenhum item (`Item não encontrado no histórico`).
 
 ## Contratos de eventos
 

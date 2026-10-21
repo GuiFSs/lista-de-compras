@@ -1,6 +1,6 @@
 // Menor preço (guia §4 "Lista/conteúdo" + §5): campo de busca com rótulo
-// visível, linhas nome+R$ e os 4 estados. Coluna única e padding da bottom
-// nav são do shell; aqui só tokens.
+// visível, grupos por mercado e os 4 estados. Ritmo maior entre mercados e
+// menor dentro do grupo; coluna única e padding da bottom nav são do shell.
 :host {
   display: block;
 }
@@ -44,6 +44,22 @@
   color: var(--color-ink-muted);
 }
 
+// Espaço entre grupos é o que separa os mercados (guia §4: whitespace agrupa).
+.markets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.market__title {
+  margin-bottom: var(--space-xxs);
+  font-size: var(--font-size-eyebrow);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-eyebrow);
+  color: var(--color-ink-muted);
+  text-transform: uppercase;
+}
+
 .prices {
   list-style: none;
 }
@@ -53,16 +69,30 @@
   border-top: 1px solid var(--color-hairline);
 }
 
-// Linha nome + menor preço: nome à esquerda, R$ alinhado à direita — o valor
-// já vem pronto do serviço (AC-10), aqui só formatação de exibição.
-.prices__item {
-  display: flex;
+// A linha inteira é o alvo (≥44px): nome + R$ na primeira linha e os
+// metadados mercado · data · quantidade na segunda.
+.prices__link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-md);
+  row-gap: var(--space-xxs);
   align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-md);
   min-height: var(--touch-target-min);
   padding: var(--space-sm) var(--space-xs);
   margin-inline: calc(var(--space-xs) * -1);
+  color: var(--color-ink);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  touch-action: manipulation;
+}
+
+.prices__link:active {
+  background-color: var(--color-ripple);
+}
+
+.prices__link:focus-visible {
+  outline: 2px solid var(--color-primary-text);
+  outline-offset: 2px;
 }
 
 .prices__name {
@@ -70,9 +100,15 @@
 }
 
 .prices__value {
-  font-size: var(--font-size-body);
+  font-size: var(--font-size-body-sm);
   font-weight: var(--font-weight-medium);
   white-space: nowrap;
+}
+
+.prices__meta {
+  grid-column: 1 / -1;
+  font-size: var(--font-size-caption);
+  color: var(--color-ink-muted);
 }
 
 // Empty states ricos (guia §5): sticker + título + frase + CTA primary.
@@ -129,30 +165,44 @@
   margin-top: var(--space-sm);
 }
 
-// Skeleton na forma das linhas nome+preço (AC-13), sem spinner centralizado.
+// Skeleton na forma dos grupos (AC-13), sem spinner centralizado.
 .prices-skeleton {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: var(--space-xl);
   padding-block: var(--space-xs);
+}
+
+.prices-skeleton__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.prices-skeleton__header {
+  width: 35%;
+  height: var(--space-sm);
+  background: var(--color-hairline);
+  border-radius: var(--radius-xs);
 }
 
 .prices-skeleton__row {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  animation: skeleton-pulse 1.4s ease-in-out infinite;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
 }
 
 .prices-skeleton__line {
+  width: 55%;
   height: var(--space-sm);
   background: var(--color-hairline);
   border-radius: var(--radius-xs);
 }
 
 .prices-skeleton__line--short {
-  width: 30%;
-  align-self: flex-end;
+  width: 20%;
 }
 
 .btn-primary,
@@ -203,7 +253,7 @@
 @media (prefers-reduced-motion: reduce) {
   .btn-primary,
   .btn-secondary,
-  .prices-skeleton__row {
+  .prices-skeleton__group {
     transition: none;
     animation: none;
   }

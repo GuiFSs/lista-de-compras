@@ -1,34 +1,54 @@
-import type { LowestPriceItem } from '@lista/contracts';
-import type { PriceHistoryPurchase, PriceHistoryPurchaseItem } from './purchase';
+import type { LowestPriceItem, LowestPriceMarketGroup } from '@lista/contracts';
+import type {
+  PriceHistoryPurchase,
+  PriceHistoryPurchaseItem,
+} from './purchase';
+import { compareMarketNames } from './market-order';
 
 /** Candidato a menor preço de um grupo, com a compra de origem para o desempate. */
-interface PriceCandidate {
+export interface PriceCandidate {
   readonly item: PriceHistoryPurchaseItem;
+  readonly purchaseId: string;
+  readonly market: string;
   readonly purchaseDate: string;
-  readonly createdAt: string;
 }
 
-function isBetterPrice(
+/**
+ * Cadeia única de vencedor (RN-02/RN-03/RN-04), compartilhada com o drill-down
+ * por item × mercado. Exportada para não duplicar a regra de desempate.
+ */
+export function isBetterPrice(
   candidate: PriceCandidate,
   current: PriceCandidate,
 ): boolean {
   if (candidate.item.unitPrice !== current.item.unitPrice) {
     return candidate.item.unitPrice < current.item.unitPrice;
   }
-  // Empate de preço: vale o item da compra mais recente. `purchaseDate`
-  // (YYYY-MM-DD) e `createdAt` (ISO-8601) comparam como texto.
+  // Empate de preço: vale a compra mais recente. `purchaseDate` é YYYY-MM-DD,
+  // então a comparação lexicográfica é cronológica.
   if (candidate.purchaseDate !== current.purchaseDate) {
     return candidate.purchaseDate > current.purchaseDate;
   }
-  return candidate.createdAt > current.createdAt;
+  // Desempate final determinístico (RN-04/CD-03): vence o menor id, qualquer
+  // que seja a ordem de chegada das compras. `createdAt` não participa.
+  return candidate.purchaseId < current.purchaseId;
+}
+
+function compareByNameNormalized(
+  left: LowestPriceItem,
+  right: LowestPriceItem,
+): number {
+  if (left.nameNormalized === right.nameNormalized) {
+    return 0;
+  }
+  return left.nameNormalized < right.nameNormalized ? -1 : 1;
 }
 
 /**
- * Menor preço por unidade de cada item distinto do histórico (RN-07a; AC-08,
- * AC-10): agrupa por `nameNormalized` (RN-06) e mantém o menor `unitPrice`, sem
- * média nem último preço. O nome de exibição é o do item que ostenta o menor
- * preço. Ordenação estável por `nameNormalized` para a lista não variar entre
- * requisições.
+ * Menor preço por unidade de cada item distinto do histórico (RN-02; AC-01,
+ * AC-03, AC-04): agrupa por `nameNormalized` e mantém o menor `unitPrice`, sem
+ * média nem último preço. A linha herda mercado, data, quantidade e unidade da
+ * compra vencedora. Ordenação estável por `nameNormalized`.
  */
 export function aggregateLowestPrices(
   purchases: readonly PriceHistoryPurchase[],
@@ -38,8 +58,9 @@ export function aggregateLowestPrices(
     for (const item of purchase.items) {
       const candidate: PriceCandidate = {
         item,
+        purchaseId: purchase.id,
+        market: purchase.market,
         purchaseDate: purchase.purchaseDate,
-        createdAt: purchase.createdAt,
       };
       const current = byName.get(item.nameNormalized);
       if (current === undefined || isBetterPrice(candidate, current)) {
@@ -48,16 +69,41 @@ export function aggregateLowestPrices(
     }
   }
   return [...byName.values()]
-    .map(({ item }) => ({
+    .map(({ item, market, purchaseDate }) => ({
       name: item.name,
       nameNormalized: item.nameNormalized,
       lowestUnitPrice: item.unitPrice,
+      market,
+      purchaseDate,
+      quantity: item.quantity,
+      unit: item.unit,
     }))
-    .sort((left, right) =>
-      left.nameNormalized < right.nameNormalized
-        ? -1
-        : left.nameNormalized > right.nameNormalized
-          ? 1
-          : 0,
-    );
+    .sort(compareByNameNormalized);
+}
+
+/**
+ * Agrupa a lista principal pelo mercado da compra vencedora (RN-05/CD-04,
+ * CD-09): mercados A→Z, itens A→Z por `nameNormalized` e nenhum grupo vazio —
+ * os grupos nascem dos itens. A chave é o texto cru do mercado, então
+ * `group.market` é exatamente o `market` de cada linha (R-6b); variações de
+ * caixa formam grupos distintos, ordenados pelo texto cru.
+ */
+export function groupByMarket(
+  items: readonly LowestPriceItem[],
+): LowestPriceMarketGroup[] {
+  const itemsByMarket = new Map<string, LowestPriceItem[]>();
+  for (const item of items) {
+    const group = itemsByMarket.get(item.market);
+    if (group === undefined) {
+      itemsByMarket.set(item.market, [item]);
+    } else {
+      group.push(item);
+    }
+  }
+  return [...itemsByMarket.entries()]
+    .sort(([left], [right]) => compareMarketNames(left, right))
+    .map(([market, groupItems]) => ({
+      market,
+      items: [...groupItems].sort(compareByNameNormalized),
+    }));
 }

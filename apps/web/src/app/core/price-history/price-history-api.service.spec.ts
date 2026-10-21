@@ -56,6 +56,7 @@ describe('PriceHistoryApiService', () => {
           [
             { path: 'login', component: StubComponent },
             { path: 'historico', component: StubComponent },
+            { path: 'menor-preco/:item', component: StubComponent },
           ],
           withDisabledInitialNavigation(),
         ),
@@ -110,7 +111,7 @@ describe('PriceHistoryApiService', () => {
     expect(req.request.method).toBe('GET');
     expect(req.request.params.keys()).toHaveLength(0);
     expect(req.request.headers.get('Authorization')).toBe(`Bearer ${token}`);
-    req.flush({ items: [] });
+    req.flush({ markets: [] });
   });
 
   it('busca vai ao serviço como query q (AC-09)', () => {
@@ -118,7 +119,56 @@ describe('PriceHistoryApiService', () => {
 
     const req = http.expectOne(url('/lowest-prices?q=cafe'));
     expect(req.request.params.get('q')).toBe('cafe');
-    req.flush({ items: [] });
+    req.flush({ markets: [] });
+  });
+
+  it('menores preços do item codificam acento no segmento com Authorization (AC-05/R-2)', () => {
+    api.getLowestPricesByItem('café').subscribe();
+
+    const req = http.expectOne(`${BASE_URL}/lowest-prices/caf%C3%A9`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${token}`);
+    req.flush({ name: 'Café', nameNormalized: 'cafe', markets: [] });
+  });
+
+  it('nome com barra sobrevive ao caminho como %2F (round-trip R-2)', () => {
+    api.getLowestPricesByItem('leite/açúcar').subscribe();
+
+    const req = http.expectOne(`${BASE_URL}/lowest-prices/leite%2Fa%C3%A7%C3%BAcar`);
+    expect(req.request.url).toBe(
+      'http://localhost:3002/api/price-history/lowest-prices/leite%2Fa%C3%A7%C3%BAcar',
+    );
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${token}`);
+    req.flush({ name: 'Leite/Açúcar', nameNormalized: 'leite/açúcar', markets: [] });
+  });
+
+  it('devolve as linhas por mercado como o serviço mandou, sem reordenar (RN-12)', () => {
+    let response: unknown;
+    api.getLowestPricesByItem('cafe').subscribe((value) => (response = value));
+
+    const payload = {
+      name: 'Café',
+      nameNormalized: 'cafe',
+      markets: [
+        {
+          market: 'Zaffari',
+          lowestUnitPrice: 9.5,
+          purchaseDate: '2026-10-10',
+          quantity: 1,
+          unit: 'pacote' as const,
+        },
+        {
+          market: 'Atacadão',
+          lowestUnitPrice: 7.5,
+          purchaseDate: '2026-10-12',
+          quantity: 2,
+          unit: 'pacote' as const,
+        },
+      ],
+    };
+    http.expectOne(`${BASE_URL}/lowest-prices/cafe`).flush(payload);
+
+    expect(response).toEqual(payload);
   });
 
   it('não anexa Authorization sem sessão (o 401 fica com o interceptor)', () => {
@@ -129,6 +179,30 @@ describe('PriceHistoryApiService', () => {
     const req = http.expectOne(url('/purchases'));
     expect(req.request.headers.has('Authorization')).toBe(false);
     req.flush({ purchases: [] });
+  });
+
+  it('401 no drill-down do item encerra a sessão e volta ao login (AC-15)', async () => {
+    await router.navigate(['/menor-preco/cafe']);
+    const navigateSpy = vi.spyOn(router, 'navigate');
+    let error: unknown;
+
+    api
+      .getLowestPricesByItem('cafe')
+      .subscribe({ error: (value: unknown) => (error = value) });
+
+    const req = http.expectOne(`${BASE_URL}/lowest-prices/cafe`);
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${token}`);
+    req.flush(
+      { statusCode: 401, message: 'Não autorizado' },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+
+    expect(error).toBeInstanceOf(HttpErrorResponse);
+    expect(window.localStorage.getItem(SESSION_STORAGE_KEY)).toBeNull();
+    expect(session.hasValidSession()).toBe(false);
+    expect(navigateSpy).toHaveBeenCalledWith(['/login'], {
+      queryParams: { returnUrl: '/menor-preco/cafe' },
+    });
   });
 
   it('401 no histórico encerra a sessão e volta ao login (AC-18)', async () => {

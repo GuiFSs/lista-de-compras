@@ -35,6 +35,7 @@ describe('BottomNav', () => {
           { path: 'historico', component: Blank },
           { path: 'historico/:id', component: Blank },
           { path: 'menor-preco', component: Blank },
+          { path: 'menor-preco/:item', component: Blank },
           { path: '**', component: Blank },
         ]),
         provideLocationMocks(),
@@ -104,6 +105,17 @@ describe('BottomNav', () => {
     expect(router.url).toBe('/menor-preco');
     expect(lowestPrice.classList.contains('bottom-nav__tab--active')).toBe(true);
     expect(lowestPrice.getAttribute('aria-current')).toBe('page');
+  });
+
+  it('mantém a aba Menor preço ativa no drill-down /menor-preco/:item (AC-05)', async () => {
+    const fixture = await mountAt('/menor-preco/cafe');
+    const lowestPrice = tabByLabel(fixture, 'Menor preço');
+
+    expect(lowestPrice.classList.contains('bottom-nav__tab--active')).toBe(true);
+    expect(lowestPrice.getAttribute('aria-current')).toBe('page');
+    expect(
+      tabByLabel(fixture, 'Lista').classList.contains('bottom-nav__tab--active'),
+    ).toBe(false);
   });
 
   it('mantém a aba Histórico ativa no detalhe /historico/:id', async () => {
