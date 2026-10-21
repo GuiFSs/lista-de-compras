@@ -8,10 +8,11 @@ import { provideRouter } from '@angular/router';
 import { provideServiceWorker } from '@angular/service-worker';
 import { appRoutes } from './app.routes';
 import { authInterceptor } from './core/auth';
+import { environment } from '../environments/environment';
 
 // Configuração da base URL da API de auth (ADR 0006).
-// Em produção/local dev aponta para o auth-service na porta 3001.
-const AUTH_API_BASE_URL = 'http://localhost:3001';
+// Em dev aponta para o auth-service local; em prod para o Render.
+const AUTH_API_BASE_URL = environment.authApiBaseUrl;
 
 export const appConfig: ApplicationConfig = {
   providers: [

@@ -1,3 +1,5 @@
+import { environment } from '../../../environments/environment';
+
 // Configuração de borda do auth-service consumido pela PWA (ADR 0006).
 //
 // A PWA chama o auth-service **diretamente** em `http://localhost:3001`
@@ -6,8 +8,8 @@
 // seção 3): a PWA passa a chamar o login por URL relativa, o CORS do
 // auth-service é removido e esta base é deprecada.
 
-/** Base URL do auth-service — v1 local, hardcoded de propósito (ADR 0006). */
-export const AUTH_API_BASE_URL = 'http://localhost:3001';
+/** Base URL do auth-service — v1 local em dev, URLs de produção no build prod. */
+export const AUTH_API_BASE_URL = environment.authApiBaseUrl;
 
 /**
  * URL da operação `POST /api/auth/login`.

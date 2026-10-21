@@ -1,11 +1,13 @@
 import { InjectionToken } from '@angular/core';
+import { environment } from '../../../environments/environment';
 
 /**
  * Base do price-history-service na v1 local — exceção temporária ao gateway
  * registrada na ADR 0010. Migração para o gateway: a base sai da configuração
  * da PWA e a chamada vira URL relativa (critérios de saída §3 da ADR 0010).
  */
-export const DEFAULT_PRICE_HISTORY_API_BASE_URL = 'http://localhost:3002';
+export const DEFAULT_PRICE_HISTORY_API_BASE_URL =
+  environment.priceHistoryApiBaseUrl;
 
 /** Caminho das operações do histórico, já sob o prefixo `api` do serviço. */
 export const PRICE_HISTORY_API_PATH = '/api/price-history';
