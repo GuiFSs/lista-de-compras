@@ -17,9 +17,9 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   // Prefixo por serviço (ADR 0010); evita colisão com PORT do Angular no monorepo.
   const port = config.get<number>('PRICE_HISTORY_API_PORT') ?? 3002;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   Logger.log(
-    `🚀 Application is running on: http://localhost:${port}/api`,
+    `🚀 Application is running on: http://0.0.0.0:${port}/api`,
   );
 }
 

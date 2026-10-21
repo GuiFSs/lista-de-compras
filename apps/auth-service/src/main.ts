@@ -21,9 +21,9 @@ async function bootstrap() {
   // AUTH_API_PORT e não PORT/API_PORT: variáveis de serviço têm prefixo
   // por serviço (ADR 0006); o Nx injeta o .env da raiz em todos os targets.
   const port = config.get<number>('AUTH_API_PORT') ?? 3001;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   Logger.log(
-    `🚀 Application is running on: http://localhost:${port}/api`,
+    `🚀 Application is running on: http://0.0.0.0:${port}/api`,
   );
 }
 

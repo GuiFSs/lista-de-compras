@@ -20,9 +20,9 @@ async function bootstrap() {
   // API_PORT e não PORT: o Nx carrega o .env da raiz para todos os targets e
   // o dev server do Angular trata PORT como a própria porta (monorepo).
   const port = config.get<number>('API_PORT') ?? 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   Logger.log(
-    `🚀 Application is running on: http://localhost:${port}/api`,
+    `🚀 Application is running on: http://0.0.0.0:${port}/api`,
   );
 }
 
