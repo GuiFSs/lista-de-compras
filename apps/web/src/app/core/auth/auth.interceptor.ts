@@ -11,8 +11,8 @@ import { AUTH_API_LOGIN_URL } from './auth-config';
 import { SessionService } from './session.service';
 
 /**
- * Anexa `Authorization: Bearer` com sessão ativa; em 401, logout + redirect.
- * Login (`AUTH_API_LOGIN_URL`) fica de fora: ali 401 = credenciais inválidas.
+ * Anexa `Authorization: Bearer` com sessao ativa; em 401, logout + redirect.
+ * Login (`AUTH_API_LOGIN_URL`) fica de fora: ali 401 = credenciais invalidas.
  */
 export const authInterceptorFn: HttpInterceptorFn = (
   request: HttpRequest<unknown>,
@@ -30,11 +30,10 @@ export const authInterceptorFn: HttpInterceptorFn = (
     return next(request);
   }
 
-  // Evita anexar token a requisições claramente cross-origin.
-  if (!request.url.startsWith('/') && !request.url.includes('localhost')) {
-    return next(request);
-  }
-
+  // Em producao as APIs sao URLs absolutas cross-origin (https://...onrender.com),
+  // entao a antiga restricao por origem deixava o token de fora e causava 401 em
+  // todas as chamadas. Como toda requisicao HTTP do app e para as APIs conhecidas,
+  // anexamos o token a todas elas (exceto o login, tratado acima).
   const cloned = request.clone({
     setHeaders: {
       Authorization: `Bearer ${token}`,
