@@ -1,9 +1,9 @@
 # Estado da feature — Autenticação
 
-**Fase atual:** Concluída
-**Gate atual:** validação aprovada
-**Última atualização:** 2026-10-08
-**Próxima ação:** usuário decide push e PR da branch local
+**Fase atual:** Concluída e integrada na master
+**Gate atual:** validação aprovada; feature integrada (branch feature/auth é ancestral da master)
+**Última atualização:** 2026-10-21
+**Próxima ação:** nenhuma pendente de código (feature integrada na master)
 
 ## Artefatos
 

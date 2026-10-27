@@ -1,9 +1,9 @@
 # Estado da feature — Menor preço por mercado
 
-**Fase atual:** **Validação aprovada** (feature-validator — 16/16 ACs com evidência executável; Superfície de UI = sim, gate ADR 0008 reproduzido: `npx nx e2e web-e2e --skip-nx-cache` → 72/72, filtro da feature → 28/28). Implementação concluída (T-01…T-17; PC-0…PC-8); **próxima fase: decisão de push/PR do usuário** (skill `git-workflow`).
+**Fase atual:** **Validação aprovada e integrada na master** (feature-validator — 16/16 ACs; Superfície de UI = sim, gate ADR 0008 reproduzido: `npx nx e2e web-e2e --skip-nx-cache` → 72/72, filtro da feature → 28/28). Implementação concluída (T-01..T-17; PC-0..PC-8); integrada via PR #5 mergeado em 2026-10-21 (merge commit 0f237e4).
 **Gate atual:** SPEC e PLAN aprovados (`Aprovado pelo usuário em 2026-10-19`); `ARCHITECTURE-REVIEW.md` Aprovada com ressalvas (nenhuma bloqueante), R-1…R-6 incorporadas; **ADR 0011 aceita** (T-01); **VALIDATION.md aprovada** (16/16 ACs). Branch `feature/lowest-price-by-market`; PC-0…PC-8 commitados (último: `d8e62cc` + lição `3932133`). Suítes verdes: price-history-service 146/146, web 316/316, shopping-list-service 206/206, E2E web-e2e 72/72 (filtro 28/28). Sem AC/T reaberto.
-**Última atualização:** 2026-10-20
-**Próxima ação:** **decisão do usuário** — push da branch `feature/lowest-price-by-market`, abertura de PR e, após aprovação, merge na `master` (skill `git-workflow`). Pendências não bloqueantes: follow-up do banco de teste dedicado (R-4) e budget do `lowest-price-page.scss` (4,26 kB > 4 kB, pré-existente do PC-5). Nenhuma pendência de comportamento/contrato/arquitetura.
+**Última atualização:** 2026-10-21
+**Próxima ação:** nenhuma pendente de código (feature integrada na master via PR #5). Pendências não bloqueantes: follow-up do banco de teste dedicado (R-4) e budget do lowest-price-page.scss (4,26 kB > 4 kB, pré-existente do PC-5). Verificação de deploy (Render) pendente, se aplicável.
 
 ## Origem da demanda
 

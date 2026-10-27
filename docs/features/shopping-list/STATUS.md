@@ -4,7 +4,7 @@
 `master` via **PR #3**). A Rodada 1 (lista ativa, 26/26 ACs) e a Rodada 2 (máscara
 BRL, AC-27 + cross-refs) seguem fechadas; **nenhum AC/T reaberto**.
 **Gate atual:** **fechado** — feature integrada; não há próxima ação nesta feature.
-**Última atualização:** 2026-10-16
+**Última atualização:** 2026-10-21
 **Próxima ação:** nenhuma nesta feature. A **próxima feature de produto** no escopo
 inicial é o **histórico de preços** (`price-history`) — ver
 `docs/product/initial-scope.md` § Histórico de preços e ADR 0001.
