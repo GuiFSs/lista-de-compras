@@ -75,6 +75,47 @@ export interface CheckoutShoppingListRequest {
   purchaseDate: string;
 }
 
+/** Limite de upload da foto da nota (RN-03 / PLAN receipt-purchase). */
+export const RECEIPT_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
+
+export const RECEIPT_IMAGE_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const;
+
+export type ReceiptImageMimeType = (typeof RECEIPT_IMAGE_MIME_TYPES)[number];
+
+/** Linha devolvida pelo recognize — campos podem faltar para revisão humana. */
+export interface RecognizedReceiptLine {
+  name: string | null;
+  quantity: number | null;
+  unit: ItemUnit | null;
+  unitPrice: number | null;
+}
+
+export interface RecognizeReceiptResponse {
+  market: string | null;
+  /** YYYY-MM-DD quando legível; senão null. */
+  purchaseDate: string | null;
+  lines: RecognizedReceiptLine[];
+}
+
+/** Linha enviada no apply; só `include: true` com campos válidos entram. */
+export interface ApplyReceiptLineRequest {
+  name: string;
+  quantity: number;
+  unit: ItemUnit;
+  unitPrice: number;
+  include: boolean;
+}
+
+export interface ApplyReceiptPurchaseRequest {
+  market?: string | null;
+  purchaseDate?: string | null;
+  lines: ApplyReceiptLineRequest[];
+}
+
 /**
  * 409 de duplicidade. Usado na criação (fluxo: a PWA pergunta "somar?" e
  * reenvia com `duplicateResolution`) e na edição (conflito terminal no
