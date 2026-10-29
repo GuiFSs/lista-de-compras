@@ -31,7 +31,10 @@ test.describe('Lista — importar compra pela foto da nota', () => {
     await expect(listRows(page)).toHaveCount(2);
 
     await page.getByRole('button', { name: 'Importar nota' }).click();
-    await page.locator('input[type="file"]').setInputFiles({
+    const source = page.getByRole('dialog', { name: 'Importar nota' });
+    await expect(source).toBeVisible();
+    await source.getByRole('button', { name: 'Escolher da galeria' }).click();
+    await page.locator('input[type="file"]:not([capture])').setInputFiles({
       name: 'nota.jpg',
       mimeType: 'image/jpeg',
       buffer: TINY_JPEG,
@@ -75,7 +78,10 @@ test.describe('Lista — importar compra pela foto da nota', () => {
 
     await expect(listRows(page)).toHaveCount(1);
     await page.getByRole('button', { name: 'Importar nota' }).click();
-    await page.locator('input[type="file"]').setInputFiles({
+    await page.getByRole('dialog', { name: 'Importar nota' })
+      .getByRole('button', { name: 'Escolher da galeria' })
+      .click();
+    await page.locator('input[type="file"]:not([capture])').setInputFiles({
       name: 'nota.jpg',
       mimeType: 'image/jpeg',
       buffer: TINY_JPEG,
@@ -94,7 +100,10 @@ test.describe('Lista — importar compra pela foto da nota', () => {
     });
 
     await page.getByRole('button', { name: 'Importar nota' }).click();
-    await page.locator('input[type="file"]').setInputFiles({
+    await page.getByRole('dialog', { name: 'Importar nota' })
+      .getByRole('button', { name: 'Escolher da galeria' })
+      .click();
+    await page.locator('input[type="file"]:not([capture])').setInputFiles({
       name: 'nota.jpg',
       mimeType: 'image/jpeg',
       buffer: TINY_JPEG,

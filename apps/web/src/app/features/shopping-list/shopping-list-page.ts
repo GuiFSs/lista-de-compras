@@ -10,13 +10,17 @@ import {
 } from '@angular/core';
 import type { RecognizeReceiptResponse, ShoppingListItem } from '@lista/contracts';
 import { DEFAULT_SHELL_TITLE, ShellChromeService } from '../../layout/shell-chrome';
-import { CartIcon, ListIcon, ToastHost, ToastService } from '../../ui';
+import { CartIcon, ReceiptIcon, ToastHost, ToastService } from '../../ui';
 import { CheckoutSheet } from './checkout-sheet';
 import { ItemActionsSheet } from './item-actions-sheet';
 import { ItemFormSheet, type ItemFormMode } from './item-form-sheet';
 import { ItemRow } from './item-row';
 import { PurchaseSheet, type PurchaseDraft } from './purchase-sheet';
 import { ReceiptReviewSheet } from './receipt-review-sheet';
+import {
+  ReceiptSourceSheet,
+  type ReceiptImageSource,
+} from './receipt-source-sheet';
 import { ShoppingListStore } from './state';
 
 /** Skeleton na forma do conteúdo: linhas, nunca spinner centralizado (AC-02). */
@@ -39,6 +43,7 @@ type SheetFlow = 'item-actions' | 'checkout';
     ItemActionsSheet,
     CheckoutSheet,
     ReceiptReviewSheet,
+    ReceiptSourceSheet,
     ToastHost,
   ],
   templateUrl: './shopping-list-page.html',
@@ -50,8 +55,10 @@ export class ShoppingListPage {
   private readonly toasts = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly receiptFileInput =
-    viewChild<ElementRef<HTMLInputElement>>('receiptFileInput');
+  private readonly receiptCameraInput =
+    viewChild<ElementRef<HTMLInputElement>>('receiptCameraInput');
+  private readonly receiptGalleryInput =
+    viewChild<ElementRef<HTMLInputElement>>('receiptGalleryInput');
 
   protected readonly status = this.store.status;
   protected readonly items = this.store.items;
@@ -71,6 +78,7 @@ export class ShoppingListPage {
   /** Sheet de conclusão da compra aberto (T-14). */
   protected readonly checkoutOpen = signal(false);
 
+  protected readonly receiptSourceOpen = signal(false);
   protected readonly recognizing = signal(false);
   protected readonly receiptDraft = signal<RecognizeReceiptResponse | null>(null);
   protected readonly checkoutMarket = signal<string | null>(null);
@@ -111,7 +119,7 @@ export class ShoppingListPage {
         actions: [
           {
             label: 'Importar nota',
-            icon: ListIcon,
+            icon: ReceiptIcon,
             run: () => this.onImportReceipt(),
           },
           {
@@ -148,7 +156,23 @@ export class ShoppingListPage {
 
   protected onImportReceipt(): void {
     if (this.recognizing()) return;
-    this.receiptFileInput()?.nativeElement.click();
+    this.receiptSourceOpen.set(true);
+  }
+
+  protected onReceiptSourceClosed(): void {
+    this.receiptSourceOpen.set(false);
+  }
+
+  protected onReceiptSourceChosen(source: ReceiptImageSource): void {
+    this.receiptSourceOpen.set(false);
+    // Deixa o sheet fechar antes de abrir o seletor nativo (câmera/galeria).
+    setTimeout(() => {
+      const input =
+        source === 'camera'
+          ? this.receiptCameraInput()?.nativeElement
+          : this.receiptGalleryInput()?.nativeElement;
+      input?.click();
+    }, 0);
   }
 
   protected async onReceiptFileSelected(event: Event): Promise<void> {

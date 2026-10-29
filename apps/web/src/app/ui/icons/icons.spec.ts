@@ -7,6 +7,7 @@ import {
   CloseIcon,
   ListIcon,
   MoreIcon,
+  ReceiptIcon,
   TagIcon,
 } from './index';
 
@@ -18,6 +19,7 @@ const ICONS: ReadonlyArray<{ name: string; icon: Type<unknown> }> = [
   { name: 'tag', icon: TagIcon },
   { name: 'cart', icon: CartIcon },
   { name: 'more', icon: MoreIcon },
+  { name: 'receipt', icon: ReceiptIcon },
 ];
 
 describe('Ícones inline', () => {

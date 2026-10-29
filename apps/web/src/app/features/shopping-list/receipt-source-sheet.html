@@ -1,0 +1,23 @@
+<app-bottom-sheet heading="Importar nota" [closeOnBackdrop]="true" (closed)="cancel()">
+  <div class="receipt-source">
+    <p class="receipt-source__lead">
+      Envie a foto do cupom do mercado para reconhecer os itens.
+    </p>
+
+    <div class="receipt-source__actions">
+      <button
+        type="button"
+        class="receipt-source__action receipt-source__action--primary"
+        (click)="chooseCamera()"
+      >
+        Tirar foto
+      </button>
+      <button type="button" class="receipt-source__action" (click)="chooseGallery()">
+        Escolher da galeria
+      </button>
+      <button type="button" class="receipt-source__action receipt-source__action--ghost" (click)="cancel()">
+        Cancelar
+      </button>
+    </div>
+  </div>
+</app-bottom-sheet>

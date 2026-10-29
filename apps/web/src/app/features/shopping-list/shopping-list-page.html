@@ -1,9 +1,16 @@
 <input
-  #receiptFileInput
+  #receiptCameraInput
+  class="visually-hidden"
+  type="file"
+  accept="image/*"
+  capture="environment"
+  (change)="onReceiptFileSelected($event)"
+/>
+<input
+  #receiptGalleryInput
   class="visually-hidden"
   type="file"
   accept="image/jpeg,image/png,image/webp"
-  capture="environment"
   (change)="onReceiptFileSelected($event)"
 />
 
@@ -96,6 +103,13 @@
     (togglePurchased)="onActionsToggle()"
     (edit)="onActionsEdit()"
     (remove)="onActionsDelete()"
+  />
+}
+
+@if (receiptSourceOpen()) {
+  <app-receipt-source-sheet
+    (closed)="onReceiptSourceClosed()"
+    (chosen)="onReceiptSourceChosen($event)"
   />
 }
 
