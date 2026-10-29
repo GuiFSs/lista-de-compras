@@ -1,6 +1,7 @@
 import { BadRequestException, HttpStatus } from '@nestjs/common';
 import type { DuplicateResolution, ItemUnit } from '@lista/contracts';
 import type {
+  ApplyReceiptPurchaseCommand,
   CreateShoppingListItemCommand,
   MarkItemPurchasedCommand,
   UpdateShoppingListItemCommand,
@@ -19,7 +20,10 @@ import {
 } from '../../../domain/item-validation';
 import type { ItemValidationError } from '../../../domain/item-validation';
 import { canonicalError } from './shopping-list-errors';
-import { messageForValidationError } from './shopping-list-messages';
+import {
+  RECEIPT_LINES_REQUIRED_MESSAGE,
+  messageForValidationError,
+} from './shopping-list-messages';
 
 /**
  * Validação defensiva dos corpos de entrada: o serviço aceita requisição direta
@@ -97,6 +101,53 @@ export function parseMarkPurchasedCommand(
     unit: requireUnit(raw['unit']),
     unitPrice: requireNumber(raw['unitPrice'], 'price-negative'),
   };
+}
+
+export function parseApplyReceiptCommand(
+  body: unknown,
+): ApplyReceiptPurchaseCommand {
+  const raw = readBody(body);
+  const linesRaw = raw['lines'];
+  if (!Array.isArray(linesRaw)) {
+    throw new BadRequestException(
+      canonicalError(HttpStatus.BAD_REQUEST, RECEIPT_LINES_REQUIRED_MESSAGE),
+    );
+  }
+
+  const lines = linesRaw.map((entry) => {
+    const line =
+      typeof entry === 'object' && entry !== null && !Array.isArray(entry)
+        ? (entry as Record<string, unknown>)
+        : {};
+    const include = line['include'] === true;
+    if (!include) {
+      return {
+        name: typeof line['name'] === 'string' ? line['name'] : '',
+        quantity: typeof line['quantity'] === 'number' ? line['quantity'] : 0,
+        unit: isItemUnit(line['unit']) ? line['unit'] : ('unidade' as ItemUnit),
+        unitPrice:
+          typeof line['unitPrice'] === 'number' ? line['unitPrice'] : 0,
+        include: false,
+      };
+    }
+    const error =
+      validateItemName(line['name']) ??
+      validateRequiredQuantity(line['quantity']) ??
+      validateRequiredUnit(line['unit']) ??
+      validateRequiredPrice(line['unitPrice']);
+    if (error !== null) {
+      throw badRequest(error);
+    }
+    return {
+      name: requireString(line['name'], 'name-required'),
+      quantity: requireNumber(line['quantity'], 'quantity-not-positive'),
+      unit: requireUnit(line['unit']),
+      unitPrice: requireNumber(line['unitPrice'], 'price-negative'),
+      include: true,
+    };
+  });
+
+  return { lines };
 }
 
 /** Corpo ausente/JSON não-objeto vira `{}`: as validações acima decidem o 400. */

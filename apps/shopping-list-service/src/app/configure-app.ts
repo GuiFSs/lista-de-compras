@@ -1,10 +1,12 @@
 import * as corsModule from '@fastify/cors';
+import * as multipartModule from '@fastify/multipart';
 import { BadRequestException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
+import { RECEIPT_IMAGE_MAX_BYTES } from '@lista/contracts';
 
 /** Origem padrão da PWA em desenvolvimento (ADR 0009). */
 export const DEFAULT_CORS_ORIGINS = 'http://localhost:4200';
@@ -43,6 +45,11 @@ export async function configureApp(app: NestFastifyApplication): Promise<void> {
     origin: origins,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+
+  const multipartPlugin = multipartModule.default ?? multipartModule;
+  await app.register(multipartPlugin, {
+    limits: { fileSize: RECEIPT_IMAGE_MAX_BYTES },
   });
 
   // Parser próprio: corpo JSON malformado vira `BadRequestException` com o
