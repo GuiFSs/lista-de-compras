@@ -4,6 +4,7 @@
 // compilador, não por texto solto no teste.
 import type { Page, Route } from '@playwright/test';
 import {
+  ApplyReceiptPurchaseRequest,
   CreateShoppingListItemRequest,
   DuplicateItemErrorResponse,
   DuplicateResolution,
@@ -11,6 +12,7 @@ import {
   ItemUnit,
   MarkItemPurchasedRequest,
   PurchasedDetails,
+  RecognizeReceiptResponse,
   ShoppingListItem,
   ShoppingListResponse,
   UpdateShoppingListItemRequest,
@@ -57,6 +59,10 @@ export interface FakeApiOptions {
   seeds?: readonly SeedItem[];
   /** Atraso por resposta (ms) — permite observar estados transitórios (AC-02/AC-26). */
   delayMs?: number;
+  /** Resposta fixa do recognize (E2E hermético — sem Gemini). */
+  recognizeResponse?: RecognizeReceiptResponse;
+  /** Status HTTP forçado na próxima chamada de recognize. */
+  recognizeStatus?: number;
 }
 
 /** Requisição que chegou à API falsa, na ordem — prova do contrato (ADR 0009). */
@@ -178,12 +184,25 @@ export class ShoppingListFakeApi {
   private readonly delayMs: number;
   private nextId = 1;
   private loadFailure = false;
+  private recognizeResponse: RecognizeReceiptResponse;
+  private recognizeStatus: number;
 
   constructor(options: FakeApiOptions = {}) {
     this.delayMs = options.delayMs ?? 0;
+    this.recognizeResponse = options.recognizeResponse ?? {
+      market: null,
+      purchaseDate: null,
+      lines: [],
+    };
+    this.recognizeStatus = options.recognizeStatus ?? 200;
     for (const [index, seed] of (options.seeds ?? []).entries()) {
       this.items.push(seedToRecord(seed, index));
     }
+  }
+
+  setRecognizeResponse(response: RecognizeReceiptResponse, status = 200): void {
+    this.recognizeResponse = response;
+    this.recognizeStatus = status;
   }
 
   async mount(page: Page): Promise<void> {
@@ -287,6 +306,26 @@ export class ShoppingListFakeApi {
       return true;
     }
 
+    if (
+      segments.length === 2 &&
+      segments[0] === 'receipts' &&
+      segments[1] === 'recognize' &&
+      method === 'POST'
+    ) {
+      await this.recognize(route);
+      return true;
+    }
+
+    if (
+      segments.length === 2 &&
+      segments[0] === 'receipts' &&
+      segments[1] === 'apply' &&
+      method === 'POST'
+    ) {
+      await this.applyReceipt(route);
+      return true;
+    }
+
     if (segments.length === 3 && segments[0] === 'items') {
       const id = segments[1];
       const action = segments[2];
@@ -315,6 +354,62 @@ export class ShoppingListFakeApi {
     }
 
     return false;
+  }
+
+  private async recognize(route: Route): Promise<void> {
+    if (this.recognizeStatus >= 400) {
+      await this.fulfill(route, this.recognizeStatus, {
+        statusCode: this.recognizeStatus,
+        message:
+          this.recognizeStatus === 503
+            ? 'Serviço de reconhecimento indisponível. Tente de novo.'
+            : 'Não foi possível ler a nota. Tente outra foto.',
+      });
+      return;
+    }
+    await this.fulfill(route, 200, this.recognizeResponse);
+  }
+
+  private async applyReceipt(route: Route): Promise<void> {
+    const body = readBody(route) as ApplyReceiptPurchaseRequest;
+    const lines = Array.isArray(body.lines) ? body.lines : [];
+    for (const line of lines) {
+      if (!line.include) continue;
+      const name = (line.name ?? '').trim();
+      if (name === '') {
+        await this.fulfill(route, 400, {
+          statusCode: 400,
+          message: 'Nome do item é obrigatório',
+        });
+        return;
+      }
+      const existing = this.activeByName(normalizeName(name));
+      const stamp = nowIso();
+      if (existing !== undefined) {
+        existing.purchasedQuantity = line.quantity;
+        existing.purchasedUnit = line.unit;
+        existing.unitPrice = line.unitPrice;
+        existing.purchasedAt = stamp;
+        existing.updatedAt = stamp;
+        continue;
+      }
+      this.items.push({
+        id: `item-${this.nextId++}`,
+        name,
+        nameNormalized: normalizeName(name),
+        plannedQuantity: line.quantity,
+        unit: line.unit,
+        plannedPrice: line.unitPrice,
+        purchasedQuantity: line.quantity,
+        purchasedUnit: line.unit,
+        unitPrice: line.unitPrice,
+        purchasedAt: stamp,
+        removedAt: null,
+        createdAt: stamp,
+        updatedAt: stamp,
+      });
+    }
+    await this.fulfill(route, 200, toResponse(this.items));
   }
 
   private async create(route: Route): Promise<void> {
