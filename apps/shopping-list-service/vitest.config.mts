@@ -8,7 +8,12 @@ export default defineConfig({
   root: import.meta.dirname,
   plugins: [tsconfigPaths()],
   resolve: {
+    // Alias explícito: o plugin de paths às vezes não resolve o monorepo
+    // a partir do root do serviço (mesmo padrão já usado para jwt).
     alias: {
+      '@lista/contracts': fileURLToPath(
+        new URL('../../libs/contracts/src/index.ts', import.meta.url),
+      ),
       '@lista/shared/jwt/testing': fileURLToPath(
         new URL(
           '../../libs/shared/jwt/src/test-fixtures/index.ts',
