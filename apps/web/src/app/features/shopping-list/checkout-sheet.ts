@@ -1,4 +1,4 @@
-import { Component, computed, inject, output, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import type { CheckoutShoppingListRequest } from '@lista/contracts';
 import { BottomSheet } from '../../ui';
 import { ShoppingListStore } from './state';
@@ -30,8 +30,12 @@ function isCalendarDate(value: string): boolean {
   templateUrl: './checkout-sheet.html',
   styleUrl: './checkout-sheet.scss',
 })
-export class CheckoutSheet {
+export class CheckoutSheet implements OnInit {
   private readonly store = inject(ShoppingListStore);
+
+  /** Prefill da nota (AC-07); vazio/null = comportamento anterior. */
+  readonly initialMarket = input<string | null>(null);
+  readonly initialPurchaseDate = input<string | null>(null);
 
   readonly closed = output<void>();
   readonly confirmed = output<void>();
@@ -44,6 +48,17 @@ export class CheckoutSheet {
   protected readonly market = signal('');
   protected readonly purchaseDate = signal(this.today);
   protected readonly submitted = signal(false);
+
+  ngOnInit(): void {
+    const market = this.initialMarket();
+    if (market !== null && market.trim() !== '') {
+      this.market.set(market.trim());
+    }
+    const date = this.initialPurchaseDate();
+    if (date !== null && /^\d{4}-\d{2}-\d{2}$/.test(date) && date <= this.today) {
+      this.purchaseDate.set(date);
+    }
+  }
 
   // Espelha as mensagens do envelope 400 do serviço (PLAN, "Contratos").
   protected readonly marketError = computed(() =>

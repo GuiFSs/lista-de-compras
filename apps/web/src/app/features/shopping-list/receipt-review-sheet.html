@@ -1,0 +1,120 @@
+<app-bottom-sheet heading="Revisar nota" [closeOnBackdrop]="false" (closed)="cancel()">
+  <form class="receipt-review" (submit)="onSubmit($event)" novalidate>
+    <p class="receipt-review__lead">
+      Confira os itens antes de marcar como comprados.
+    </p>
+
+    <div class="receipt-review__meta">
+      <div class="field">
+        <label class="field__label" for="receipt-market">Mercado</label>
+        <input
+          id="receipt-market"
+          class="field__input"
+          type="text"
+          autocomplete="off"
+          [value]="market()"
+          (input)="onMarketInput($event)"
+        />
+      </div>
+      <div class="field">
+        <label class="field__label" for="receipt-date">Data da compra</label>
+        <input
+          id="receipt-date"
+          class="field__input"
+          type="date"
+          [value]="purchaseDate()"
+          (input)="onDateInput($event)"
+        />
+      </div>
+    </div>
+
+    @if (empty()) {
+      <div class="receipt-review__empty" role="status">
+        <p class="receipt-review__empty-sticker" aria-hidden="true">🧾</p>
+        <h3 class="receipt-review__empty-title">Nenhum item reconhecido</h3>
+        <p class="receipt-review__empty-text">
+          Tire outra foto da nota ou adicione os itens manualmente.
+        </p>
+      </div>
+    } @else {
+      <ul class="receipt-review__lines" role="list">
+        @for (line of lines(); track line.key) {
+          <li class="receipt-line" [attr.data-complete]="lineComplete(line) ? 'true' : 'false'">
+            <label class="receipt-line__include">
+              <input
+                type="checkbox"
+                [checked]="line.include"
+                (change)="onIncludeChange(line.key, $event)"
+              />
+              <span>Incluir</span>
+            </label>
+
+            <div class="field">
+              <label class="field__label" [attr.for]="line.key + '-name'">
+                Nome
+                <span class="field__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                class="field__input"
+                [id]="line.key + '-name'"
+                type="text"
+                [value]="line.name"
+                [class.field__input--error]="submitted() && line.include && line.name.trim() === ''"
+                (input)="onNameInput(line.key, $event)"
+              />
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label class="field__label" [attr.for]="line.key + '-qty'">Quantidade *</label>
+                <input
+                  class="field__input"
+                  [id]="line.key + '-qty'"
+                  type="text"
+                  inputmode="decimal"
+                  [value]="line.quantityInput"
+                  (input)="onQuantityInput(line.key, $event)"
+                />
+              </div>
+              <div class="field">
+                <label class="field__label" [attr.for]="line.key + '-unit'">Unidade *</label>
+                <select
+                  class="field__input"
+                  [id]="line.key + '-unit'"
+                  (change)="onUnitChange(line.key, $event)"
+                >
+                  <option value="" [selected]="line.unit === ''">Selecione</option>
+                  @for (option of units; track option) {
+                    <option [value]="option" [selected]="option === line.unit">{{ option }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="field__label" [attr.for]="line.key + '-price'">
+                Preço por unidade (R$) *
+              </label>
+              <input
+                class="field__input"
+                [id]="line.key + '-price'"
+                type="text"
+                inputmode="numeric"
+                [value]="priceDisplay(line)"
+                (input)="onPriceInput(line.key, $event)"
+                (beforeinput)="onPriceBeforeInput(line.key, $event)"
+              />
+            </div>
+          </li>
+        }
+      </ul>
+    }
+
+    <div class="receipt-review__actions">
+      <button type="button" class="btn-secondary" (click)="cancel()">Cancelar</button>
+      <button type="submit" class="btn-primary" [disabled]="!canSubmit()">
+        {{ submitting() ? 'Importando…' : 'Confirmar importação' }}
+      </button>
+    </div>
+  </form>
+</app-bottom-sheet>

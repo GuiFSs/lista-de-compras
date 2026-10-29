@@ -117,6 +117,13 @@ describe('ShoppingListPage', () => {
     return button;
   }
 
+  /** Ação da app bar pelo `label` (ícone + aria-label; ordem pode mudar). */
+  function runChromeAction(label: string): void {
+    const action = chrome.actions().find((candidate) => candidate.label === label);
+    if (!action) throw new Error(`Ação da app bar não encontrada: ${label}`);
+    action.run();
+  }
+
   /** Digita num campo de sheet disparando o `input` que o componente escuta. */
   function typeInto(
     fixture: ComponentFixture<ShoppingListPage>,
@@ -137,9 +144,11 @@ describe('ShoppingListPage', () => {
     expect(store.load).toHaveBeenCalledTimes(1);
     expect(element.querySelector('.list-skeleton')?.getAttribute('aria-busy')).toBe('true');
     expect(element.querySelectorAll('.list-skeleton__row')).toHaveLength(4);
-    expect(element.querySelector('.visually-hidden')?.textContent?.trim()).toBe(
-      'Carregando a lista…',
-    );
+    expect(
+      Array.from(element.querySelectorAll('.visually-hidden'))
+        .map((node) => node.textContent?.trim())
+        .filter((text) => text !== undefined && text.length > 0),
+    ).toContain('Carregando a lista…');
     // Skeleton no formato das linhas: nada de spinner centralizado nem CTA.
     expect(element.querySelector('.spinner')).toBeNull();
     expect(element.querySelectorAll('.btn-primary')).toHaveLength(0);
@@ -151,7 +160,10 @@ describe('ShoppingListPage', () => {
     const fixture = mount();
 
     expect(chrome.title()).toBe(DEFAULT_SHELL_TITLE);
-    expect(chrome.actions().map((action) => action.label)).toEqual(['Concluir compra']);
+    expect(chrome.actions().map((action) => action.label)).toEqual([
+      'Importar nota',
+      'Concluir compra',
+    ]);
 
     fixture.destroy();
 
@@ -721,7 +733,7 @@ describe('ShoppingListPage', () => {
     const element = root(fixture);
     const show = vi.spyOn(TestBed.inject(ToastService), 'show');
 
-    chrome.actions()[0].run();
+    runChromeAction('Concluir compra');
     fixture.detectChanges();
 
     const lines = Array.from(element.querySelectorAll('.checkout__line')).map((node) =>
@@ -750,7 +762,7 @@ describe('ShoppingListPage', () => {
     const fixture = mount();
     const element = root(fixture);
 
-    chrome.actions()[0].run();
+    runChromeAction('Concluir compra');
     fixture.detectChanges();
     buttonByText(element, 'Cancelar').click();
     fixture.detectChanges();
@@ -768,7 +780,7 @@ describe('ShoppingListPage', () => {
     const fixture = mount();
     const element = root(fixture);
 
-    chrome.actions()[0].run();
+    runChromeAction('Concluir compra');
     fixture.detectChanges();
 
     const lines = Array.from(element.querySelectorAll('.checkout__line')).map((node) =>
@@ -797,7 +809,7 @@ describe('ShoppingListPage', () => {
     const fixture = mount();
     const element = root(fixture);
 
-    chrome.actions()[0].run();
+    runChromeAction('Concluir compra');
     fixture.detectChanges();
     typeInto(fixture, '#checkout-market', 'Mercado Z');
     buttonByText(element, 'Concluir compra').click();
@@ -819,7 +831,7 @@ describe('ShoppingListPage', () => {
     const fixture = mount();
     const element = root(fixture);
 
-    chrome.actions()[0].run();
+    runChromeAction('Concluir compra');
     fixture.detectChanges();
 
     expect(element.querySelector('#checkout-market')).not.toBeNull();
@@ -832,7 +844,7 @@ describe('ShoppingListPage', () => {
     const fixture = mount();
     const element = root(fixture);
 
-    chrome.actions()[0].run();
+    runChromeAction('Concluir compra');
     fixture.detectChanges();
 
     const sheet = element.querySelector('.checkout') as HTMLElement;
@@ -850,7 +862,7 @@ describe('ShoppingListPage', () => {
     const fixture = mount();
     const element = root(fixture);
 
-    chrome.actions()[0].run();
+    runChromeAction('Concluir compra');
     fixture.detectChanges();
     typeInto(fixture, '#checkout-market', 'Mercado Z');
     buttonByText(element, 'Concluir compra').click();

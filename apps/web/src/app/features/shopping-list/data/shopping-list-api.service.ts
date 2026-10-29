@@ -1,9 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import {
+  ApplyReceiptPurchaseRequest,
   CheckoutShoppingListRequest,
   CreateShoppingListItemRequest,
   MarkItemPurchasedRequest,
+  RecognizeReceiptResponse,
   ShoppingListResponse,
   UpdateShoppingListItemRequest,
 } from '@lista/contracts';
@@ -11,9 +13,9 @@ import { Observable } from 'rxjs';
 import { SHOPPING_LIST_API_BASE_URL, shoppingListUrl } from '../../../core/shopping-list';
 
 /**
- * As 8 operações do contrato da lista ativa (PLAN, seção "Contratos"). O
- * `Authorization` e o 401 são do interceptor de auth — aqui só a rota crua.
- * Toda resposta de mutação é a lista ativa completa (RN-19/AC-24).
+ * Operações do contrato da lista ativa. O `Authorization` e o 401 são do
+ * interceptor de auth — aqui só a rota crua. Toda resposta de mutação é a
+ * lista ativa completa (RN-19/AC-24), exceto o recognize (rascunho da nota).
  */
 @Injectable({ providedIn: 'root' })
 export class ShoppingListApiService {
@@ -22,6 +24,18 @@ export class ShoppingListApiService {
 
   getActiveList(): Observable<ShoppingListResponse> {
     return this.http.get<ShoppingListResponse>(this.url());
+  }
+
+  recognizeReceipt(image: File): Observable<RecognizeReceiptResponse> {
+    const body = new FormData();
+    body.append('image', image, image.name);
+    return this.http.post<RecognizeReceiptResponse>(this.url('/receipts/recognize'), body);
+  }
+
+  applyReceiptPurchase(
+    request: ApplyReceiptPurchaseRequest,
+  ): Observable<ShoppingListResponse> {
+    return this.http.post<ShoppingListResponse>(this.url('/receipts/apply'), request);
   }
 
   createItem(request: CreateShoppingListItemRequest): Observable<ShoppingListResponse> {

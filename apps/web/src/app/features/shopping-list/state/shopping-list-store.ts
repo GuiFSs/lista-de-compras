@@ -1,8 +1,10 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import type {
+  ApplyReceiptPurchaseRequest,
   CheckoutShoppingListRequest,
   CreateShoppingListItemRequest,
   MarkItemPurchasedRequest,
+  RecognizeReceiptResponse,
   ShoppingListItem,
   ShoppingListResponse,
   UpdateShoppingListItemRequest,
@@ -203,6 +205,30 @@ export class ShoppingListStore {
         return this.failed(error);
       } finally {
         this.concludingState.set(false);
+      }
+    });
+  }
+
+  recognizeReceipt(
+    image: File,
+  ): Promise<{ kind: 'ok'; receipt: RecognizeReceiptResponse } | MutationErrorOutcome> {
+    return this.runMutation('receipt-recognize', async () => {
+      try {
+        const receipt = await firstValueFrom(this.api.recognizeReceipt(image));
+        return { kind: 'ok', receipt } as const;
+      } catch (error) {
+        return this.failed(error);
+      }
+    });
+  }
+
+  applyReceiptPurchase(request: ApplyReceiptPurchaseRequest): Promise<MutationOutcome> {
+    return this.runMutation('receipt-apply', async () => {
+      try {
+        this.applyList(await firstValueFrom(this.api.applyReceiptPurchase(request)));
+        return { kind: 'ok' } as MutationOutcome;
+      } catch (error) {
+        return this.failed(error);
       }
     });
   }
