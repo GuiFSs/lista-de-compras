@@ -86,6 +86,7 @@
     "@angular/router": "~22.2.0",
     "@angular/service-worker": "~22.2.0",
     "@fastify/cors": "^11.3.0",
+    "@fastify/multipart": "^9.4.0",
     "@fontsource/inter": "^5.3.0",
     "@neon/config": "^1.9.3",
     "@neon/env": "^1.6.4",

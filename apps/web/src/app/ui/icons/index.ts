@@ -7,4 +7,5 @@ export { ClockIcon } from './clock-icon';
 export { CloseIcon } from './close-icon';
 export { ListIcon } from './list-icon';
 export { MoreIcon } from './more-icon';
+export { ReceiptIcon } from './receipt-icon';
 export { TagIcon } from './tag-icon';

@@ -1,12 +1,26 @@
-import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
-import type { ShoppingListItem } from '@lista/contracts';
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
+import type { RecognizeReceiptResponse, ShoppingListItem } from '@lista/contracts';
 import { DEFAULT_SHELL_TITLE, ShellChromeService } from '../../layout/shell-chrome';
-import { CartIcon, ToastHost, ToastService } from '../../ui';
+import { CartIcon, ReceiptIcon, ToastHost, ToastService } from '../../ui';
 import { CheckoutSheet } from './checkout-sheet';
 import { ItemActionsSheet } from './item-actions-sheet';
 import { ItemFormSheet, type ItemFormMode } from './item-form-sheet';
 import { ItemRow } from './item-row';
 import { PurchaseSheet, type PurchaseDraft } from './purchase-sheet';
+import { ReceiptReviewSheet } from './receipt-review-sheet';
+import {
+  ReceiptSourceSheet,
+  type ReceiptImageSource,
+} from './receipt-source-sheet';
 import { ShoppingListStore } from './state';
 
 /** Skeleton na forma do conteúdo: linhas, nunca spinner centralizado (AC-02). */
@@ -28,6 +42,8 @@ type SheetFlow = 'item-actions' | 'checkout';
     PurchaseSheet,
     ItemActionsSheet,
     CheckoutSheet,
+    ReceiptReviewSheet,
+    ReceiptSourceSheet,
     ToastHost,
   ],
   templateUrl: './shopping-list-page.html',
@@ -38,6 +54,11 @@ export class ShoppingListPage {
   private readonly chrome = inject(ShellChromeService);
   private readonly toasts = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
+
+  private readonly receiptCameraInput =
+    viewChild<ElementRef<HTMLInputElement>>('receiptCameraInput');
+  private readonly receiptGalleryInput =
+    viewChild<ElementRef<HTMLInputElement>>('receiptGalleryInput');
 
   protected readonly status = this.store.status;
   protected readonly items = this.store.items;
@@ -56,6 +77,12 @@ export class ShoppingListPage {
 
   /** Sheet de conclusão da compra aberto (T-14). */
   protected readonly checkoutOpen = signal(false);
+
+  protected readonly receiptSourceOpen = signal(false);
+  protected readonly recognizing = signal(false);
+  protected readonly receiptDraft = signal<RecognizeReceiptResponse | null>(null);
+  protected readonly checkoutMarket = signal<string | null>(null);
+  protected readonly checkoutPurchaseDate = signal<string | null>(null);
 
   /**
    * Valores digitados por item, preservados após desmarcar (RN-12/CD-04): o
@@ -91,6 +118,11 @@ export class ShoppingListPage {
         title: DEFAULT_SHELL_TITLE,
         actions: [
           {
+            label: 'Importar nota',
+            icon: ReceiptIcon,
+            run: () => this.onImportReceipt(),
+          },
+          {
             label: 'Concluir compra',
             icon: CartIcon,
             run: () => this.requestSheet('checkout'),
@@ -120,6 +152,58 @@ export class ShoppingListPage {
 
   protected onAddItem(): void {
     this.openForm('create', null);
+  }
+
+  protected onImportReceipt(): void {
+    if (this.recognizing()) return;
+    this.receiptSourceOpen.set(true);
+  }
+
+  protected onReceiptSourceClosed(): void {
+    this.receiptSourceOpen.set(false);
+  }
+
+  protected onReceiptSourceChosen(source: ReceiptImageSource): void {
+    this.receiptSourceOpen.set(false);
+    // Deixa o sheet fechar antes de abrir o seletor nativo (câmera/galeria).
+    setTimeout(() => {
+      const input =
+        source === 'camera'
+          ? this.receiptCameraInput()?.nativeElement
+          : this.receiptGalleryInput()?.nativeElement;
+      input?.click();
+    }, 0);
+  }
+
+  protected async onReceiptFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    input.value = '';
+    if (file === null || this.recognizing()) return;
+
+    this.recognizing.set(true);
+    try {
+      const outcome = await this.store.recognizeReceipt(file);
+      if (outcome.kind !== 'ok') return;
+      this.receiptDraft.set(outcome.receipt);
+    } finally {
+      this.recognizing.set(false);
+    }
+  }
+
+  protected onReceiptReviewClosed(): void {
+    this.receiptDraft.set(null);
+  }
+
+  protected onReceiptApplied(meta: {
+    market: string | null;
+    purchaseDate: string | null;
+  }): void {
+    this.receiptDraft.set(null);
+    this.checkoutMarket.set(meta.market);
+    this.checkoutPurchaseDate.set(meta.purchaseDate);
+    this.checkoutOpen.set(true);
+    this.toasts.show('Itens importados da nota');
   }
 
   protected onTogglePurchased(item: ShoppingListItem): void {
@@ -169,10 +253,14 @@ export class ShoppingListPage {
   protected onCheckoutClosed(): void {
     // Cancelar o resumo não muda nada: nada é enviado ao serviço (AC-19).
     this.checkoutOpen.set(false);
+    this.checkoutMarket.set(null);
+    this.checkoutPurchaseDate.set(null);
   }
 
   protected onCheckoutConfirmed(): void {
     this.checkoutOpen.set(false);
+    this.checkoutMarket.set(null);
+    this.checkoutPurchaseDate.set(null);
     this.toasts.show('Compra concluída');
   }
 

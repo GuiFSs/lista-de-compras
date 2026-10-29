@@ -1,3 +1,25 @@
+<input
+  #receiptCameraInput
+  class="visually-hidden"
+  type="file"
+  accept="image/*"
+  capture="environment"
+  (change)="onReceiptFileSelected($event)"
+/>
+<input
+  #receiptGalleryInput
+  class="visually-hidden"
+  type="file"
+  accept="image/jpeg,image/png,image/webp"
+  (change)="onReceiptFileSelected($event)"
+/>
+
+@if (recognizing()) {
+  <div class="recognize-progress" role="status" aria-live="polite">
+    Lendo a nota…
+  </div>
+}
+
 @switch (status()) {
   @case ('loading') {
     <div class="list-skeleton" role="status" aria-busy="true">
@@ -84,8 +106,28 @@
   />
 }
 
+@if (receiptSourceOpen()) {
+  <app-receipt-source-sheet
+    (closed)="onReceiptSourceClosed()"
+    (chosen)="onReceiptSourceChosen($event)"
+  />
+}
+
+@if (receiptDraft(); as draft) {
+  <app-receipt-review-sheet
+    [receipt]="draft"
+    (closed)="onReceiptReviewClosed()"
+    (applied)="onReceiptApplied($event)"
+  />
+}
+
 @if (checkoutOpen()) {
-  <app-checkout-sheet (closed)="onCheckoutClosed()" (confirmed)="onCheckoutConfirmed()" />
+  <app-checkout-sheet
+    [initialMarket]="checkoutMarket()"
+    [initialPurchaseDate]="checkoutPurchaseDate()"
+    (closed)="onCheckoutClosed()"
+    (confirmed)="onCheckoutConfirmed()"
+  />
 }
 
 <!-- Host dos toasts (guia §5): confirmações com auto-dismiss ≈4s (o "Desfazer"

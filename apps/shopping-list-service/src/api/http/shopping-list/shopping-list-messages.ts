@@ -11,6 +11,18 @@ export const ITEM_UNIT_INVALID_MESSAGE = 'Unidade inválida';
 export const ITEM_NOT_FOUND_MESSAGE = 'Item não encontrado';
 export const ITEM_DUPLICATE_NAME_MESSAGE = 'Já existe um item com esse nome';
 export const INTERNAL_ERROR_MESSAGE = 'Erro interno';
+export const RECEIPT_IMAGE_REQUIRED_MESSAGE = 'Imagem da nota é obrigatória';
+export const RECEIPT_IMAGE_TYPE_INVALID_MESSAGE =
+  'Tipo de imagem não suportado';
+export const RECEIPT_IMAGE_TOO_LARGE_MESSAGE = 'Imagem da nota é muito grande';
+export const RECEIPT_UNREADABLE_MESSAGE =
+  'Não foi possível ler a nota. Tente outra foto.';
+export const RECEIPT_UNAVAILABLE_MESSAGE =
+  'Serviço de reconhecimento indisponível. Tente de novo.';
+export const RECEIPT_MISCONFIGURED_MESSAGE =
+  'Reconhecimento de nota não configurado neste ambiente.';
+export const RECEIPT_LINES_REQUIRED_MESSAGE =
+  'Informe ao menos uma linha da nota';
 
 // Checkout com ≥1 comprado (price-history RN-03/RN-04): mensagens exatas do
 // PLAN.md "HTTP — shopping-list-service (evolução)".

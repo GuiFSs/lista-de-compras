@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -10,26 +11,47 @@ import {
   Logger,
   Param,
   Patch,
+  PayloadTooLargeException,
   Post,
   Put,
+  Req,
   Res,
+  ServiceUnavailableException,
 } from '@nestjs/common';
-import type { FastifyReply } from 'fastify';
-import type { ShoppingListResponse } from '@lista/contracts';
+import type { FastifyReply, FastifyRequest } from 'fastify';
+import type {
+  RecognizeReceiptResponse,
+  ShoppingListResponse,
+} from '@lista/contracts';
+import { RECEIPT_IMAGE_MAX_BYTES } from '@lista/contracts';
 import {
+  ApplyReceiptPurchaseUseCase,
   CheckoutShoppingListUseCase,
   CreateShoppingListItemUseCase,
   DeleteShoppingListItemUseCase,
   GetShoppingListUseCase,
   MarkItemPurchasedUseCase,
+  RecognizeReceiptUseCase,
   RestoreShoppingListItemUseCase,
   UnmarkItemPurchasedUseCase,
   UpdateShoppingListItemUseCase,
 } from '../../../application';
-import type { ShoppingListResult } from '../../../application';
+import type {
+  RecognizeReceiptError,
+  ShoppingListResult,
+} from '../../../application';
 import { canonicalError, toHttpException } from './shopping-list-errors';
-import { INTERNAL_ERROR_MESSAGE } from './shopping-list-messages';
 import {
+  INTERNAL_ERROR_MESSAGE,
+  RECEIPT_IMAGE_REQUIRED_MESSAGE,
+  RECEIPT_IMAGE_TOO_LARGE_MESSAGE,
+  RECEIPT_IMAGE_TYPE_INVALID_MESSAGE,
+  RECEIPT_MISCONFIGURED_MESSAGE,
+  RECEIPT_UNAVAILABLE_MESSAGE,
+  RECEIPT_UNREADABLE_MESSAGE,
+} from './shopping-list-messages';
+import {
+  parseApplyReceiptCommand,
   parseCreateItemCommand,
   parseMarkPurchasedCommand,
   parseUpdateItemCommand,
@@ -58,6 +80,8 @@ export class ShoppingListController {
     private readonly markItemPurchased: MarkItemPurchasedUseCase,
     private readonly unmarkItemPurchased: UnmarkItemPurchasedUseCase,
     private readonly checkout: CheckoutShoppingListUseCase,
+    private readonly recognizeReceipt: RecognizeReceiptUseCase,
+    private readonly applyReceiptPurchase: ApplyReceiptPurchaseUseCase,
   ) {}
 
   @Get()
@@ -129,6 +153,88 @@ export class ShoppingListController {
       this.checkout.execute(readCheckoutInput(body)),
     );
     return toShoppingListResponse(result.items);
+  }
+
+  @Post('receipts/recognize')
+  @HttpCode(HttpStatus.OK)
+  async recognize(
+    @Req() req: FastifyRequest,
+  ): Promise<RecognizeReceiptResponse> {
+    try {
+      const file = await req.file();
+      if (file === undefined) {
+        throw new BadRequestException(
+          canonicalError(HttpStatus.BAD_REQUEST, RECEIPT_IMAGE_REQUIRED_MESSAGE),
+        );
+      }
+      const bytes = await file.toBuffer();
+      if (bytes.length > RECEIPT_IMAGE_MAX_BYTES) {
+        throw new PayloadTooLargeException(
+          canonicalError(HttpStatus.PAYLOAD_TOO_LARGE, RECEIPT_IMAGE_TOO_LARGE_MESSAGE),
+        );
+      }
+      const result = await this.recognizeReceipt.execute({
+        bytes,
+        mimeType: file.mimetype,
+      });
+      if (!result.ok) {
+        throw this.recognizeHttpError(result.error);
+      }
+      return result.receipt;
+    } catch (error) {
+      throw this.internalError(error);
+    }
+  }
+
+  @Post('receipts/apply')
+  @HttpCode(HttpStatus.OK)
+  async applyReceipt(@Body() body: unknown): Promise<ShoppingListResponse> {
+    const command = parseApplyReceiptCommand(body);
+    const result = await this.run(() =>
+      this.applyReceiptPurchase.execute(command),
+    );
+    return toShoppingListResponse(result.items);
+  }
+
+  private recognizeHttpError(error: RecognizeReceiptError): HttpException {
+    switch (error) {
+      case 'image-required':
+        return new BadRequestException(
+          canonicalError(HttpStatus.BAD_REQUEST, RECEIPT_IMAGE_REQUIRED_MESSAGE),
+        );
+      case 'image-type-invalid':
+        return new BadRequestException(
+          canonicalError(
+            HttpStatus.BAD_REQUEST,
+            RECEIPT_IMAGE_TYPE_INVALID_MESSAGE,
+          ),
+        );
+      case 'image-too-large':
+        return new PayloadTooLargeException(
+          canonicalError(
+            HttpStatus.PAYLOAD_TOO_LARGE,
+            RECEIPT_IMAGE_TOO_LARGE_MESSAGE,
+          ),
+        );
+      case 'recognizer-unreadable':
+        return new BadRequestException(
+          canonicalError(HttpStatus.BAD_REQUEST, RECEIPT_UNREADABLE_MESSAGE),
+        );
+      case 'recognizer-misconfigured':
+        return new ServiceUnavailableException(
+          canonicalError(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            RECEIPT_MISCONFIGURED_MESSAGE,
+          ),
+        );
+      case 'recognizer-unavailable':
+        return new ServiceUnavailableException(
+          canonicalError(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            RECEIPT_UNAVAILABLE_MESSAGE,
+          ),
+        );
+    }
   }
 
   /** Executa o caso de uso e converte falha de negócio em exceção HTTP. */
