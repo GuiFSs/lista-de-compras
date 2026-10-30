@@ -158,7 +158,8 @@ estar rodando.
 npm run web                 # nx serve web (PWA, porta 4200)
 npm run ms-shopping-list    # nx serve shopping-list-service (porta 3000)
 npm run ms-auth             # nx serve auth-service (porta 3001)
-npm run ms-all              # sobe todos os serviços de uma vez (web + shopping-list + auth)
+npm run ms-price-history    # nx serve price-history-service (porta 3002)
+npm run ms-all              # sobe tudo de uma vez (web + shopping-list + auth + price-history)
 npm run build               # nx run-many -t build
 npm run test                # nx run-many -t test
 npm run lint                # nx run-many -t lint
