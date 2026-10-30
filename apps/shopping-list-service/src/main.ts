@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
@@ -5,8 +6,13 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
+import { config as loadEnv } from 'dotenv';
 import { AppModule } from './app/app.module';
 import { configureApp } from './app/configure-app';
+
+// Nx injeta o `.env` no processo pai uma vez; sem override, mudar
+// SHOPPING_LIST_GEMINI_* no arquivo não chega ao Nest no hot-reload.
+loadEnv({ path: resolve(process.cwd(), '.env'), override: true });
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(

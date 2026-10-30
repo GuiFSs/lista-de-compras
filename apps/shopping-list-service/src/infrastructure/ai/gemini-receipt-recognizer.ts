@@ -7,7 +7,12 @@ import type {
 } from '../../application/ports/receipt-recognizer.port';
 import { ReceiptRecognizer } from '../../application/ports/receipt-recognizer.port';
 
-const DEFAULT_MODEL = 'gemini-2.5-flash';
+// Contas novas não recebem mais gemini-2.5-flash (404 → nosso 503).
+const DEFAULT_MODEL = 'gemini-3.1-flash-lite';
+
+/** Retries para 503/UNAVAILABLE transitório da Gemini (alta demanda). */
+const MAX_ATTEMPTS = 3;
+const RETRY_BASE_MS = 400;
 
 const UNIT_SET = new Set<string>(ITEM_UNITS);
 
@@ -29,6 +34,7 @@ export interface GeminiReceiptRecognizerOptions {
   apiKey: string;
   model?: string;
   fetchImpl?: typeof fetch;
+  sleepImpl?: (ms: number) => Promise<void>;
 }
 
 /**
@@ -38,12 +44,16 @@ export class GeminiReceiptRecognizer extends ReceiptRecognizer {
   private readonly apiKey: string;
   private readonly model: string;
   private readonly fetchImpl: typeof fetch;
+  private readonly sleepImpl: (ms: number) => Promise<void>;
 
   constructor(options: GeminiReceiptRecognizerOptions) {
     super();
     this.apiKey = options.apiKey.trim();
     this.model = (options.model ?? DEFAULT_MODEL).trim() || DEFAULT_MODEL;
     this.fetchImpl = options.fetchImpl ?? fetch;
+    this.sleepImpl =
+      options.sleepImpl ??
+      ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   }
 
   async recognize(image: ReceiptImageInput): Promise<ReceiptRecognizerResult> {
@@ -77,39 +87,64 @@ export class GeminiReceiptRecognizer extends ReceiptRecognizer {
       },
     };
 
-    let response: Response;
-    try {
-      response = await this.fetchImpl(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-    } catch {
-      return { ok: false, error: 'unavailable' };
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      let response: Response;
+      try {
+        response = await this.fetchImpl(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } catch (err) {
+        console.error(
+          `[gemini-receipt] fetch failed model=${this.model} attempt=${attempt}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+        if (attempt < MAX_ATTEMPTS) {
+          await this.sleepImpl(RETRY_BASE_MS * attempt);
+          continue;
+        }
+        return { ok: false, error: 'unavailable' };
+      }
+
+      if (!response.ok) {
+        const detail = await response.text().catch(() => '');
+        console.error(
+          `[gemini-receipt] HTTP ${response.status} model=${this.model} attempt=${attempt}: ${detail.slice(0, 500)}`,
+        );
+        // 429/503 costumam ser cota ou alta demanda — vale retry.
+        if (
+          (response.status === 503 || response.status === 429) &&
+          attempt < MAX_ATTEMPTS
+        ) {
+          await this.sleepImpl(RETRY_BASE_MS * attempt);
+          continue;
+        }
+        return { ok: false, error: 'unavailable' };
+      }
+
+      let payload: unknown;
+      try {
+        payload = await response.json();
+      } catch {
+        return { ok: false, error: 'unavailable' };
+      }
+
+      const text = extractText(payload);
+      if (text === null) {
+        return { ok: false, error: 'unreadable' };
+      }
+
+      try {
+        const parsed: unknown = JSON.parse(stripCodeFence(text));
+        return { ok: true, receipt: normalizeDraft(parsed) };
+      } catch {
+        return { ok: false, error: 'unreadable' };
+      }
     }
 
-    if (!response.ok) {
-      return { ok: false, error: 'unavailable' };
-    }
-
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch {
-      return { ok: false, error: 'unavailable' };
-    }
-
-    const text = extractText(payload);
-    if (text === null) {
-      return { ok: false, error: 'unreadable' };
-    }
-
-    try {
-      const parsed: unknown = JSON.parse(stripCodeFence(text));
-      return { ok: true, receipt: normalizeDraft(parsed) };
-    } catch {
-      return { ok: false, error: 'unreadable' };
-    }
+    return { ok: false, error: 'unavailable' };
   }
 }
 

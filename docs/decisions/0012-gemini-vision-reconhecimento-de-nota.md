@@ -20,9 +20,9 @@
 ## Decisões
 
 1. **Provedor:** Gemini Developer API (modelo Flash com visão disponível no
-   free tier no momento da implementação — ex. `gemini-2.5-flash` ou
-   sucessor Flash documentado no free tier). Configurável por env
-   `SHOPPING_LIST_GEMINI_MODEL`.
+   free tier — default de código `gemini-3.1-flash-lite`; contas novas
+   deixaram de receber `gemini-2.5-flash`. Override via
+   `SHOPPING_LIST_GEMINI_MODEL` — reinicie o serve após mudar o `.env`).
 2. **Onde vive a chamada:** adaptador no **`shopping-list-service`**
    (dono da lista e do apply). Porta de aplicação `ReceiptRecognizer`;
    implementação Gemini atrás da porta. Sem microserviço novo de IA nesta

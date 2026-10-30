@@ -62,11 +62,53 @@ describe('GeminiReceiptRecognizer', () => {
     const recognizer = new GeminiReceiptRecognizer({
       apiKey: 'test-key',
       fetchImpl,
+      sleepImpl: async () => undefined,
     });
     const result = await recognizer.recognize({
       bytes: Buffer.from('img'),
       mimeType: 'image/jpeg',
     });
     expect(result).toEqual({ ok: false, error: 'unavailable' });
+  });
+
+  it('retenta 503 e sucede na tentativa seguinte', async () => {
+    let calls = 0;
+    const fetchImpl: typeof fetch = async () => {
+      calls += 1;
+      if (calls === 1) return new Response('busy', { status: 503 });
+      return new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  {
+                    text: JSON.stringify({
+                      market: 'Assaí',
+                      purchaseDate: null,
+                      lines: [],
+                    }),
+                  },
+                ],
+              },
+            },
+          ],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    };
+    const recognizer = new GeminiReceiptRecognizer({
+      apiKey: 'test-key',
+      fetchImpl,
+      sleepImpl: async () => undefined,
+    });
+    const result = await recognizer.recognize({
+      bytes: Buffer.from('img'),
+      mimeType: 'image/jpeg',
+    });
+    expect(calls).toBe(2);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.receipt.market).toBe('Assaí');
   });
 });
