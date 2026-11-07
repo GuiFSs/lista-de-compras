@@ -50,6 +50,13 @@
   > mesma base `http://localhost:3002`, com o CORS desta ADR §2 e os critérios de
   > saída desta ADR §3 (mesmo dono do follow-up). As três operações acima **não**
   > mudam.
+  > **Ponte (2026-11-07):** a
+  > [ADR 0014](0014-excecao-gateway-editar-compra-historico.md)
+  > registrou a primeira **escrita** da exceção —
+  > `PATCH /api/price-history/purchases/{id}` (editar compra concluída). O texto
+  > acima, que reservava a escrita ao evento, continua válido para o que foi
+  > decidido em 2026-10-16. O CORS desta ADR §2 passa a aceitar também `PATCH`
+  > (ADR 0014). As operações de leitura não mudam.
 - A ADR 0001 permanece vigente como **regra geral** (o gateway continua sendo o
   destino de todas as demais chamadas e do futuro roteamento).
 - As exceções do auth-service (ADR 0006) e do shopping-list-service (ADR 0009), e
@@ -61,7 +68,9 @@
   shopping-list) com:
   - `origin` = lista de **`PRICE_HISTORY_CORS_ORIGINS`** (CSV), default
     `http://localhost:4200`;
-  - `methods: ['GET', 'OPTIONS']` (somente leitura nesta rodada);
+  - `methods: ['GET', 'OPTIONS']` (somente leitura nesta rodada).
+    Ponte (2026-11-07): a ADR 0014 inclui `PATCH` nessa lista. O restante
+    deste item não muda.
   - `allowedHeaders: ['Content-Type', 'Authorization']`.
 - **Por quê:** a PWA roda em `http://localhost:4200` e o serviço em
   `http://localhost:3002` — origens diferentes. O CORS **não é controle de

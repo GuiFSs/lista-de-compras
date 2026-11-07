@@ -35,6 +35,7 @@ Permitir que uma família mantenha uma lista de compras compartilhada e consulte
 - A data da compra é preenchida inicialmente com a data atual, mas pode ser editada.
 - A primeira consulta de histórico mostrará somente o menor preço já pago por item.
 - O histórico terá uma tela para rever cada compra concluída, incluindo data, mercado e itens comprados.
+- Uma compra já concluída pode ser editada a partir do detalhe do histórico: mercado, data e itens (nome, quantidade, unidade e preço por unidade), inclusive incluir ou remover linhas. A compra não pode ficar sem itens e não é excluída por essa edição. O menor preço é recalculado na consulta seguinte a partir dos registros atualizados (feature `edit-purchase`, `docs/features/edit-purchase/SPEC.md`, 2026-11-07).
 - A consulta de menor preço permitirá pesquisar por nome de item e também listar todos os itens comprados com o menor preço de cada um.
 - A consulta de menor preço mostrará, para cada item, o mercado, a data e a quantidade da compra que ostenta esse menor preço, agrupando a lista por mercado; e permitirá abrir o item para ver o seu menor preço em cada mercado (comparação entre mercados — feature `lowest-price-by-market`, `docs/features/lowest-price-by-market/SPEC.md`, 2026-10-19). Na v1 (`price-history`), a comparação entre mercados estava declarada fora do escopo inicial.
 - Evoluções como média, último preço e tendência ficam fora do escopo inicial.
