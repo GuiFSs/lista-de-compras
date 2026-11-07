@@ -67,6 +67,16 @@ class FlakyPurchaseRepository extends PurchaseRepository {
     return this.inner.findAllWithItems();
   }
 
+  async findAllWithItemsByName(
+    nameNormalized: string,
+  ): Promise<PriceHistoryPurchase[]> {
+    return this.inner.findAllWithItemsByName(nameNormalized);
+  }
+
+  async update(purchase: PriceHistoryPurchase): Promise<boolean> {
+    return this.inner.update(purchase);
+  }
+
   count(): number {
     return this.inner.count();
   }

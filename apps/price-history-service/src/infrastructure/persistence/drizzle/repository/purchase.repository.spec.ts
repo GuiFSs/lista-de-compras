@@ -37,8 +37,8 @@ const COMPLETION_ID = '11111111-1111-4111-8111-111111111111';
 const OTHER_COMPLETION_ID = '22222222-2222-4222-8222-222222222222';
 
 /**
- * A tabela não tem coluna de posição (fora do plano v1), então a ordem dos
- * itens no detalhe é arbitrária — os asserts ordenam os dois lados.
+ * A ordem do detalhe é `position` (a do formulário). O helper abaixo só serve
+ * aos asserts que não se importam com essa ordem.
  */
 function byNameNormalized(
   left: PriceHistoryPurchase['items'][number],
@@ -335,5 +335,40 @@ describe('DrizzlePurchaseRepository (Postgres real)', () => {
     await expect(repository.findById(purchase.id)).rejects.toThrow(
       'purchase_items.unit inválido',
     );
+  });
+
+  it('update troca mercado e itens na ordem enviada e não mexe em createdAt', async () => {
+    const purchase = buildPurchase();
+    await repository.insert(purchase);
+
+    const updated: PriceHistoryPurchase = {
+      ...purchase,
+      market: 'Mercado Sul',
+      purchaseDate: '2026-09-01',
+      items: [
+        {
+          name: 'Leite',
+          nameNormalized: 'leite',
+          quantity: 2,
+          unit: 'L',
+          unitPrice: 4,
+        },
+        {
+          name: 'Café',
+          nameNormalized: 'cafe',
+          quantity: 1,
+          unit: 'kg',
+          unitPrice: 6,
+        },
+      ],
+    };
+
+    await expect(repository.update(updated)).resolves.toBe(true);
+    await expect(repository.update({ ...updated, id: OTHER_COMPLETION_ID })).resolves.toBe(
+      false,
+    );
+
+    const found = await repository.findById(purchase.id);
+    expect(found).toEqual(updated);
   });
 });

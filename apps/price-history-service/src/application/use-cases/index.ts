@@ -5,3 +5,4 @@ export * from './get-purchase.use-case';
 export * from './ingest-purchase.use-case';
 export * from './list-lowest-prices.use-case';
 export * from './list-purchases.use-case';
+export * from './update-purchase.use-case';

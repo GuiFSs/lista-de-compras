@@ -44,6 +44,12 @@ class ThrowingPurchaseRepository extends PurchaseRepository {
   async findAllWithItems(): Promise<PriceHistoryPurchase[]> {
     return [];
   }
+  async findAllWithItemsByName(): Promise<PriceHistoryPurchase[]> {
+    return [];
+  }
+  async update(): Promise<boolean> {
+    return false;
+  }
 }
 
 function makeHandler(repository: PurchaseRepository): PurchaseCompletedHandler {

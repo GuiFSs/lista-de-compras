@@ -4,6 +4,7 @@
 import {
   date,
   index,
+  integer,
   numeric,
   pgTable,
   text,
@@ -42,6 +43,9 @@ export const purchaseItems = pgTable(
       scale: 2,
       mode: 'number',
     }).notNull(),
+    // Ordem do formulário de edição. Itens antigos foram preenchidos pela
+    // ordem de id, que era a ordem do detalhe antes desta coluna.
+    position: integer('position').notNull(),
   },
   // Agregação de menor preço e busca filtram por nome normalizado (RN-06/RN-07).
   (table) => [index('purchase_items_name_normalized_idx').on(table.nameNormalized)],

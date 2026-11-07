@@ -76,6 +76,17 @@ export class InMemoryPurchaseRepository extends PurchaseRepository {
       .filter((purchase) => purchase.items.length > 0);
   }
 
+  async update(purchase: PriceHistoryPurchase): Promise<boolean> {
+    if (!this.purchases.has(purchase.id)) {
+      return false;
+    }
+    this.purchases.set(purchase.id, {
+      ...purchase,
+      items: purchase.items.map((item) => ({ ...item })),
+    });
+    return true;
+  }
+
   /** Leitura direta para asserções. */
   stored(id: string): PriceHistoryPurchase | null {
     return this.purchases.get(id) ?? null;
