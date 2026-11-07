@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   HttpException,
@@ -6,6 +7,7 @@ import {
   InternalServerErrorException,
   Logger,
   Param,
+  Patch,
   Query,
 } from '@nestjs/common';
 import type {
@@ -19,12 +21,14 @@ import {
   GetPurchaseUseCase,
   ListLowestPricesUseCase,
   ListPurchasesUseCase,
+  UpdatePurchaseUseCase,
 } from '../../../application';
 import {
   INTERNAL_ERROR_MESSAGE,
   canonicalError,
   itemNotFound,
   purchaseNotFound,
+  purchaseUpdateRejected,
 } from './price-history-errors';
 
 /**
@@ -41,6 +45,7 @@ export class PriceHistoryController {
     private readonly getPurchase: GetPurchaseUseCase,
     private readonly listLowestPrices: ListLowestPricesUseCase,
     private readonly getLowestPricesByItem: GetLowestPricesByItemUseCase,
+    private readonly updatePurchase: UpdatePurchaseUseCase,
   ) {}
 
   /** GET /purchases — 200 `PurchaseListResponse` (RN-08). */
@@ -57,6 +62,25 @@ export class PriceHistoryController {
       throw purchaseNotFound();
     }
     return purchase;
+  }
+
+  /** PATCH /purchases/:id — 200 detalhe atualizado; corpo inválido → 400; id ausente → 404. */
+  @Patch('purchases/:id')
+  async update(
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ): Promise<PurchaseDetailResponse> {
+    const command = parseUpdateBody(body);
+    const result = await this.safely(() =>
+      this.updatePurchase.execute(id, command, new Date()),
+    );
+    if (!result.ok) {
+      if (result.error === 'not-found') {
+        throw purchaseNotFound();
+      }
+      throw purchaseUpdateRejected(result.error);
+    }
+    return result.purchase;
   }
 
   /** GET /lowest-prices?q=... — 200 `LowestPricesResponse` agrupada (RN-05/RN-07). */
@@ -119,4 +143,21 @@ function parseSearchQuery(value: unknown): string | undefined {
   }
   const [first] = value as unknown[];
   return typeof first === 'string' ? first : undefined;
+}
+
+/** Corpo ausente ou não-objeto cai na validação de domínio (400), não num 500. */
+function parseUpdateBody(body: unknown): {
+  market: unknown;
+  purchaseDate: unknown;
+  items: unknown;
+} {
+  if (typeof body !== 'object' || body === null) {
+    return { market: undefined, purchaseDate: undefined, items: undefined };
+  }
+  const record = body as Record<string, unknown>;
+  return {
+    market: record['market'],
+    purchaseDate: record['purchaseDate'],
+    items: record['items'],
+  };
 }

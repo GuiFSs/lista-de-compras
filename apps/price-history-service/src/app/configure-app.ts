@@ -27,7 +27,7 @@ export async function configureApp(app: NestFastifyApplication): Promise<void> {
   const corsPlugin = corsModule.default ?? corsModule;
   await app.register(corsPlugin, {
     origin: origins,
-    methods: ['GET', 'OPTIONS'],
+    methods: ['GET', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 }
