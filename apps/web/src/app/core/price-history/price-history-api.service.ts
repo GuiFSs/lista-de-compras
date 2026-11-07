@@ -5,12 +5,13 @@ import {
   LowestPricesResponse,
   PurchaseDetailResponse,
   PurchaseListResponse,
+  UpdatePurchaseRequest,
 } from '@lista/contracts';
 import { Observable } from 'rxjs';
 import { PRICE_HISTORY_API_BASE_URL, priceHistoryUrl } from './price-history-config';
 
 /**
- * As consultas do histórico (ADR 0010/0011 — somente leitura).
+ * Consultas e a edição de compra do histórico (ADR 0010/0011/0014).
  * `Authorization` e o 401 são do interceptor de auth — aqui só as rotas cruas.
  */
 @Injectable({ providedIn: 'root' })
@@ -24,6 +25,14 @@ export class PriceHistoryApiService {
 
   getPurchase(id: string): Observable<PurchaseDetailResponse> {
     return this.http.get<PurchaseDetailResponse>(this.url(`/purchases/${id}`));
+  }
+
+  /** Substitui mercado, data e itens. O corpo de sucesso é o detalhe atualizado. */
+  updatePurchase(
+    id: string,
+    body: UpdatePurchaseRequest,
+  ): Observable<PurchaseDetailResponse> {
+    return this.http.patch<PurchaseDetailResponse>(this.url(`/purchases/${id}`), body);
   }
 
   /** Sem `query` (ou vazia), o serviço devolve a lista completa. */

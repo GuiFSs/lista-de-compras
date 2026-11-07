@@ -5,6 +5,7 @@ import type {
   LowestPriceMarketGroup,
   PurchaseDetailResponse,
   PurchaseListItem,
+  UpdatePurchaseRequest,
 } from '@lista/contracts';
 import { firstValueFrom } from 'rxjs';
 import { apiErrorMessage } from '../../shopping-list/data';
@@ -141,6 +142,24 @@ export class PriceHistoryStore {
         selectedId: targetId,
       });
     }
+  }
+
+  /**
+   * Grava a edição e aplica o detalhe devolvido. Não entra em loading: o
+   * formulário continua visível se a requisição falhar.
+   */
+  async updatePurchase(
+    id: string,
+    body: UpdatePurchaseRequest,
+  ): Promise<PurchaseDetailResponse> {
+    const purchase = await firstValueFrom(this.api.updatePurchase(id, body));
+    this.detailState.set({
+      status: 'loaded',
+      data: purchase,
+      error: null,
+      selectedId: id,
+    });
+    return purchase;
   }
 
   /** Sai do detalhe: descarta seleção e invalida resposta pendente. */

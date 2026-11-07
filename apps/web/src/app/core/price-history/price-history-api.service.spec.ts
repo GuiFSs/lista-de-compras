@@ -104,6 +104,28 @@ describe('PriceHistoryApiService', () => {
     });
   });
 
+  it('editar compra faz PATCH em /purchases/{id} com Authorization (ADR 0014)', () => {
+    const body = {
+      market: 'Mercado Sul',
+      purchaseDate: '2026-10-02',
+      items: [{ name: 'Café', quantity: 1, unit: 'kg' as const, unitPrice: 6 }],
+    };
+    api.updatePurchase('completion-1', body).subscribe();
+
+    const req = http.expectOne(url('/purchases/completion-1'));
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.url).toBe(
+      'http://localhost:3002/api/price-history/purchases/completion-1',
+    );
+    expect(req.request.body).toEqual(body);
+    expect(req.request.headers.get('Authorization')).toBe(`Bearer ${token}`);
+    req.flush({
+      id: 'completion-1',
+      ...body,
+      createdAt: '2026-10-01T12:00:00.000Z',
+    });
+  });
+
   it('menores preços sem busca não envia query (AC-08)', () => {
     api.getLowestPrices().subscribe();
 

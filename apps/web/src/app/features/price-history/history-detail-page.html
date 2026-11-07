@@ -35,6 +35,10 @@
         <p class="detail__date">{{ formatDate(detail.purchaseDate) }}</p>
       </header>
 
+      <div class="detail__actions">
+        <button type="button" class="btn-secondary" (click)="startEdit()">Editar</button>
+      </div>
+
       <ul class="detail__items" role="list" aria-label="Itens comprados">
         @for (item of detail.items; track $index) {
           <li class="detail__item">
@@ -46,3 +50,13 @@
     }
   }
 }
+
+@if (editing() && purchase(); as detail) {
+  <app-edit-purchase-sheet
+    [purchase]="detail"
+    (closed)="closeEdit()"
+    (saved)="closeEdit()"
+  />
+}
+
+<app-toast-host />

@@ -460,4 +460,32 @@ describe('PriceHistoryStore', () => {
       expect(store.itemLowestPrices().selectedItem).toBe('cafe');
     });
   });
+
+  describe('edição da compra', () => {
+    it('aplica o detalhe devolvido sem passar por loading', async () => {
+      const load = store.loadPurchase('c1');
+      http.expectOne(url('/purchases/c1')).flush(purchase());
+      await load;
+
+      const updated = purchase({
+        market: 'Mercado Sul',
+        items: [{ name: 'Leite', quantity: 1, unit: 'L', unitPrice: 4 }],
+      });
+      const saving = store.updatePurchase('c1', {
+        market: 'Mercado Sul',
+        purchaseDate: '2026-10-15',
+        items: updated.items,
+      });
+      expect(store.detail().status).toBe('loaded');
+      expect(store.detail().data?.market).toBe('Mercado Central');
+
+      const req = http.expectOne(url('/purchases/c1'));
+      expect(req.request.method).toBe('PATCH');
+      req.flush(updated);
+      await saving;
+
+      expect(store.detail().status).toBe('loaded');
+      expect(store.detail().data).toEqual(updated);
+    });
+  });
 });
