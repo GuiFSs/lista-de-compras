@@ -65,6 +65,12 @@ class ThrowingPurchaseRepository extends PurchaseRepository {
   async findAllWithItems(): Promise<PriceHistoryPurchase[]> {
     return [];
   }
+  async findAllWithItemsByName(): Promise<PriceHistoryPurchase[]> {
+    return [];
+  }
+  async update(): Promise<boolean> {
+    return false;
+  }
 }
 
 /** URL nunca usada: handleDelivery não toca em conexão (é puro de broker). */

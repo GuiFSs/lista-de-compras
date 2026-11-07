@@ -253,7 +253,7 @@ export class PriceHistoryFakeApi {
     await route.fallback();
   }
 
-  /** Roteia as 4 operações do contrato; `false` = caminho desconhecido. */
+  /** Roteia as operações do contrato; `false` = caminho desconhecido. */
   private async dispatch(route: Route, method: string, segments: string[]): Promise<boolean> {
     if (method === 'GET' && segments.length === 1 && segments[0] === 'purchases') {
       const body: PurchaseListResponse = {
@@ -270,6 +270,31 @@ export class PriceHistoryFakeApi {
         return true;
       }
       await this.fulfill(route, 200, toDetail(found));
+      return true;
+    }
+
+    if (method === 'PATCH' && segments.length === 2 && segments[0] === 'purchases') {
+      const index = this.purchases.findIndex((purchase) => purchase.id === segments[1]);
+      if (index === -1) {
+        await this.fulfill(route, 404, { statusCode: 404, message: 'Compra não encontrada' });
+        return true;
+      }
+      const parsed = parsePurchaseEdit(route.request().postDataJSON());
+      if (!parsed.ok) {
+        await this.fulfill(route, 400, { statusCode: 400, message: parsed.message });
+        return true;
+      }
+      const current = this.purchases[index];
+      this.purchases[index] = {
+        ...current,
+        market: parsed.market,
+        purchaseDate: parsed.purchaseDate,
+        items: parsed.items,
+      };
+      // A leitura seguinte de menor preço usa as compras já editadas. Antes do
+      // PATCH, a lista semeada continua valendo — a agregação oficial é do serviço.
+      this.recomputeLowestFromPurchases();
+      await this.fulfill(route, 200, toDetail(this.purchases[index]));
       return true;
     }
 
@@ -297,6 +322,88 @@ export class PriceHistoryFakeApi {
     }
 
     return false;
+  }
+
+  /**
+   * Depois de um PATCH aceito, a lista e o drill-down passam a sair das
+   * compras em memória (menor preço por unidade; empate pela data mais
+   * recente e, depois, pelo menor id).
+   */
+  private recomputeLowestFromPurchases(): void {
+    const byName = new Map<string, PriceCandidate>();
+    const byNameAndMarket = new Map<string, Map<string, PriceCandidate>>();
+
+    for (const purchase of this.purchases) {
+      for (const item of purchase.items) {
+        const candidate: PriceCandidate = {
+          name: item.name.trim(),
+          nameNormalized: normalizeName(item.name),
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
+          unit: item.unit,
+          market: purchase.market,
+          purchaseDate: purchase.purchaseDate,
+          purchaseId: purchase.id,
+        };
+        const current = byName.get(candidate.nameNormalized);
+        if (current === undefined || isBetterPrice(candidate, current)) {
+          byName.set(candidate.nameNormalized, candidate);
+        }
+        const markets = byNameAndMarket.get(candidate.nameNormalized) ?? new Map();
+        const inMarket = markets.get(candidate.market);
+        if (inMarket === undefined || isBetterPrice(candidate, inMarket)) {
+          markets.set(candidate.market, candidate);
+        }
+        byNameAndMarket.set(candidate.nameNormalized, markets);
+      }
+    }
+
+    const grouped = new Map<string, LowestPriceItem[]>();
+    for (const winner of [...byName.values()].sort(compareByNormalizedName)) {
+      const line: LowestPriceItem = {
+        name: winner.name,
+        nameNormalized: winner.nameNormalized,
+        lowestUnitPrice: winner.unitPrice,
+        market: winner.market,
+        purchaseDate: winner.purchaseDate,
+        quantity: winner.quantity,
+        unit: winner.unit,
+      };
+      const group = grouped.get(winner.market) ?? [];
+      group.push(line);
+      grouped.set(winner.market, group);
+    }
+
+    this.lowestPrices.splice(
+      0,
+      this.lowestPrices.length,
+      ...[...grouped.entries()]
+        .sort(([left], [right]) => compareMarketNames(left, right))
+        .map(([market, items]) => ({
+          market,
+          items: [...items].sort(compareByNormalizedName),
+        })),
+    );
+
+    for (const key of Object.keys(this.lowestPricesByItem)) {
+      delete this.lowestPricesByItem[key];
+    }
+    for (const [nameNormalized, markets] of byNameAndMarket) {
+      const globalWinner = byName.get(nameNormalized);
+      this.lowestPricesByItem[nameNormalized] = {
+        name: globalWinner?.name ?? '',
+        nameNormalized,
+        markets: [...markets.values()]
+          .sort((left, right) => compareMarketNames(left.market, right.market))
+          .map((line) => ({
+            market: line.market,
+            lowestUnitPrice: line.unitPrice,
+            purchaseDate: line.purchaseDate,
+            quantity: line.quantity,
+            unit: line.unit,
+          })),
+      };
+    }
   }
 
   /**
@@ -340,4 +447,115 @@ function cloneByItem(response: SeedLowestPriceByItem): LowestPriceByMarketRespon
     nameNormalized: response.nameNormalized,
     markets: response.markets.map((line) => ({ ...line }) satisfies LowestPriceByMarketLine),
   };
+}
+
+interface PriceCandidate {
+  name: string;
+  nameNormalized: string;
+  unitPrice: number;
+  quantity: number;
+  unit: ItemUnit;
+  market: string;
+  purchaseDate: string;
+  purchaseId: string;
+}
+
+interface ParsedPurchaseEdit {
+  ok: true;
+  market: string;
+  purchaseDate: string;
+  items: SeedPurchaseItem[];
+}
+
+const ITEM_UNITS = ['unidade', 'kg', 'g', 'L', 'ml', 'pacote', 'caixa'] as const;
+
+function isBetterPrice(candidate: PriceCandidate, current: PriceCandidate): boolean {
+  if (candidate.unitPrice !== current.unitPrice) {
+    return candidate.unitPrice < current.unitPrice;
+  }
+  if (candidate.purchaseDate !== current.purchaseDate) {
+    return candidate.purchaseDate > current.purchaseDate;
+  }
+  return candidate.purchaseId < current.purchaseId;
+}
+
+function compareByNormalizedName(
+  left: { nameNormalized: string },
+  right: { nameNormalized: string },
+): number {
+  if (left.nameNormalized === right.nameNormalized) return 0;
+  return left.nameNormalized < right.nameNormalized ? -1 : 1;
+}
+
+function compareMarketNames(left: string, right: string): number {
+  const leftNormalized = normalizeName(left);
+  const rightNormalized = normalizeName(right);
+  if (leftNormalized !== rightNormalized) {
+    return leftNormalized < rightNormalized ? -1 : 1;
+  }
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+}
+
+function localToday(): string {
+  const now = new Date();
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+function isItemUnit(value: string): value is ItemUnit {
+  return (ITEM_UNITS as readonly string[]).includes(value);
+}
+
+function parsePurchaseEdit(body: unknown): ParsedPurchaseEdit | { ok: false; message: string } {
+  if (typeof body !== 'object' || body === null) {
+    return { ok: false, message: 'Mercado é obrigatório' };
+  }
+  const record = body as Record<string, unknown>;
+  const market = record['market'];
+  if (typeof market !== 'string' || market.trim().length === 0) {
+    return { ok: false, message: 'Mercado é obrigatório' };
+  }
+  const purchaseDate = record['purchaseDate'];
+  if (typeof purchaseDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(purchaseDate)) {
+    return { ok: false, message: 'Data da compra inválida' };
+  }
+  if (purchaseDate > localToday()) {
+    return { ok: false, message: 'A data da compra não pode ser futura' };
+  }
+  const items = record['items'];
+  if (!Array.isArray(items) || items.length === 0) {
+    return { ok: false, message: 'A compra precisa ter pelo menos um item' };
+  }
+  const parsed: SeedPurchaseItem[] = [];
+  const seen = new Set<string>();
+  for (const raw of items) {
+    if (typeof raw !== 'object' || raw === null) {
+      return { ok: false, message: 'Informe o nome do item' };
+    }
+    const item = raw as Record<string, unknown>;
+    const name = item['name'];
+    const quantity = item['quantity'];
+    const unit = item['unit'];
+    const unitPrice = item['unitPrice'];
+    if (typeof name !== 'string' || name.trim().length === 0) {
+      return { ok: false, message: 'Informe o nome do item' };
+    }
+    if (typeof quantity !== 'number' || !Number.isFinite(quantity) || quantity <= 0) {
+      return { ok: false, message: 'A quantidade precisa ser maior que zero' };
+    }
+    if (typeof unit !== 'string' || !isItemUnit(unit)) {
+      return { ok: false, message: 'Unidade inválida' };
+    }
+    if (typeof unitPrice !== 'number' || !Number.isFinite(unitPrice) || unitPrice < 0) {
+      return { ok: false, message: 'O preço por unidade não pode ser negativo' };
+    }
+    const normalized = normalizeName(name);
+    if (seen.has(normalized)) {
+      return { ok: false, message: 'Já existe um item com esse nome nesta compra' };
+    }
+    seen.add(normalized);
+    parsed.push({ name: name.trim(), quantity, unit, unitPrice });
+  }
+  return { ok: true, market: market.trim(), purchaseDate, items: parsed };
 }

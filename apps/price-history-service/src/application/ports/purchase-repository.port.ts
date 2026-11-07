@@ -43,4 +43,10 @@ export abstract class PurchaseRepository {
   abstract findAllWithItemsByName(
     nameNormalized: string,
   ): Promise<PriceHistoryPurchase[]>;
+
+  /**
+   * Substitui mercado, data e itens. `false` quando o id não existe — a
+   * edição não cria compra. `createdAt` fica como já está no banco.
+   */
+  abstract update(purchase: PriceHistoryPurchase): Promise<boolean>;
 }

@@ -44,13 +44,14 @@ export class DrizzlePurchaseRepository implements PurchaseRepository {
         return false;
       }
       await tx.insert(purchaseItems).values(
-        purchase.items.map((item) => ({
+        purchase.items.map((item, position) => ({
           purchaseId: purchase.id,
           name: item.name,
           nameNormalized: item.nameNormalized,
           quantity: item.quantity,
           unit: item.unit,
           unitPrice: item.unitPrice,
+          position,
         })),
       );
       return true;
@@ -91,13 +92,13 @@ export class DrizzlePurchaseRepository implements PurchaseRepository {
     if (!purchase) {
       return null;
     }
-    // A tabela não tem coluna de posição; ordenar por id dá listagem estável
-    // sem inventar ordem de exibição fora do plano.
+    // `position` é a ordem do formulário. O id desempatava antes da coluna
+    // existir; o backfill da migração copiou essa ordem.
     const itemRows = await this.db
       .select()
       .from(purchaseItems)
       .where(eq(purchaseItems.purchaseId, id))
-      .orderBy(asc(purchaseItems.id));
+      .orderBy(asc(purchaseItems.position), asc(purchaseItems.id));
     return this.toDomain(purchase, itemRows.map((row) => this.toDomainItem(row)));
   }
 
@@ -109,7 +110,10 @@ export class DrizzlePurchaseRepository implements PurchaseRepository {
     if (purchaseRows.length === 0) {
       return [];
     }
-    const itemRows = await this.db.select().from(purchaseItems);
+    const itemRows = await this.db
+      .select()
+      .from(purchaseItems)
+      .orderBy(asc(purchaseItems.position), asc(purchaseItems.id));
     const itemsByPurchase = new Map<string, PriceHistoryPurchaseItem[]>();
     for (const row of itemRows) {
       const items = itemsByPurchase.get(row.purchaseId) ?? [];
@@ -135,6 +139,7 @@ export class DrizzlePurchaseRepository implements PurchaseRepository {
       .orderBy(
         desc(purchases.purchaseDate),
         desc(purchases.createdAt),
+        asc(purchaseItems.position),
         asc(purchaseItems.id),
       );
 
@@ -153,6 +158,37 @@ export class DrizzlePurchaseRepository implements PurchaseRepository {
     return [...purchasesByName.values()].map(({ purchase, items }) =>
       this.toDomain(purchase, items),
     );
+  }
+
+  async update(purchase: PriceHistoryPurchase): Promise<boolean> {
+    return this.db.transaction(async (tx) => {
+      const updated = await tx
+        .update(purchases)
+        .set({
+          market: purchase.market,
+          purchaseDate: purchase.purchaseDate,
+        })
+        .where(eq(purchases.id, purchase.id))
+        .returning({ id: purchases.id });
+      if (updated.length === 0) {
+        return false;
+      }
+      await tx
+        .delete(purchaseItems)
+        .where(eq(purchaseItems.purchaseId, purchase.id));
+      await tx.insert(purchaseItems).values(
+        purchase.items.map((item, position) => ({
+          purchaseId: purchase.id,
+          name: item.name,
+          nameNormalized: item.nameNormalized,
+          quantity: item.quantity,
+          unit: item.unit,
+          unitPrice: item.unitPrice,
+          position,
+        })),
+      );
+      return true;
+    });
   }
 
   private toDomain(

@@ -1,12 +1,14 @@
-import { Component, DestroyRef, computed, inject } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ShellChromeService } from '../../layout/shell-chrome';
+import { ToastHost } from '../../ui';
 import {
   formatPurchaseDate,
   formatQuantity,
   formatUnitPrice,
 } from './purchase-format';
 import { PriceHistoryStore } from './state';
+import { EditPurchaseSheet } from './edit-purchase-sheet';
 
 /** Skeleton na forma do detalhe (AC-13): título + linhas de itens. */
 const SKELETON_ITEMS: readonly number[] = [0, 1, 2];
@@ -18,7 +20,7 @@ const SKELETON_ITEMS: readonly number[] = [0, 1, 2];
  */
 @Component({
   selector: 'app-history-detail-page',
-  imports: [RouterLink],
+  imports: [RouterLink, EditPurchaseSheet, ToastHost],
   templateUrl: './history-detail-page.html',
   styleUrl: './history-detail-page.scss',
 })
@@ -33,6 +35,7 @@ export class HistoryDetailPage {
   protected readonly loadError = computed(() => this.store.detail().error);
 
   protected readonly skeletonItems = SKELETON_ITEMS;
+  protected readonly editing = signal(false);
   protected readonly formatDate = formatPurchaseDate;
   protected readonly formatQuantity = formatQuantity;
   protected readonly formatUnitPrice = formatUnitPrice;
@@ -49,5 +52,13 @@ export class HistoryDetailPage {
   /** "Tentar novamente" (AC-14): sem id, o store repete a última seleção. */
   protected retry(): void {
     void this.store.loadPurchase();
+  }
+
+  protected startEdit(): void {
+    this.editing.set(true);
+  }
+
+  protected closeEdit(): void {
+    this.editing.set(false);
   }
 }

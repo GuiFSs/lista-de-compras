@@ -43,6 +43,10 @@
   color: var(--color-ink-muted);
 }
 
+.detail__actions {
+  margin-bottom: var(--space-lg);
+}
+
 .detail__items {
   list-style: none;
 }

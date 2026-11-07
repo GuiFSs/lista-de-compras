@@ -125,6 +125,10 @@ class ResettablePurchaseRepository extends PurchaseRepository {
   ): Promise<PriceHistoryPurchase[]> {
     return this.current.findAllWithItemsByName(nameNormalized);
   }
+
+  override update(purchase: PriceHistoryPurchase): Promise<boolean> {
+    return this.current.update(purchase);
+  }
 }
 
 /** Repositório que lança — prova o 500 canônico sem vazar o detalhe. */
@@ -150,6 +154,10 @@ class FailingPurchaseRepository extends PurchaseRepository {
   }
 
   override async findAllWithItemsByName(): Promise<PriceHistoryPurchase[]> {
+    return this.fail();
+  }
+
+  override async update(): Promise<boolean> {
     return this.fail();
   }
 }
@@ -300,6 +308,121 @@ describe('Borda HTTP do histórico — integração via inject (T-10)', () => {
         message: PURCHASE_NOT_FOUND_MESSAGE,
       });
       expect(Object.keys(body).sort()).toEqual(['message', 'statusCode']);
+    });
+  });
+
+  describe('PATCH /api/price-history/purchases/:id', () => {
+    const editedItems = [
+      { name: 'Açúcar', quantity: 2, unit: 'kg' as const, unitPrice: 3.5 },
+      { name: 'Café', quantity: 1, unit: 'pacote' as const, unitPrice: 6 },
+    ];
+
+    it('200 substitui a compra, preserva id e createdAt, e a leitura seguinte troca o menor preço', async () => {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `${PURCHASES_ROUTE}/${OLDER_ID}`,
+        headers: { ...auth(), 'content-type': 'application/json' },
+        payload: {
+          market: 'Mercado Novo',
+          purchaseDate: '2026-10-11',
+          items: editedItems,
+        },
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json<PurchaseDetailResponse>();
+      expect(body).toMatchObject({
+        id: OLDER_ID,
+        market: 'Mercado Novo',
+        purchaseDate: '2026-10-11',
+        createdAt: '2026-10-12T12:00:00.000Z',
+      });
+      expect(body.items).toEqual(editedItems);
+
+      const lowest = await app.inject({
+        method: 'GET',
+        url: LOWEST_ROUTE,
+        headers: auth(),
+      });
+      expect(lowest.statusCode).toBe(200);
+      const markets = lowest.json<LowestPricesResponse>().markets;
+      const items = markets.flatMap((group) => group.items);
+      expect(items.find((item) => item.nameNormalized === 'cafe')).toMatchObject({
+        lowestUnitPrice: 6,
+        market: 'Mercado Novo',
+        purchaseDate: '2026-10-11',
+        quantity: 1,
+        unit: 'pacote',
+      });
+      expect(items.find((item) => item.nameNormalized === 'leite')).toBeUndefined();
+      expect(items.find((item) => item.nameNormalized === 'acucar')).toMatchObject({
+        lowestUnitPrice: 3.5,
+        market: 'Mercado Novo',
+      });
+    });
+
+    it('400 de validação não altera a compra', async () => {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `${PURCHASES_ROUTE}/${OLDER_ID}`,
+        headers: { ...auth(), 'content-type': 'application/json' },
+        payload: {
+          market: 'Mercado Novo',
+          purchaseDate: '2099-01-01',
+          items: editedItems,
+        },
+      });
+
+      expect(res.statusCode).toBe(400);
+      expect(res.json<ApiErrorResponse>()).toMatchObject({
+        statusCode: 400,
+        message: 'A data da compra não pode ser futura',
+      });
+
+      const detail = await app.inject({
+        method: 'GET',
+        url: `${PURCHASES_ROUTE}/${OLDER_ID}`,
+        headers: auth(),
+      });
+      expect(detail.json<PurchaseDetailResponse>().market).toBe('Mercado Zebra');
+    });
+
+    it('404 quando o id não existe', async () => {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `${PURCHASES_ROUTE}/${UNKNOWN_ID}`,
+        headers: { ...auth(), 'content-type': 'application/json' },
+        payload: {
+          market: 'Mercado Novo',
+          purchaseDate: '2026-10-11',
+          items: editedItems,
+        },
+      });
+
+      expect(res.statusCode).toBe(404);
+      expect(res.json<ApiErrorResponse>()).toMatchObject({
+        statusCode: 404,
+        message: PURCHASE_NOT_FOUND_MESSAGE,
+      });
+    });
+
+    it('401 sem token', async () => {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: `${PURCHASES_ROUTE}/${OLDER_ID}`,
+        headers: { 'content-type': 'application/json' },
+        payload: {
+          market: 'Mercado Novo',
+          purchaseDate: '2026-10-11',
+          items: editedItems,
+        },
+      });
+
+      expect(res.statusCode).toBe(401);
+      expect(res.json<ApiErrorResponse>()).toEqual({
+        statusCode: 401,
+        message: AUTHORIZATION_MESSAGE,
+      });
     });
   });
 
@@ -617,7 +740,9 @@ describe('Borda HTTP do histórico — integração via inject (T-10)', () => {
       )
         .split(',')
         .map((method) => method.trim());
-      expect(allowMethods).toEqual(expect.arrayContaining(['GET', 'OPTIONS']));
+      expect(allowMethods).toEqual(
+        expect.arrayContaining(['GET', 'PATCH', 'OPTIONS']),
+      );
       const allowHeaders = String(
         preflight.headers['access-control-allow-headers'],
       )

@@ -34,6 +34,17 @@ export interface PurchaseDetailResponse {
   createdAt: string;
 }
 
+/**
+ * Substitui mercado, data e linhas de uma compra já concluída.
+ * A lista de itens é a compra inteira depois da edição, na ordem de exibição.
+ */
+export interface UpdatePurchaseRequest {
+  market: string;
+  /** YYYY-MM-DD */
+  purchaseDate: string;
+  items: PurchaseItem[];
+}
+
 /** Menor preço por unidade de um item, com os dados da compra vencedora. */
 export interface LowestPriceItem {
   /** Nome de exibição (o do item que ostenta o menor preço). */

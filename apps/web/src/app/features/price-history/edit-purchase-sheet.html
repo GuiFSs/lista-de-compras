@@ -1,0 +1,172 @@
+<!-- Formulário de app (guia §4/§5): título no sheet, mercado e data, linhas
+     e um único primary. Sem linha, Salvar não envia. -->
+<app-bottom-sheet heading="Editar compra" [closeOnBackdrop]="false" (closed)="cancel()">
+  <form class="edit-purchase" (submit)="save(); $event.preventDefault()" novalidate>
+    <p class="edit-purchase__lead">Corrija o mercado, a data ou os itens. O menor preço acompanha a compra na próxima consulta.</p>
+
+    @if (formError(); as message) {
+      <p class="edit-purchase__error" role="alert">{{ message }}</p>
+    }
+
+    <div class="edit-purchase__fields">
+      <div class="field">
+        <label class="field__label" for="edit-market">
+          Mercado
+          <span class="field__required" aria-hidden="true">*</span>
+          <span class="visually-hidden">(obrigatório)</span>
+        </label>
+        <input
+          id="edit-market"
+          class="field__input"
+          type="text"
+          autocomplete="off"
+          [value]="market()"
+          [class.field__input--error]="errors().market"
+          [attr.aria-invalid]="errors().market ? 'true' : null"
+          [attr.aria-describedby]="errors().market ? 'edit-market-error' : null"
+          (input)="onMarketInput($event)"
+        />
+        @if (errors().market; as message) {
+          <p class="field__error" id="edit-market-error" role="alert">{{ message }}</p>
+        }
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="edit-date">
+          Data da compra
+          <span class="field__required" aria-hidden="true">*</span>
+          <span class="visually-hidden">(obrigatório)</span>
+        </label>
+        <input
+          id="edit-date"
+          class="field__input"
+          type="date"
+          [max]="today"
+          [value]="purchaseDate()"
+          [class.field__input--error]="errors().date"
+          [attr.aria-invalid]="errors().date ? 'true' : null"
+          [attr.aria-describedby]="errors().date ? 'edit-date-error' : null"
+          (input)="onDateInput($event)"
+        />
+        @if (errors().date; as message) {
+          <p class="field__error" id="edit-date-error" role="alert">{{ message }}</p>
+        }
+      </div>
+    </div>
+
+    @if (lines().length === 0) {
+      <p class="edit-purchase__empty">A compra precisa ter pelo menos um item.</p>
+    } @else {
+      <ul class="edit-purchase__lines">
+        @for (line of lines(); track line.key) {
+          <li class="edit-line">
+            <div class="field">
+              <label class="field__label" [attr.for]="'edit-line-' + line.key + '-name'">
+                Nome
+                <span class="field__required" aria-hidden="true">*</span>
+                <span class="visually-hidden">(obrigatório)</span>
+              </label>
+              <input
+                class="field__input"
+                type="text"
+                autocomplete="off"
+                [id]="'edit-line-' + line.key + '-name'"
+                [value]="line.name"
+                [class.field__input--error]="lineError(line.key)?.name"
+                [attr.aria-invalid]="lineError(line.key)?.name ? 'true' : null"
+                [attr.aria-describedby]="lineError(line.key)?.name ? 'edit-line-' + line.key + '-name-error' : null"
+                (input)="onNameInput(line.key, $event)"
+              />
+              @if (lineError(line.key)?.name; as message) {
+                <p class="field__error" [id]="'edit-line-' + line.key + '-name-error'" role="alert">{{ message }}</p>
+              }
+            </div>
+
+            <div class="edit-line__row">
+              <div class="field">
+                <label class="field__label" [attr.for]="'edit-line-' + line.key + '-qty'">
+                  Quantidade
+                  <span class="field__required" aria-hidden="true">*</span>
+                  <span class="visually-hidden">(obrigatório)</span>
+                </label>
+                <input
+                  class="field__input"
+                  type="text"
+                  inputmode="decimal"
+                  autocomplete="off"
+                  [id]="'edit-line-' + line.key + '-qty'"
+                  [value]="line.quantity"
+                  [class.field__input--error]="lineError(line.key)?.quantity"
+                  [attr.aria-invalid]="lineError(line.key)?.quantity ? 'true' : null"
+                  [attr.aria-describedby]="lineError(line.key)?.quantity ? 'edit-line-' + line.key + '-qty-error' : null"
+                  (input)="onQuantityInput(line.key, $event)"
+                />
+                @if (lineError(line.key)?.quantity; as message) {
+                  <p class="field__error" [id]="'edit-line-' + line.key + '-qty-error'" role="alert">{{ message }}</p>
+                }
+              </div>
+
+              <div class="field">
+                <label class="field__label" [attr.for]="'edit-line-' + line.key + '-unit'">
+                  Unidade
+                  <span class="field__required" aria-hidden="true">*</span>
+                  <span class="visually-hidden">(obrigatório)</span>
+                </label>
+                <select
+                  class="field__input"
+                  [id]="'edit-line-' + line.key + '-unit'"
+                  [class.field__input--error]="lineError(line.key)?.unit"
+                  [attr.aria-invalid]="lineError(line.key)?.unit ? 'true' : null"
+                  [attr.aria-describedby]="lineError(line.key)?.unit ? 'edit-line-' + line.key + '-unit-error' : null"
+                  (change)="onUnitChange(line.key, $event)"
+                >
+                  <option value="" [selected]="line.unit === ''">Selecione</option>
+                  @for (unit of units; track unit) {
+                    <option [value]="unit" [selected]="unit === line.unit">{{ unit }}</option>
+                  }
+                </select>
+                @if (lineError(line.key)?.unit; as message) {
+                  <p class="field__error" [id]="'edit-line-' + line.key + '-unit-error'" role="alert">{{ message }}</p>
+                }
+              </div>
+
+              <div class="field">
+                <label class="field__label" [attr.for]="'edit-line-' + line.key + '-price'">
+                  Preço por unidade (R$)
+                  <span class="field__required" aria-hidden="true">*</span>
+                  <span class="visually-hidden">(obrigatório)</span>
+                </label>
+                <input
+                  class="field__input"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  [id]="'edit-line-' + line.key + '-price'"
+                  [value]="priceDisplay(line.priceDigits)"
+                  [class.field__input--error]="lineError(line.key)?.price"
+                  [attr.aria-invalid]="lineError(line.key)?.price ? 'true' : null"
+                  [attr.aria-describedby]="lineError(line.key)?.price ? 'edit-line-' + line.key + '-price-error' : null"
+                  (input)="onPriceInput(line.key, $event)"
+                />
+                @if (lineError(line.key)?.price; as message) {
+                  <p class="field__error" [id]="'edit-line-' + line.key + '-price-error'" role="alert">{{ message }}</p>
+                }
+              </div>
+            </div>
+
+            <button type="button" class="btn-danger" (click)="removeLine(line.key)">Remover item</button>
+          </li>
+        }
+      </ul>
+    }
+
+    <button type="button" class="btn-secondary edit-purchase__add" (click)="addLine()">Incluir item</button>
+
+    <div class="edit-purchase__actions">
+      <button type="button" class="btn-secondary" (click)="cancel()">Cancelar</button>
+      <button type="submit" class="btn-primary" [disabled]="saving() || lines().length === 0">
+        {{ saving() ? 'Salvando…' : 'Salvar' }}
+      </button>
+    </div>
+  </form>
+</app-bottom-sheet>

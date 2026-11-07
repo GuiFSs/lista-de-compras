@@ -193,9 +193,9 @@ drill-down foi registrada na **ADR 0011**). Tipos em
 **Todas** as rotas exigem JWT (guard global, ADR 0007) — **401** uniforme
 `{ "statusCode": 401, "message": "Não autorizado" }`.
 
-**CORS (ADR 0010, inalterado pela ADR 0011):** `@fastify/cors` com
+**CORS (ADR 0010, leitura; ADR 0014 acrescenta `PATCH`):** `@fastify/cors` com
 `PRICE_HISTORY_CORS_ORIGINS` (default `http://localhost:4200`),
-`methods: ['GET','OPTIONS']`,
+`methods: ['GET','PATCH','OPTIONS']`,
 `allowedHeaders: ['Content-Type','Authorization']`.
 
 ### Operações
@@ -204,6 +204,7 @@ drill-down foi registrada na **ADR 0011**). Tipos em
 | --- | --- | --- | --- | --- |
 | Listar compras | `GET /api/price-history/purchases` | — | **200** `PurchaseListResponse` | 401, 500 |
 | Detalhe | `GET /api/price-history/purchases/{id}` | — | **200** `PurchaseDetailResponse` | **404**, 401, 500 |
+| Editar compra | `PATCH /api/price-history/purchases/{id}` | `UpdatePurchaseRequest` | **200** `PurchaseDetailResponse` | **400**, **404**, 401, 500 |
 | Menores preços (agrupados por mercado) | `GET /api/price-history/lowest-prices` | query opcional `q` | **200** `LowestPricesResponse` | 401, 500 |
 | Menores preços do item por mercado | `GET /api/price-history/lowest-prices/{item}` | `{item}` = `nameNormalized` percent-encoded | **200** `LowestPriceByMarketResponse` | **404**, 401, 500 |
 
@@ -221,6 +222,12 @@ Tipos das operações inalteradas:
   `id` = `completionId`.
 - `PurchaseDetailResponse` / `PurchaseItem` — detalhe com itens (`unit`:
   `ItemUnit`; `unitPrice` em R$).
+- `UpdatePurchaseRequest` — corpo do PATCH. `items` substitui todas as linhas,
+  na ordem enviada. `id` e `createdAt` não vão no corpo e não mudam na
+  resposta. **400** quando mercado, data ou alguma linha é inválida, quando
+  `items` vem vazio ou quando dois itens da mesma compra têm o mesmo nome
+  normalizado. **404** quando o `{id}` não existe. A lista ativa e o evento
+  de conclusão não participam desta rota (ADR 0014).
 
 ### Lista principal — `LowestPricesResponse` (agrupada por mercado)
 

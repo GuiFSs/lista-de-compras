@@ -6,3 +6,4 @@ export * from './lowest-price-search';
 export * from './lowest-prices';
 export * from './market-order';
 export * from './purchase';
+export * from './update-purchase';

@@ -4,6 +4,7 @@ import {
   GetPurchaseUseCase,
   ListLowestPricesUseCase,
   ListPurchasesUseCase,
+  UpdatePurchaseUseCase,
 } from '../../../application';
 import { PurchaseRepository } from '../../../application/ports/purchase-repository.port';
 import { PurchaseRepositoryModule } from '../../../infrastructure/persistence/purchase-repository.module';
@@ -42,6 +43,12 @@ import { PriceHistoryController } from './price-history.controller';
       inject: [PurchaseRepository],
       useFactory: (repository: PurchaseRepository) =>
         new GetLowestPricesByItemUseCase(repository),
+    },
+    {
+      provide: UpdatePurchaseUseCase,
+      inject: [PurchaseRepository],
+      useFactory: (repository: PurchaseRepository) =>
+        new UpdatePurchaseUseCase(repository),
     },
   ],
 })
